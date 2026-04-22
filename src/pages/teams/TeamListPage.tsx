@@ -37,7 +37,7 @@ export function TeamListPage() {
   ]
 
   return (
-    <div className="space-y-4">
+    <div className="p-6 space-y-4">
       <h1 className="text-2xl font-bold text-gray-900">{t('team.title')}</h1>
       <Card>
         <div className="mb-4 pb-4 border-b">

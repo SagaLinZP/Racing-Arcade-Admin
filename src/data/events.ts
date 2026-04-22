@@ -30,7 +30,8 @@ export interface SimEvent {
   cancelRegistrationDeadline?: string
   eventStartTime: string
   status: EventStatus
-  accessRequirements?: string
+  accessRequirements_zh?: string
+  accessRequirements_en?: string
   rules_zh?: string
   rules_en?: string
   serverInfo?: string
@@ -103,7 +104,8 @@ export const events: SimEvent[] = [
     cancelRegistrationDeadline: '2026-04-17T12:00:00Z',
     eventStartTime: '2026-04-20T12:00:00Z',
     status: 'RegistrationOpen',
-    accessRequirements: 'Must read and agree to the rules',
+    accessRequirements_zh: '必须阅读并同意规则',
+    accessRequirements_en: 'Must read and agree to the rules',
     rules_zh: '1. 公平竞赛，禁止故意碰撞\n2. 服从管理员指示\n3. 使用真实姓名参赛',
     rules_en: '1. Fair play, no intentional contact\n2. Follow admin instructions\n3. Race under real name',
     scoringRules_zh: '标准积分系统',
@@ -782,7 +784,8 @@ export const events: SimEvent[] = [
     registeredDriverIds: ['d4', 'd8', 'd10', 'd14', 'd17', 'd18', 'd21', 'd24'],
     serverInfo: 'MOZA GT3 Paul Ricard Server',
     serverPassword: 'mozagt3pr',
-    accessRequirements: 'LMU license required, minimum 5 LMU races completed',
+    accessRequirements_zh: '需要LMU许可证，至少完成5场LMU比赛',
+    accessRequirements_en: 'LMU license required, minimum 5 LMU races completed',
     rules_zh: '1. 所有车手必须使用 GT3 车辆\n2. 需进站换人（耐力赛）',
     rules_en: '1. All drivers must use GT3 cars\n2. Driver change pit stop required (endurance)',
   },
@@ -817,7 +820,8 @@ export const events: SimEvent[] = [
     registeredDriverIds: ['d8', 'd10', 'd14', 'd24'],
     serverInfo: 'MOZA GT3 Le Mans Server',
     serverPassword: 'mozagt3lm',
-    accessRequirements: 'LMU license required, minimum 5 LMU races completed',
+    accessRequirements_zh: '需要LMU许可证，至少完成5场LMU比赛',
+    accessRequirements_en: 'LMU license required, minimum 5 LMU races completed',
   },
   {
     id: 'e19',
@@ -846,7 +850,8 @@ export const events: SimEvent[] = [
     status: 'RegistrationOpen',
     currentRegistrations: 6,
     registeredDriverIds: ['d5', 'd12', 'd19', 'd23'],
-    accessRequirements: 'Invite only',
+    accessRequirements_zh: '仅限受邀参加',
+    accessRequirements_en: 'Invite only',
   },
   {
     id: 'e20',
@@ -927,7 +932,8 @@ export const events: SimEvent[] = [
     status: 'Upcoming',
     currentRegistrations: 5,
     registeredDriverIds: ['d5', 'd12', 'd16', 'd19', 'd23'],
-    accessRequirements: 'Open to all rookie drivers (totalEntries < 20)',
+    accessRequirements_zh: '面向所有新手车手（参赛次数<20）',
+    accessRequirements_en: 'Open to all rookie drivers (totalEntries < 20)',
   },
   {
     id: 'e22',

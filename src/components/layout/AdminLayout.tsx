@@ -139,7 +139,7 @@ export function AdminLayout() {
         </header>
 
         {/* Page content */}
-        <main ref={setScrollContainer} className="flex-1 overflow-y-auto p-6">
+        <main ref={setScrollContainer} className="flex-1 overflow-y-auto">
           <Outlet />
         </main>
       </div>

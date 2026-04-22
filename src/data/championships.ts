@@ -23,7 +23,8 @@ export interface Championship {
   splitAssignmentRule?: string
   minEntries?: number
   cancelRegistrationDeadlineOffset?: string
-  accessRequirements?: string
+  accessRequirements_zh?: string
+  accessRequirements_en?: string
   scoringRules_zh?: string
   scoringRules_en?: string
   scoringTable?: ScoringTableEntry[]
@@ -61,7 +62,8 @@ export const championships: Championship[] = [
     splitAssignmentRule: 'By Skill',
     minEntries: 10,
     cancelRegistrationDeadlineOffset: '2 hours before race start',
-    accessRequirements: 'Must read and agree to the rules',
+    accessRequirements_zh: '必须阅读并同意规则',
+    accessRequirements_en: 'Must read and agree to the rules',
     scoringTable: [
       { position: 1, points: 25 },
       { position: 2, points: 18 },
@@ -106,7 +108,8 @@ export const championships: Championship[] = [
     splitAssignmentRule: 'By Skill',
     minEntries: 15,
     cancelRegistrationDeadlineOffset: '4 hours before race start',
-    accessRequirements: 'Minimum 10 ACC races completed',
+    accessRequirements_zh: '至少完成10场ACC比赛',
+    accessRequirements_en: 'Minimum 10 ACC races completed',
     scoringRules_zh: '耐力赛积分加倍',
     scoringRules_en: 'Endurance double points',
     scoringTable: [
@@ -153,7 +156,8 @@ export const championships: Championship[] = [
     splitAssignmentRule: 'By Skill',
     minEntries: 10,
     cancelRegistrationDeadlineOffset: '2 hours before race start',
-    accessRequirements: 'LMU license required, minimum 5 LMU races completed',
+    accessRequirements_zh: '需要LMU许可证，至少完成5场LMU比赛',
+    accessRequirements_en: 'LMU license required, minimum 5 LMU races completed',
     scoringRules_zh: '标准FIA积分系统',
     scoringRules_en: 'Standard FIA points system',
     scoringTable: [
@@ -198,7 +202,8 @@ export const championships: Championship[] = [
     enableMultiSplit: false,
     minEntries: 8,
     cancelRegistrationDeadlineOffset: '1 hour before race start',
-    accessRequirements: 'Invite only',
+    accessRequirements_zh: '仅限受邀参加',
+    accessRequirements_en: 'Invite only',
     scoringTable: [
       { position: 1, points: 12 },
       { position: 2, points: 10 },
@@ -237,7 +242,8 @@ export const championships: Championship[] = [
     enableMultiSplit: false,
     minEntries: 6,
     cancelRegistrationDeadlineOffset: '1 hour before race start',
-    accessRequirements: 'Open to all rookie drivers (totalEntries < 20)',
+    accessRequirements_zh: '面向所有新手车手（参赛次数<20）',
+    accessRequirements_en: 'Open to all rookie drivers (totalEntries < 20)',
     scoringTable: [
       { position: 1, points: 25, note_zh: '杆位额外+2分', note_en: 'Pole position bonus +2pts' },
       { position: 2, points: 18 },

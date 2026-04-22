@@ -39,7 +39,7 @@ export function UserDetailPage() {
   const participatedEvents = events.filter(e => e.registeredDriverIds.includes(driver.id))
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="p-6 space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" onClick={() => navigate('/users')}><ArrowLeft className="w-4 h-4" /></Button>

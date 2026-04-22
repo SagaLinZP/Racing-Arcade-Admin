@@ -20,7 +20,7 @@ export function TeamDetailPage() {
   if (!team) return <div className="text-center py-12 text-gray-500">Team not found</div>
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="p-6 space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" onClick={() => navigate('/teams')}><ArrowLeft className="w-4 h-4" /></Button>

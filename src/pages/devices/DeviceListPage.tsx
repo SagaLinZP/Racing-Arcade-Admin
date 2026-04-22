@@ -38,7 +38,7 @@ export function DeviceListPage() {
   ]
 
   return (
-    <div className="space-y-4">
+    <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">{t('device.title')}</h1>
         <Button onClick={() => { setEditDevice(null); setShowModal(true) }}><Plus className="w-4 h-4 mr-1" />{t('device.createDevice')}</Button>

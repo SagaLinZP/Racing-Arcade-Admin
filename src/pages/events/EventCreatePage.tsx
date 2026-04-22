@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { eventTemplates } from '@/data/admin'
 import { ArrowLeft, Save, Send } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 const GAME_OPTIONS = [
   { value: 'ACC', label: 'ACC PC' },
@@ -70,7 +71,7 @@ export function EventCreatePage() {
     registrationOpenAt: '', registrationCloseAt: '',
     cancelRegistrationDeadline: '',
     eventStartTime: '',
-    accessRequirements: '',
+    accessRequirements_en: '', accessRequirements_zh: '',
     rules_en: '', rules_zh: '',
     serverInfo: '', serverPassword: '', serverJoinLink: '',
     streamUrl: '', vodUrl: '',
@@ -108,40 +109,43 @@ export function EventCreatePage() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" onClick={() => navigate('/events')}>
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <h1 className="text-2xl font-bold text-gray-900">{t('event.createEvent')}</h1>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => navigate('/events')}>
-            <Save className="w-4 h-4 mr-1" />
-            {t('event.saveAsDraft')}
-          </Button>
-          <Button>
-            <Send className="w-4 h-4 mr-1" />
-            {t('event.publishNow')}
-          </Button>
+    <>
+      <div className="sticky top-0 z-10 w-full bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-5xl mx-auto px-6 pt-5 pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" onClick={() => navigate('/events')}>
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              <h1 className="text-2xl font-bold text-gray-900">{t('event.createEvent')}</h1>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">{t('common.language')}:</span>
+                <button
+                  className={cn('px-2.5 py-1 text-xs rounded', editLang === 'en' ? 'bg-blue-100 text-blue-700 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}
+                  onClick={() => setEditLang('en')}
+                >EN</button>
+                <button
+                  className={cn('px-2.5 py-1 text-xs rounded', editLang === 'zh' ? 'bg-blue-100 text-blue-700 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}
+                  onClick={() => setEditLang('zh')}
+                >中文</button>
+              </div>
+              <div className="w-px h-6 bg-gray-200" />
+              <Button variant="secondary" onClick={() => navigate('/events')}>
+                <Save className="w-4 h-4 mr-1" />
+                {t('event.saveAsDraft')}
+              </Button>
+              <Button>
+                <Send className="w-4 h-4 mr-1" />
+                {t('event.publishNow')}
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Language toggle */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-500">{t('common.language')}:</span>
-        <button
-          className={`px-3 py-1 text-sm rounded ${editLang === 'en' ? 'bg-blue-100 text-blue-700 font-medium' : 'bg-gray-100 text-gray-600'}`}
-          onClick={() => setEditLang('en')}
-        >English</button>
-        <button
-          className={`px-3 py-1 text-sm rounded ${editLang === 'zh' ? 'bg-blue-100 text-blue-700 font-medium' : 'bg-gray-100 text-gray-600'}`}
-          onClick={() => setEditLang('zh')}
-        >中文</button>
-      </div>
-
-      {/* Template quick-fill */}
+      <div className="max-w-5xl mx-auto p-6 space-y-6">
       <Card>
         <h3 className="text-sm font-medium text-gray-700 mb-2">{t('event.createFrom')}</h3>
         <div className="flex flex-wrap gap-2">
@@ -156,7 +160,7 @@ export function EventCreatePage() {
 
       {/* Basic Info */}
       <Card>
-        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">Basic Information</h3>
+        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionBasicInfo')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
             label={`${t('event.eventName')} (${editLang === 'en' ? 'English' : '中文'})`}
@@ -176,7 +180,7 @@ export function EventCreatePage() {
 
       {/* Game & Track */}
       <Card>
-        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">Game & Track</h3>
+        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionGameTrack')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Select label={t('event.game')} options={GAME_OPTIONS} value={form.game} onChange={(e) => updateForm('game', e.target.value)} />
           <Input label={t('event.track')} value={form.track} onChange={(e) => updateForm('track', e.target.value)} />
@@ -207,7 +211,7 @@ export function EventCreatePage() {
 
       {/* Race Format */}
       <Card>
-        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">Race Format</h3>
+        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionRaceFormat')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Input label={t('event.practiceDuration')} type="number" value={form.practiceDuration} onChange={(e) => updateForm('practiceDuration', Number(e.target.value))} />
           <Input label={t('event.qualifyingDuration')} type="number" value={form.qualifyingDuration} onChange={(e) => updateForm('qualifyingDuration', Number(e.target.value))} />
@@ -220,7 +224,7 @@ export function EventCreatePage() {
 
       {/* Split Configuration */}
       <Card>
-        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">Split Configuration</h3>
+        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionSplitConfig')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={form.enableMultiSplit} onChange={(e) => updateForm('enableMultiSplit', e.target.checked)} className="rounded border-gray-300" />
@@ -236,7 +240,7 @@ export function EventCreatePage() {
 
       {/* Schedule */}
       <Card>
-        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">Schedule</h3>
+        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionSchedule')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input label={t('event.registrationOpenAt')} type="datetime-local" value={form.registrationOpenAt} onChange={(e) => updateForm('registrationOpenAt', e.target.value)} />
           <Input label={t('event.registrationCloseAt')} type="datetime-local" value={form.registrationCloseAt} onChange={(e) => updateForm('registrationCloseAt', e.target.value)} />
@@ -247,9 +251,13 @@ export function EventCreatePage() {
 
       {/* Rules & Access */}
       <Card>
-        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">Rules & Access</h3>
+        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionRulesAccess')}</h3>
         <div className="space-y-4">
-          <Input label={t('event.accessRequirements')} value={form.accessRequirements} onChange={(e) => updateForm('accessRequirements', e.target.value)} />
+          <Textarea
+            label={`${t('event.accessRequirements')} (${editLang === 'en' ? 'English' : '中文'})`}
+            value={editLang === 'en' ? form.accessRequirements_en : form.accessRequirements_zh}
+            onChange={(e) => updateForm(editLang === 'en' ? 'accessRequirements_en' : 'accessRequirements_zh', e.target.value)}
+          />
           <Textarea
             label={`${t('event.rules')} (${editLang === 'en' ? 'English' : '中文'})`}
             value={editLang === 'en' ? form.rules_en : form.rules_zh}
@@ -265,7 +273,7 @@ export function EventCreatePage() {
 
       {/* Server & Streaming */}
       <Card>
-        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">Server & Streaming</h3>
+        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionServerStreaming')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input label={t('event.serverInfo')} value={form.serverInfo} onChange={(e) => updateForm('serverInfo', e.target.value)} />
           <Input label={t('event.serverPassword')} value={form.serverPassword} onChange={(e) => updateForm('serverPassword', e.target.value)} />
@@ -285,6 +293,7 @@ export function EventCreatePage() {
           placeholder="Download links, installation instructions..."
         />
       </Card>
-    </div>
+      </div>
+    </>
   )
 }

@@ -40,7 +40,7 @@ export function ProtestDetailPage() {
   const reported = drivers.find(d => d.id === protest.reportedId)
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="p-6 space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-3">
         <Button variant="ghost" onClick={() => navigate('/protests')}><ArrowLeft className="w-4 h-4" /></Button>
         <div>

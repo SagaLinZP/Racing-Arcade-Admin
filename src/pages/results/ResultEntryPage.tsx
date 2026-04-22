@@ -39,7 +39,7 @@ export function ResultEntryPage() {
   const changeLogs = resultChangeLogs.filter(cl => cl.eventId === event.id)
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" onClick={() => navigate('/results')}><ArrowLeft className="w-4 h-4" /></Button>

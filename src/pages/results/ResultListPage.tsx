@@ -58,7 +58,7 @@ export function ResultListPage() {
   ]
 
   return (
-    <div className="space-y-4">
+    <div className="p-6 space-y-4">
       <h1 className="text-2xl font-bold text-gray-900">{t('result.title')}</h1>
       <Card>
         <div className="mb-4 pb-4 border-b border-gray-200">

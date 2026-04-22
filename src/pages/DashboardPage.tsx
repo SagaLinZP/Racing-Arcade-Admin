@@ -24,7 +24,7 @@ export function DashboardPage() {
   const maxRegs = Math.max(...stats.registrationTrends.map(d => d.count))
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">{t('dashboard.title')}</h1>
         <div className="flex gap-2">

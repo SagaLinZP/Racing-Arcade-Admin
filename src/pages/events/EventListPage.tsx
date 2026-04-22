@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '@/hooks/useAppStore'
 import { events } from '@/data/events'
-import { championships } from '@/data/championships'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -44,8 +43,10 @@ export function EventListPage() {
   const [gameFilter, setGameFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
 
+  const standaloneEvents = useMemo(() => events.filter(e => !e.championshipId), [])
+
   const filtered = useMemo(() => {
-    return events.filter(e => {
+    return standaloneEvents.filter(e => {
       if (search) {
         const q = search.toLowerCase()
         const name = lang === 'zh' ? e.name_zh : e.name_en
@@ -55,7 +56,7 @@ export function EventListPage() {
       if (statusFilter && e.status !== statusFilter) return false
       return true
     })
-  }, [events, search, gameFilter, statusFilter, lang])
+  }, [standaloneEvents, search, gameFilter, statusFilter, lang])
 
   const getName = (e: SimEvent) => lang === 'zh' ? e.name_zh : e.name_en
 
@@ -66,14 +67,6 @@ export function EventListPage() {
       render: (e: SimEvent) => (
         <div>
           <div className="font-medium text-gray-900">{getName(e)}</div>
-          {e.championshipId && (
-            <div className="text-xs text-blue-600">
-              {(() => {
-                const ch = championships.find(c => c.id === e.championshipId)
-                return ch ? (lang === 'zh' ? ch.name_zh : ch.name_en) : ''
-              })()}
-            </div>
-          )}
         </div>
       ),
     },
@@ -118,7 +111,7 @@ export function EventListPage() {
   ]
 
   return (
-    <div className="space-y-4">
+    <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">{t('event.eventList')}</h1>
         <Button onClick={() => navigate('/events/create')}>
@@ -139,7 +132,7 @@ export function EventListPage() {
             <Select options={STATUS_OPTIONS} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} />
           </div>
           <div className="text-sm text-gray-500 flex items-center">
-            {filtered.length} events
+            {filtered.length} standalone events
           </div>
         </div>
 
