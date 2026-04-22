@@ -40,7 +40,7 @@ export default function App() {
 
   return (
     <AppContext.Provider value={{ state, setState }}>
-      <BrowserRouter>
+      <BrowserRouter basename="/Racing-Arcade-Admin">
         <ScrollToTop />
         <Routes>
           {!state.isLoggedIn ? (
