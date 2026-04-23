@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { eventTemplates } from '@/data/admin'
-import { ArrowLeft, Save, Send } from 'lucide-react'
+import { ArrowLeft, Save, Send, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const GAME_OPTIONS = [
@@ -21,14 +21,6 @@ const GAME_OPTIONS = [
   { value: 'ETS2', label: 'ETS2 PC' },
 ]
 
-const CAR_CLASS_OPTIONS = [
-  { value: 'GT3', label: 'GT3' },
-  { value: 'GT4', label: 'GT4' },
-  { value: 'Formula', label: 'Formula' },
-  { value: 'Porsche Cup', label: 'Porsche Cup' },
-  { value: 'LMP2', label: 'LMP2' },
-]
-
 const REGION_OPTIONS = [
   { value: 'CN', label: 'China (CN)' },
   { value: 'AP', label: 'Asia Pacific (AP)' },
@@ -36,18 +28,19 @@ const REGION_OPTIONS = [
   { value: 'EU', label: 'Europe & Africa (EU)' },
 ]
 
-const WEATHER_OPTIONS = [
-  { value: 'Clear', label: 'Clear' },
-  { value: 'Overcast', label: 'Overcast' },
-  { value: 'Dynamic', label: 'Dynamic' },
+const SPLIT_RULE_OPTIONS = [
+  { value: 'By Skill', label: '按实力 / By Skill' },
+  { value: 'Random', label: '随机 / Random' },
+  { value: 'Manual', label: '手动 / Manual' },
+  { value: 'First Come First Served', label: '先到先得 / First Come First Served' },
 ]
 
-const SPLIT_RULE_OPTIONS = [
-  { value: 'By Skill', label: 'By Skill' },
-  { value: 'Random', label: 'Random' },
-  { value: 'Manual', label: 'Manual' },
-  { value: 'First Come First Served', label: 'First Come First Served' },
-]
+interface ScoringRow {
+  position: number
+  points: number
+  note_en: string
+  note_zh: string
+}
 
 export function EventCreatePage() {
   const { t } = useTranslation()
@@ -59,8 +52,11 @@ export function EventCreatePage() {
   const [form, setForm] = useState({
     name_en: '', name_zh: '',
     description_en: '', description_zh: '',
+    coverImage: '',
     game: 'ACC', track: '', trackLayout: '',
     carClass: 'GT3',
+    carList: '',
+    conditions_en: '', conditions_zh: '',
     regions: ['CN'] as string[],
     weather: 'Clear', hasPitstop: true,
     practiceDuration: 30, qualifyingDuration: 15, raceDuration: 60,
@@ -77,6 +73,7 @@ export function EventCreatePage() {
     streamUrl: '', vodUrl: '',
     scoringRules_en: '', scoringRules_zh: '',
     resources_en: '', resources_zh: '',
+    scoringTable: [] as ScoringRow[],
   })
 
   const updateForm = (field: string, value: unknown) => {
@@ -106,6 +103,29 @@ export function EventCreatePage() {
         hasPitstop: tpl.hasPitstop,
       }))
     }
+  }
+
+  const addScoringRow = () => {
+    setForm(prev => ({
+      ...prev,
+      scoringTable: [...prev.scoringTable, { position: prev.scoringTable.length + 1, points: 0, note_en: '', note_zh: '' }],
+    }))
+  }
+
+  const removeScoringRow = (index: number) => {
+    setForm(prev => ({
+      ...prev,
+      scoringTable: prev.scoringTable.filter((_, i) => i !== index),
+    }))
+  }
+
+  const updateScoringRow = (index: number, field: keyof ScoringRow, value: string | number) => {
+    setForm(prev => ({
+      ...prev,
+      scoringTable: prev.scoringTable.map((row, i) =>
+        i === index ? { ...row, [field]: value } : row
+      ),
+    }))
   }
 
   return (
@@ -167,7 +187,14 @@ export function EventCreatePage() {
             value={editLang === 'en' ? form.name_en : form.name_zh}
             onChange={(e) => updateForm(editLang === 'en' ? 'name_en' : 'name_zh', e.target.value)}
           />
-          <div />
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('event.coverImage')}</label>
+            <div className="flex items-center gap-3">
+              <input type="file" accept="image/*" className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+              <span className="text-xs text-gray-400">或</span>
+              <Input className="flex-1" placeholder="粘贴图片链接..." value={form.coverImage} onChange={(e) => updateForm('coverImage', e.target.value)} />
+            </div>
+          </div>
           <div className="md:col-span-2">
             <Textarea
               label={`${t('common.description')} (${editLang === 'en' ? 'English' : '中文'})`}
@@ -185,13 +212,27 @@ export function EventCreatePage() {
           <Select label={t('event.game')} options={GAME_OPTIONS} value={form.game} onChange={(e) => updateForm('game', e.target.value)} />
           <Input label={t('event.track')} value={form.track} onChange={(e) => updateForm('track', e.target.value)} />
           <Input label={t('event.trackLayout')} value={form.trackLayout} onChange={(e) => updateForm('trackLayout', e.target.value)} />
-          <Select label={t('event.carClass')} options={CAR_CLASS_OPTIONS} value={form.carClass} onChange={(e) => updateForm('carClass', e.target.value)} />
-          <Select label={t('event.weather')} options={WEATHER_OPTIONS} value={form.weather} onChange={(e) => updateForm('weather', e.target.value)} />
+          <Input label={t('event.carClass')} value={form.carClass} onChange={(e) => updateForm('carClass', e.target.value)} />
+          <Input label={t('event.weather')} value={form.weather} onChange={(e) => updateForm('weather', e.target.value)} />
           <div className="flex items-end">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={form.hasPitstop} onChange={(e) => updateForm('hasPitstop', e.target.checked)} className="rounded border-gray-300" />
               <span className="text-sm text-gray-700">{t('event.hasPitstop')}</span>
             </label>
+          </div>
+          <Input
+            label={t('event.carList')}
+            value={form.carList}
+            onChange={(e) => updateForm('carList', e.target.value)}
+            placeholder="e.g. Ferrari 296 GT3, Porsche 992 GT3, ..."
+            className="md:col-span-3"
+          />
+          <div className="md:col-span-3">
+            <Textarea
+              label={`${t('event.conditions')} (${editLang === 'en' ? 'English' : '中文'})`}
+              value={editLang === 'en' ? form.conditions_en : form.conditions_zh}
+              onChange={(e) => updateForm(editLang === 'en' ? 'conditions_en' : 'conditions_zh', e.target.value)}
+            />
           </div>
         </div>
       </Card>
@@ -217,7 +258,7 @@ export function EventCreatePage() {
           <Input label={t('event.qualifyingDuration')} type="number" value={form.qualifyingDuration} onChange={(e) => updateForm('qualifyingDuration', Number(e.target.value))} />
           <div className="grid grid-cols-2 gap-2">
             <Input label={t('event.raceDuration')} type="number" value={form.raceDuration} onChange={(e) => updateForm('raceDuration', Number(e.target.value))} />
-            <Select label={t('event.raceDurationType')} options={[{ value: 'time', label: 'Minutes' }, { value: 'laps', label: 'Laps' }]} value={form.raceDurationType} onChange={(e) => updateForm('raceDurationType', e.target.value)} />
+            <Select label={t('event.raceDurationType')} options={[{ value: 'time', label: t('event.timeBased') }, { value: 'laps', label: t('event.lapsBased') }]} value={form.raceDurationType} onChange={(e) => updateForm('raceDurationType', e.target.value)} />
           </div>
         </div>
       </Card>
@@ -268,6 +309,75 @@ export function EventCreatePage() {
             value={editLang === 'en' ? form.scoringRules_en : form.scoringRules_zh}
             onChange={(e) => updateForm(editLang === 'en' ? 'scoringRules_en' : 'scoringRules_zh', e.target.value)}
           />
+        </div>
+      </Card>
+
+      {/* Scoring Table */}
+      <Card>
+        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.scoringTable')}</h3>
+        {form.scoringTable.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-2 px-2 font-medium text-gray-600 w-24">{t('event.position')}</th>
+                  <th className="text-left py-2 px-2 font-medium text-gray-600 w-24">{t('event.points')}</th>
+                  <th className="text-left py-2 px-2 font-medium text-gray-600">{t('event.noteEn')}</th>
+                  <th className="text-left py-2 px-2 font-medium text-gray-600">{t('event.noteZh')}</th>
+                  <th className="w-12" />
+                </tr>
+              </thead>
+              <tbody>
+                {form.scoringTable.map((row, idx) => (
+                  <tr key={idx} className="border-b border-gray-100">
+                    <td className="py-2 px-2">
+                      <input
+                        type="number"
+                        value={row.position}
+                        onChange={(e) => updateScoringRow(idx, 'position', Number(e.target.value))}
+                        className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="py-2 px-2">
+                      <input
+                        type="number"
+                        value={row.points}
+                        onChange={(e) => updateScoringRow(idx, 'points', Number(e.target.value))}
+                        className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="py-2 px-2">
+                      <input
+                        type="text"
+                        value={row.note_en}
+                        onChange={(e) => updateScoringRow(idx, 'note_en', e.target.value)}
+                        className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="py-2 px-2">
+                      <input
+                        type="text"
+                        value={row.note_zh}
+                        onChange={(e) => updateScoringRow(idx, 'note_zh', e.target.value)}
+                        className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="py-2 px-2">
+                      <Button variant="ghost" size="sm" onClick={() => removeScoringRow(idx)}>
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="mt-3">
+          <Button variant="secondary" size="sm" onClick={addScoringRow}>
+            <Plus className="w-4 h-4 mr-1" />
+            {t('event.addRow')}
+          </Button>
         </div>
       </Card>
 

@@ -12,6 +12,7 @@ export interface SimEvent {
   track: string
   trackLayout?: string
   carClass: string
+  carList?: string[]
   championshipId?: string
   regions: Array<'CN' | 'AP' | 'AM' | 'EU'>
   weather?: string
@@ -30,6 +31,8 @@ export interface SimEvent {
   cancelRegistrationDeadline?: string
   eventStartTime: string
   status: EventStatus
+  conditions_zh?: string
+  conditions_en?: string
   accessRequirements_zh?: string
   accessRequirements_en?: string
   rules_zh?: string

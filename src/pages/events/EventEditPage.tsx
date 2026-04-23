@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { ArrowLeft, Save, Send, XCircle } from 'lucide-react'
+import { ArrowLeft, Save, Send, XCircle, Plus, Trash2 } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { cn } from '@/lib/utils'
 
@@ -24,18 +24,18 @@ const GAME_OPTIONS = [
   { value: 'ETS2', label: 'ETS2 PC' },
 ]
 
-const CAR_CLASS_OPTIONS = [
-  { value: 'GT3', label: 'GT3' },
-  { value: 'GT4', label: 'GT4' },
-  { value: 'Formula', label: 'Formula' },
-  { value: 'Porsche Cup', label: 'Porsche Cup' },
-  { value: 'LMP2', label: 'LMP2' },
+const SPLIT_RULE_OPTIONS = [
+  { value: 'By Skill', label: '按实力 / By Skill' },
+  { value: 'Random', label: '随机 / Random' },
+  { value: 'Manual', label: '手动 / Manual' },
+  { value: 'First Come First Served', label: '先到先得 / First Come First Served' },
 ]
 
-const WEATHER_OPTIONS = [
-  { value: 'Clear', label: 'Clear' },
-  { value: 'Overcast', label: 'Overcast' },
-  { value: 'Dynamic', label: 'Dynamic' },
+const REGION_OPTIONS = [
+  { value: 'CN', label: 'China (CN)' },
+  { value: 'AP', label: 'Asia Pacific (AP)' },
+  { value: 'AM', label: 'Americas (AM)' },
+  { value: 'EU', label: 'Europe & Africa (EU)' },
 ]
 
 export function EventEditPage() {
@@ -46,7 +46,8 @@ export function EventEditPage() {
   const { id } = useParams()
   const [editLang, setEditLang] = useState<'en' | 'zh'>('en')
   const [showCancel, setShowCancel] = useState(false)
-  const [cancelReason, setCancelReason] = useState('')
+  const [cancelReason_en, setCancelReason_en] = useState('')
+  const [cancelReason_zh, setCancelReason_zh] = useState('')
 
   const event = useMemo(() => events.find(e => e.id === id), [id])
 
@@ -62,6 +63,24 @@ export function EventEditPage() {
   }
 
   const getName = () => lang === 'zh' ? event.name_zh : event.name_en
+
+  const [scoringRows, setScoringRows] = useState(
+    event.scoringTable?.length
+      ? event.scoringTable
+      : [{ position: 1, points: 25, note_en: '', note_zh: '' }]
+  )
+
+  const addScoringRow = () => {
+    setScoringRows(prev => [...prev, { position: prev.length + 1, points: 0, note_en: '', note_zh: '' }])
+  }
+
+  const removeScoringRow = (index: number) => {
+    setScoringRows(prev => prev.filter((_, i) => i !== index).map((r, i) => ({ ...r, position: i + 1 })))
+  }
+
+  const updateScoringRow = (index: number, field: string, value: string | number) => {
+    setScoringRows(prev => prev.map((r, i) => i === index ? { ...r, [field]: value } : r))
+  }
 
   return (
     <>
@@ -122,21 +141,102 @@ export function EventEditPage() {
       <Card key={editLang}>
         <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionBasicInfo')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input label={`Event Name (${editLang === 'en' ? 'English' : '中文'})`} defaultValue={editLang === 'en' ? event.name_en : event.name_zh} />
-          <div />
+          <Input
+            label={`${t('event.eventName')} (${editLang === 'en' ? 'English' : '中文'})`}
+            defaultValue={editLang === 'en' ? event.name_en : event.name_zh}
+          />
           <div className="md:col-span-2">
-            <Textarea label={`Description (${editLang === 'en' ? 'English' : '中文'})`} defaultValue={editLang === 'en' ? event.description_en : event.description_zh} />
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('event.coverImage')}</label>
+            <div className="flex items-center gap-3">
+              <input type="file" accept="image/*" className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+              <span className="text-xs text-gray-400">或</span>
+              <Input className="flex-1" placeholder="粘贴图片链接..." defaultValue={event.coverImage} />
+            </div>
+            {event.coverImage && <img src={event.coverImage} alt="cover" className="mt-2 h-20 w-auto rounded border" />}
+          </div>
+          <div className="md:col-span-2">
+            <Textarea
+              label={`${t('common.description')} (${editLang === 'en' ? 'English' : '中文'})`}
+              defaultValue={editLang === 'en' ? event.description_en : event.description_zh}
+            />
           </div>
         </div>
       </Card>
 
       <Card>
-        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionServerStreaming')}</h3>
+        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionGameTrack')}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Select label={t('event.game')} options={GAME_OPTIONS} defaultValue={event.game} />
+          <Input label={t('event.track')} defaultValue={event.track} />
+          <Input label={t('event.trackLayout')} defaultValue={event.trackLayout ?? ''} />
+          <Input label={t('event.carClass')} defaultValue={event.carClass} />
+          <Input label={t('event.weather')} defaultValue={event.weather ?? 'Clear'} />
+          <div className="flex items-end">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" defaultChecked={event.hasPitstop} className="rounded border-gray-300" />
+              <span className="text-sm text-gray-700">{t('event.hasPitstop')}</span>
+            </label>
+          </div>
+          <div className="md:col-span-3">
+            <Input label={t('event.carList')} defaultValue={event.carList?.join(', ') ?? ''} />
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('common.regions')}</h3>
+        <div className="flex flex-wrap gap-3">
+          {REGION_OPTIONS.map(opt => (
+            <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                defaultChecked={event.regions.includes(opt.value as 'CN' | 'AP' | 'AM' | 'EU')}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm text-gray-700">{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionRaceFormat')}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Input label={t('event.practiceDuration')} type="number" defaultValue={event.practiceDuration ?? 30} />
+          <Input label={t('event.qualifyingDuration')} type="number" defaultValue={event.qualifyingDuration ?? 15} />
+          <div className="grid grid-cols-2 gap-2">
+            <Input label={t('event.raceDuration')} type="number" defaultValue={event.raceDuration} />
+            <Select
+              label={t('event.raceDurationType')}
+              options={[{ value: 'time', label: t('event.timeBased') }, { value: 'laps', label: t('event.lapsBased') }]}
+              defaultValue={event.raceDurationType}
+            />
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionSplitConfig')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input label={t('event.serverInfo')} defaultValue={event.serverInfo} />
-          <Input label={t('event.serverPassword')} defaultValue={event.serverPassword} />
-          <Input label={t('event.serverJoinLink')} defaultValue={event.serverJoinLink} />
-          <Input label={t('event.streamUrl')} defaultValue={event.streamUrl} />
+          <label className="flex items-center gap-2">
+            <input type="checkbox" defaultChecked={event.enableMultiSplit} className="rounded border-gray-300" />
+            <span className="text-sm text-gray-700">{t('event.enableMultiSplit')}</span>
+          </label>
+          <div />
+          <Input label={t('event.maxEntriesPerSplit')} type="number" defaultValue={event.maxEntriesPerSplit} />
+          <Input label={t('event.maxSplits')} type="number" defaultValue={event.maxSplits ?? 2} />
+          <Select label={t('event.splitAssignmentRule')} options={SPLIT_RULE_OPTIONS} defaultValue={event.splitAssignmentRule ?? 'By Skill'} />
+          <Input label={t('event.minEntries')} type="number" defaultValue={event.minEntries ?? 10} />
+        </div>
+      </Card>
+
+      <Card>
+        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionSchedule')}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input label={t('event.registrationOpenAt')} type="datetime-local" defaultValue={event.registrationOpenAt} />
+          <Input label={t('event.registrationCloseAt')} type="datetime-local" defaultValue={event.registrationCloseAt} />
+          <Input label={t('event.cancelRegistrationDeadline')} type="datetime-local" defaultValue={event.cancelRegistrationDeadline ?? ''} />
+          <Input label={t('event.eventStartTime')} type="datetime-local" defaultValue={event.eventStartTime} />
         </div>
       </Card>
 
@@ -147,17 +247,112 @@ export function EventEditPage() {
             label={`${t('event.accessRequirements')} (${editLang === 'en' ? 'English' : '中文'})`}
             defaultValue={editLang === 'en' ? event.accessRequirements_en : event.accessRequirements_zh}
           />
-          <Textarea label={`${t('event.rules')} (${editLang === 'en' ? 'English' : '中文'})`} defaultValue={editLang === 'en' ? event.rules_en : event.rules_zh} />
-          <Textarea label={`${t('event.scoringRules')} (${editLang === 'en' ? 'English' : '中文'})`} defaultValue={editLang === 'en' ? event.scoringRules_en : event.scoringRules_zh} />
-          <Textarea label={`${t('event.resources')} (${editLang === 'en' ? 'English' : '中文'})`} defaultValue={editLang === 'en' ? event.resources_en : event.resources_zh} />
+          <Textarea
+            label={`${t('event.rules')} (${editLang === 'en' ? 'English' : '中文'})`}
+            defaultValue={editLang === 'en' ? event.rules_en : event.rules_zh}
+          />
+          <Textarea
+            label={`${t('event.scoringRules')} (${editLang === 'en' ? 'English' : '中文'})`}
+            defaultValue={editLang === 'en' ? event.scoringRules_en : event.scoringRules_zh}
+          />
         </div>
       </Card>
 
-      {/* Cancel Event Modal */}
+      <Card>
+        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.scoringTable')}</h3>
+        <div className="space-y-3">
+          <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 px-1">
+            <div className="col-span-2">{t('event.position')}</div>
+            <div className="col-span-2">{t('event.points')}</div>
+            <div className="col-span-3">{t('event.noteEn')}</div>
+            <div className="col-span-3">{t('event.noteZh')}</div>
+            <div className="col-span-2" />
+          </div>
+          {scoringRows.map((row, idx) => (
+            <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+              <div className="col-span-2">
+                <Input
+                  type="number"
+                  value={row.position}
+                  onChange={(e) => updateScoringRow(idx, 'position', Number(e.target.value))}
+                />
+              </div>
+              <div className="col-span-2">
+                <Input
+                  type="number"
+                  value={row.points}
+                  onChange={(e) => updateScoringRow(idx, 'points', Number(e.target.value))}
+                />
+              </div>
+              <div className="col-span-3">
+                <Input
+                  value={row.note_en ?? ''}
+                  onChange={(e) => updateScoringRow(idx, 'note_en', e.target.value)}
+                />
+              </div>
+              <div className="col-span-3">
+                <Input
+                  value={row.note_zh ?? ''}
+                  onChange={(e) => updateScoringRow(idx, 'note_zh', e.target.value)}
+                />
+              </div>
+              <div className="col-span-2 flex justify-end">
+                <Button variant="ghost" size="sm" onClick={() => removeScoringRow(idx)}>
+                  <Trash2 className="w-4 h-4 text-red-500" />
+                </Button>
+              </div>
+            </div>
+          ))}
+          <Button variant="secondary" size="sm" onClick={addScoringRow}>
+            <Plus className="w-4 h-4 mr-1" />
+            {t('event.addRow')}
+          </Button>
+        </div>
+      </Card>
+
+      <Card>
+        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionServerStreaming')}</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input label={t('event.serverInfo')} defaultValue={event.serverInfo ?? ''} />
+          <Input label={t('event.serverPassword')} defaultValue={event.serverPassword ?? ''} />
+          <Input label={t('event.serverJoinLink')} defaultValue={event.serverJoinLink ?? ''} />
+          <Input label={t('event.streamUrl')} defaultValue={event.streamUrl ?? ''} />
+          <Input label={t('event.vodUrl')} defaultValue={event.vodUrl ?? ''} />
+        </div>
+      </Card>
+
+      <Card key={`resources-${editLang}`}>
+        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.resources')}</h3>
+        <Textarea
+          label={`${t('event.resources')} (${editLang === 'en' ? 'English' : '中文'})`}
+          defaultValue={editLang === 'en' ? event.resources_en : event.resources_zh}
+          placeholder="Download links, installation instructions..."
+        />
+      </Card>
+
+      <Card key={`conditions-${editLang}`}>
+        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.conditions')}</h3>
+        <Textarea
+          label={`${t('event.conditions')} (${editLang === 'en' ? 'English' : '中文'})`}
+          defaultValue={editLang === 'en' ? event.conditions_en : event.conditions_zh}
+        />
+      </Card>
+
       <Modal isOpen={showCancel} onClose={() => setShowCancel(false)} title={t('event.cancelEvent')} size="md">
         <div className="space-y-4">
           <p className="text-sm text-gray-600">Are you sure you want to cancel this event? This will notify all {event.currentRegistrations} registered drivers.</p>
-          <Textarea label="Cancel Reason (English)" value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder="Reason for cancellation..." />
+          <Textarea
+            label={`${t('event.cancelReason')} (English)`}
+            value={cancelReason_en}
+            onChange={(e) => setCancelReason_en(e.target.value)}
+            placeholder="Reason for cancellation..."
+          />
+          <Textarea
+            label={`${t('event.cancelReason')} (中文)`}
+            value={cancelReason_zh}
+            onChange={(e) => setCancelReason_zh(e.target.value)}
+            placeholder="取消原因..."
+          />
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setShowCancel(false)}>{t('common.cancel')}</Button>
             <Button variant="danger">{t('event.cancelEvent')}</Button>

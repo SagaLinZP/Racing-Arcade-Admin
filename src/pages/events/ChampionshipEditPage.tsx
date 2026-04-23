@@ -25,12 +25,18 @@ const GAME_OPTIONS = [
   { value: 'ETS2', label: 'ETS2 PC' },
 ]
 
-const CAR_CLASS_OPTIONS = [
-  { value: 'GT3', label: 'GT3' },
-  { value: 'GT4', label: 'GT4' },
-  { value: 'Formula', label: 'Formula' },
-  { value: 'Porsche Cup', label: 'Porsche Cup' },
-  { value: 'LMP2', label: 'LMP2' },
+const SPLIT_RULE_OPTIONS = [
+  { value: 'By Skill', label: '按实力 / By Skill' },
+  { value: 'Random', label: '随机 / Random' },
+  { value: 'Manual', label: '手动 / Manual' },
+  { value: 'First Come First Served', label: '先到先得 / First Come First Served' },
+]
+
+const REGION_OPTIONS = [
+  { value: 'CN', label: 'China (CN)' },
+  { value: 'AP', label: 'Asia Pacific (AP)' },
+  { value: 'AM', label: 'Americas (AM)' },
+  { value: 'EU', label: 'Europe & Africa (EU)' },
 ]
 
 type TabKey = 'info' | 'events'
@@ -45,10 +51,17 @@ export function ChampionshipEditPage() {
   const [editLang, setEditLang] = useState<'en' | 'zh'>('en')
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
   const [showCancelEvent, setShowCancelEvent] = useState<string | null>(null)
-  const [cancelReason, setCancelReason] = useState('')
+  const [cancelReason_en, setCancelReason_en] = useState('')
+  const [cancelReason_zh, setCancelReason_zh] = useState('')
 
   const ch = useMemo(() => championships.find(c => c.id === id), [id])
   const chEvents = useMemo(() => ch ? allEvents.filter(e => ch.eventIds.includes(e.id)) : [], [ch])
+
+  const [scoringRows, setScoringRows] = useState(
+    ch?.scoringTable?.length
+      ? ch.scoringTable
+      : [{ position: 1, points: 25, note_en: '', note_zh: '' }]
+  )
 
   if (!ch) return <div className="text-center py-12 text-gray-500">Championship not found</div>
 
@@ -61,10 +74,8 @@ export function ChampionshipEditPage() {
 
   return (
     <>
-      {/* Sticky header */}
       <div className="sticky top-0 z-10 w-full bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-5xl mx-auto px-6 pt-5 pb-0">
-          {/* Row 1: title + actions */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
               <Button variant="ghost" onClick={() => navigate('/championships')}>
@@ -96,7 +107,6 @@ export function ChampionshipEditPage() {
             </div>
           </div>
 
-          {/* Row 2: tabs */}
           <div className="flex gap-6">
             {tabs.map(tb => (
               <button
@@ -121,38 +131,175 @@ export function ChampionshipEditPage() {
         </div>
       </div>
 
-      {/* Tab content */}
       {tab === 'info' && (
         <div className="max-w-5xl mx-auto p-6 space-y-6" key={editLang}>
           <Card>
             <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('championship.tabInfo')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input label={`${t('championship.championshipName')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? ch.name_en : ch.name_zh} />
-              <Select label={t('event.game')} options={GAME_OPTIONS} value={ch.game} />
-              <Select label={t('event.carClass')} options={CAR_CLASS_OPTIONS} value={ch.carClass} />
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('event.coverImage')}</label>
+                <div className="flex items-center gap-3">
+                  <input type="file" accept="image/*" className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                  <span className="text-xs text-gray-400">或</span>
+                  <Input className="flex-1" placeholder="粘贴图片链接..." defaultValue={ch.coverImage} />
+                </div>
+                {ch.coverImage && <img src={ch.coverImage} alt="cover" className="mt-2 h-20 w-auto rounded border" />}
+              </div>
+              <div className="md:col-span-2">
+                <Textarea label={`${t('common.description')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? ch.description_en : ch.description_zh} />
+              </div>
+              <Select label={t('event.game')} options={GAME_OPTIONS} defaultValue={ch.game} />
+              <Input label={t('event.carClass')} value={ch.carClass} />
               <Input label={t('event.streamUrl')} defaultValue={ch.streamUrl} />
-              <div className="md:col-span-2"><Textarea label={`Description (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? ch.description_en : ch.description_zh} /></div>
+            </div>
+          </Card>
+
+          <Card>
+            <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('common.regions')}</h3>
+            <div className="flex flex-wrap gap-6">
+              {REGION_OPTIONS.map(opt => (
+                <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    defaultChecked={ch.regions.includes(opt.value as 'CN' | 'AP' | 'AM' | 'EU')}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">{opt.label}</span>
+                </label>
+              ))}
             </div>
           </Card>
 
           <Card>
             <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionRaceFormat')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Input label={t('event.weather')} value={ch.weather} />
+              <div className="flex items-end gap-2 pb-0.5">
+                <label className="flex items-center gap-2 cursor-pointer mb-0.5">
+                  <input
+                    type="checkbox"
+                    defaultChecked={ch.hasPitstop}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">{t('event.hasPitstop')}</span>
+                </label>
+              </div>
+              <div />
               <Input label={t('event.practiceDuration')} type="number" defaultValue={ch.practiceDuration} />
               <Input label={t('event.qualifyingDuration')} type="number" defaultValue={ch.qualifyingDuration} />
               <div className="grid grid-cols-2 gap-2">
                 <Input label={t('event.raceDuration')} type="number" defaultValue={ch.raceDuration} />
-                <Select label={t('event.raceDurationType')} options={[{ value: 'time', label: t('event.minutes') }, { value: 'laps', label: t('event.laps') }]} value={ch.raceDurationType} />
+                <Select label={t('event.raceDurationType')} options={[{ value: 'time', label: t('event.timeBased') }, { value: 'laps', label: t('event.lapsBased') }]} defaultValue={ch.raceDurationType} />
               </div>
             </div>
           </Card>
 
           <Card>
-            <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionSplitScoring')}</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionSplitConfig')}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    defaultChecked={ch.enableMultiSplit}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">{t('event.enableMultiSplit')}</span>
+                </label>
+              </div>
+              <div />
               <Input label={t('event.maxEntriesPerSplit')} type="number" defaultValue={ch.maxEntriesPerSplit} />
               <Input label={t('event.maxSplits')} type="number" defaultValue={ch.maxSplits} />
+              <Select label={t('event.splitAssignmentRule')} options={SPLIT_RULE_OPTIONS} defaultValue={ch.splitAssignmentRule} />
               <Input label={t('event.minEntries')} type="number" defaultValue={ch.minEntries} />
+            </div>
+          </Card>
+
+          <Card>
+            <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionScoringTable')}</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead>
+                  <tr>
+                    <th className="px-3 py-2 text-left font-medium text-gray-500">{t('event.position')}</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-500">{t('event.points')}</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-500">{t('event.note')} (EN)</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-500">{t('event.note')} (中文)</th>
+                    <th className="px-3 py-2 w-12"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {scoringRows.map((row, idx) => (
+                    <tr key={idx}>
+                      <td className="px-3 py-1.5">
+                        <Input
+                          type="number"
+                          defaultValue={row.position}
+                          className="w-20"
+                          onChange={(e) => {
+                            const next = [...scoringRows]
+                            next[idx] = { ...next[idx], position: Number(e.target.value) }
+                            setScoringRows(next)
+                          }}
+                        />
+                      </td>
+                      <td className="px-3 py-1.5">
+                        <Input
+                          type="number"
+                          defaultValue={row.points}
+                          className="w-20"
+                          onChange={(e) => {
+                            const next = [...scoringRows]
+                            next[idx] = { ...next[idx], points: Number(e.target.value) }
+                            setScoringRows(next)
+                          }}
+                        />
+                      </td>
+                      <td className="px-3 py-1.5">
+                        <Input
+                          defaultValue={row.note_en || ''}
+                          onChange={(e) => {
+                            const next = [...scoringRows]
+                            next[idx] = { ...next[idx], note_en: e.target.value }
+                            setScoringRows(next)
+                          }}
+                        />
+                      </td>
+                      <td className="px-3 py-1.5">
+                        <Input
+                          defaultValue={row.note_zh || ''}
+                          onChange={(e) => {
+                            const next = [...scoringRows]
+                            next[idx] = { ...next[idx], note_zh: e.target.value }
+                            setScoringRows(next)
+                          }}
+                        />
+                      </td>
+                      <td className="px-3 py-1.5">
+                        {scoringRows.length > 1 && (
+                          <button
+                            className="text-red-500 hover:text-red-700 text-xs"
+                            onClick={() => setScoringRows(scoringRows.filter((_, i) => i !== idx))}
+                          >
+                            {t('event.removeRow')}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-3">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setScoringRows([...scoringRows, { position: scoringRows.length + 1, points: 0, note_en: '', note_zh: '' }])}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                {t('event.addRow')}
+              </Button>
             </div>
           </Card>
 
@@ -166,12 +313,13 @@ export function ChampionshipEditPage() {
               <Textarea label={`${t('event.rules')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? ch.rules_en : ch.rules_zh} />
               <Textarea label={`${t('event.scoringRules')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? ch.scoringRules_en : ch.scoringRules_zh} />
               <Textarea label={`${t('championship.progressionRules')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? ch.progressionRules_en : ch.progressionRules_zh} />
+              <Input label={t('event.cancelRegistrationDeadlineOffset')} defaultValue={ch.cancelRegistrationDeadlineOffset} />
             </div>
           </Card>
 
           <Card>
             <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.resources')}</h3>
-            <Textarea label={`Resources (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? ch.resources_en : ch.resources_zh} />
+            <Textarea label={`${t('event.resources')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? ch.resources_en : ch.resources_zh} />
           </Card>
         </div>
       )}
@@ -224,7 +372,7 @@ export function ChampionshipEditPage() {
                             <h4 className="text-sm font-medium text-gray-700">{t('event.sectionEventDetails')}</h4>
                             <div className="flex gap-1">
                               {e.status !== 'Cancelled' && e.status !== 'Completed' && (
-                                <Button variant="danger" size="sm" onClick={() => { setShowCancelEvent(e.id); setCancelReason('') }}>
+                                <Button variant="danger" size="sm" onClick={() => { setShowCancelEvent(e.id); setCancelReason_en(''); setCancelReason_zh('') }}>
                                   <XCircle className="w-3.5 h-3.5 mr-1" />
                                   Cancel
                                 </Button>
@@ -329,7 +477,8 @@ export function ChampionshipEditPage() {
           return (
             <div className="space-y-4">
               <p className="text-sm text-gray-600">{t('event.cancelSubEventQuestion')} <span className="font-medium">{getName(evt)}</span>. {t('event.cancelSubEventNotify')} ({evt.currentRegistrations} {t('event.registered')})</p>
-              <Textarea label={t('event.cancelSubEventReason')} value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder="Reason for cancellation..." />
+              <Textarea label={t('event.cancelReasonEn')} value={cancelReason_en} onChange={(e) => setCancelReason_en(e.target.value)} placeholder="Reason for cancellation (English)..." />
+              <Textarea label={t('event.cancelReasonZh')} value={cancelReason_zh} onChange={(e) => setCancelReason_zh(e.target.value)} placeholder="取消原因（中文）..." />
               <div className="flex justify-end gap-2">
                 <Button variant="secondary" onClick={() => setShowCancelEvent(null)}>{t('common.cancel')}</Button>
                 <Button variant="danger">{t('event.confirmCancelSubEvent')}</Button>

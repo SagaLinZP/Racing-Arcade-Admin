@@ -19,20 +19,6 @@ const GAME_OPTIONS = [
   { value: 'ETS2', label: 'ETS2 PC' },
 ]
 
-const CAR_CLASS_OPTIONS = [
-  { value: 'GT3', label: 'GT3' },
-  { value: 'GT4', label: 'GT4' },
-  { value: 'Formula', label: 'Formula' },
-  { value: 'Porsche Cup', label: 'Porsche Cup' },
-  { value: 'LMP2', label: 'LMP2' },
-]
-
-const WEATHER_OPTIONS = [
-  { value: 'Clear', label: 'Clear' },
-  { value: 'Overcast', label: 'Overcast' },
-  { value: 'Dynamic', label: 'Dynamic' },
-]
-
 const REGION_OPTIONS = [
   { value: 'CN', label: 'China (CN)' },
   { value: 'AP', label: 'Asia Pacific (AP)' },
@@ -41,10 +27,10 @@ const REGION_OPTIONS = [
 ]
 
 const SPLIT_RULE_OPTIONS = [
-  { value: 'By Skill', label: 'By Skill' },
-  { value: 'Random', label: 'Random' },
-  { value: 'Manual', label: 'Manual' },
-  { value: 'First Come First Served', label: 'First Come First Served' },
+  { value: 'By Skill', label: '按实力 / By Skill' },
+  { value: 'Random', label: '随机 / Random' },
+  { value: 'Manual', label: '手动 / Manual' },
+  { value: 'First Come First Served', label: '先到先得 / First Come First Served' },
 ]
 
 interface SubEventDraft {
@@ -83,6 +69,7 @@ export function ChampionshipCreatePage() {
   const [editLang, setEditLang] = useState<'en' | 'zh'>('en')
   const [subEvents, setSubEvents] = useState<SubEventDraft[]>([])
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null)
+  const [scoringRows, setScoringRows] = useState([{ position: 1, points: 25, note_en: '', note_zh: '' }])
 
   const addSubEvent = () => {
     const next = [...subEvents, emptySubEvent()]
@@ -96,6 +83,16 @@ export function ChampionshipCreatePage() {
   }
   const updateSubEvent = (idx: number, field: string, value: string) => {
     setSubEvents(prev => prev.map((se, i) => i === idx ? { ...se, [field]: value } : se))
+  }
+
+  const addScoringRow = () => {
+    setScoringRows(prev => [...prev, { position: prev.length + 1, points: 0, note_en: '', note_zh: '' }])
+  }
+  const removeScoringRow = (idx: number) => {
+    setScoringRows(prev => prev.filter((_, i) => i !== idx).map((row, i) => ({ ...row, position: i + 1 })))
+  }
+  const updateScoringRow = (idx: number, field: string, value: string | number) => {
+    setScoringRows(prev => prev.map((row, i) => i === idx ? { ...row, [field]: value } : row))
   }
 
   return (
@@ -133,8 +130,17 @@ export function ChampionshipCreatePage() {
         <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('championship.tabInfo')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input label={`${t('championship.championshipName')} (${editLang === 'en' ? 'EN' : '中文'})`} />
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('event.coverImage')}</label>
+            <div className="flex items-center gap-3">
+              <input type="file" accept="image/*" className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+              <span className="text-xs text-gray-400">或</span>
+              <Input className="flex-1" placeholder="粘贴图片链接..." />
+            </div>
+          </div>
+          <Input label={t('event.carList')} placeholder={t('event.carListPlaceholder')} />
           <Select label={t('event.game')} options={GAME_OPTIONS} />
-          <Select label={t('event.carClass')} options={CAR_CLASS_OPTIONS} />
+          <Input label={t('event.carClass')} />
           <Input label={t('event.streamUrl')} />
           <div className="md:col-span-2"><Textarea label={`${t('common.description')} (${editLang === 'en' ? 'EN' : '中文'})`} /></div>
         </div>
@@ -159,9 +165,9 @@ export function ChampionshipCreatePage() {
           <Input label={t('event.qualifyingDuration')} type="number" defaultValue={15} />
           <div className="grid grid-cols-2 gap-2">
             <Input label={t('event.raceDuration')} type="number" defaultValue={60} />
-            <Select label={t('event.raceDurationType')} options={[{ value: 'time', label: t('event.minutes') }, { value: 'laps', label: t('event.laps') }]} />
+            <Select label={t('event.raceDurationType')} options={[{ value: 'time', label: t('event.timeBased') }, { value: 'laps', label: t('event.lapsBased') }]} />
           </div>
-          <Select label={t('event.weather')} options={WEATHER_OPTIONS} />
+          <Input label={t('event.weather')} />
           <div className="flex items-end">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" defaultChecked className="rounded border-gray-300" />
@@ -178,6 +184,79 @@ export function ChampionshipCreatePage() {
           <Input label={t('event.maxSplits')} type="number" defaultValue={2} />
           <Input label={t('event.minEntries')} type="number" defaultValue={10} />
           <Select label={t('event.splitAssignmentRule')} options={SPLIT_RULE_OPTIONS} />
+          <div className="flex items-end">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" className="rounded border-gray-300" />
+              <span className="text-sm text-gray-700">{t('event.enableMultiSplit')}</span>
+            </label>
+          </div>
+          <Input label={t('event.cancelRegistrationDeadlineOffset')} type="number" />
+        </div>
+      </Card>
+
+      <Card>
+        <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionScoringTable')}</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-gray-500">
+                <th className="py-2 pr-3 font-medium w-24">{t('event.position')}</th>
+                <th className="py-2 pr-3 font-medium w-24">{t('event.points')}</th>
+                <th className="py-2 pr-3 font-medium">{t('event.noteEn')}</th>
+                <th className="py-2 pr-3 font-medium">{t('event.noteZh')}</th>
+                <th className="py-2 w-10" />
+              </tr>
+            </thead>
+            <tbody>
+              {scoringRows.map((row, idx) => (
+                <tr key={idx} className="border-b border-gray-100">
+                  <td className="py-2 pr-3">
+                    <input
+                      type="number"
+                      className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                      value={row.position}
+                      readOnly
+                    />
+                  </td>
+                  <td className="py-2 pr-3">
+                    <input
+                      type="number"
+                      className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                      value={row.points}
+                      onChange={(e) => updateScoringRow(idx, 'points', Number(e.target.value))}
+                    />
+                  </td>
+                  <td className="py-2 pr-3">
+                    <input
+                      type="text"
+                      className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                      value={row.note_en}
+                      onChange={(e) => updateScoringRow(idx, 'note_en', e.target.value)}
+                    />
+                  </td>
+                  <td className="py-2 pr-3">
+                    <input
+                      type="text"
+                      className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                      value={row.note_zh}
+                      onChange={(e) => updateScoringRow(idx, 'note_zh', e.target.value)}
+                    />
+                  </td>
+                  <td className="py-2">
+                    <Button variant="ghost" size="sm" onClick={() => removeScoringRow(idx)}>
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-3">
+          <Button variant="secondary" size="sm" onClick={addScoringRow}>
+            <Plus className="w-4 h-4 mr-1" />
+            {t('event.addScoringRow')}
+          </Button>
         </div>
       </Card>
 
@@ -196,7 +275,6 @@ export function ChampionshipCreatePage() {
         <Textarea label={`Resources (${editLang === 'en' ? 'EN' : '中文'})`} />
       </Card>
 
-      {/* Sub-Events */}
       <Card padding={false}>
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <div>
