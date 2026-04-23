@@ -3,7 +3,6 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '@/hooks/useAppStore'
 import {
-  LayoutDashboard,
   Calendar,
   Trophy,
   ClipboardList,
@@ -23,9 +22,8 @@ import { cn } from '@/lib/utils'
 import { setScrollContainer } from '@/lib/scrollContainer'
 
 const navItems = [
-  { path: '/', icon: LayoutDashboard, labelKey: 'admin.dashboard' },
-  { path: '/events', icon: Calendar, labelKey: 'admin.events' },
   { path: '/championships', icon: Trophy, labelKey: 'admin.championships' },
+  { path: '/events', icon: Calendar, labelKey: 'admin.events' },
   { path: '/templates', icon: FileText, labelKey: 'admin.templates' },
   { path: '/results', icon: ClipboardList, labelKey: 'admin.results' },
   { path: '/protests', icon: AlertTriangle, labelKey: 'admin.protests' },
@@ -48,9 +46,7 @@ export function AdminLayout() {
     i18n.changeLanguage(newLang)
   }
 
-  const breadcrumbs = location.pathname === '/'
-    ? [t('admin.dashboard')]
-    : location.pathname.split('/').filter(Boolean).map(p => p.charAt(0).toUpperCase() + p.slice(1))
+  const breadcrumbs = location.pathname.split('/').filter(Boolean).map(p => p.charAt(0).toUpperCase() + p.slice(1))
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">

@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { AppContext, defaultState, type AppState } from './hooks/useAppStore'
 import { AdminLayout } from './components/layout/AdminLayout'
 import { LoginPage } from './pages/LoginPage'
-import { DashboardPage } from './pages/DashboardPage'
 import { EventListPage } from './pages/events/EventListPage'
 import { EventCreatePage } from './pages/events/EventCreatePage'
 import { EventEditPage } from './pages/events/EventEditPage'
@@ -47,7 +46,7 @@ export default function App() {
             <Route path="*" element={<LoginPage />} />
           ) : (
             <Route element={<AdminLayout />}>
-              <Route path="/" element={<DashboardPage />} />
+              <Route path="/" element={<ChampionshipListPage />} />
               <Route path="/events" element={<EventListPage />} />
               <Route path="/events/create" element={<EventCreatePage />} />
               <Route path="/events/:id/edit" element={<EventEditPage />} />

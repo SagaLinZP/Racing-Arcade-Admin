@@ -10,7 +10,7 @@ import { Select } from '@/components/ui/Select'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { DataTable } from '@/components/ui/DataTable'
 import type { SimEvent } from '@/data/events'
-import { Plus, Search, Pencil, Eye, Copy } from 'lucide-react'
+import { Plus, Pencil, Eye, Copy, Ban, Trash2 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 const GAME_OPTIONS = [
@@ -42,11 +42,15 @@ export function EventListPage() {
   const [search, setSearch] = useState('')
   const [gameFilter, setGameFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [cancelTarget, setCancelTarget] = useState<SimEvent | null>(null)
+  const [cancelReason, setCancelReason] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<SimEvent | null>(null)
 
   const standaloneEvents = useMemo(() => events.filter(e => !e.championshipId), [])
+  const [visibleEvents, setVisibleEvents] = useState(standaloneEvents)
 
   const filtered = useMemo(() => {
-    return standaloneEvents.filter(e => {
+    return visibleEvents.filter(e => {
       if (search) {
         const q = search.toLowerCase()
         const name = lang === 'zh' ? e.name_zh : e.name_en
@@ -56,9 +60,24 @@ export function EventListPage() {
       if (statusFilter && e.status !== statusFilter) return false
       return true
     })
-  }, [standaloneEvents, search, gameFilter, statusFilter, lang])
+  }, [visibleEvents, search, gameFilter, statusFilter, lang])
 
   const getName = (e: SimEvent) => lang === 'zh' ? e.name_zh : e.name_en
+
+  const handleCancel = () => {
+    if (cancelTarget) {
+      cancelTarget.status = 'Cancelled'
+      setCancelTarget(null)
+      setCancelReason('')
+    }
+  }
+
+  const handleDelete = () => {
+    if (deleteTarget) {
+      setVisibleEvents(prev => prev.filter(e => e.id !== deleteTarget.id))
+      setDeleteTarget(null)
+    }
+  }
 
   const columns = [
     {
@@ -105,6 +124,14 @@ export function EventListPage() {
           <Button variant="ghost" size="sm" onClick={(ev) => { ev.stopPropagation(); navigate(`/events/create?from=${e.id}`) }}>
             <Copy className="w-3.5 h-3.5" />
           </Button>
+          {e.status !== 'Cancelled' && e.status !== 'Completed' && (
+            <Button variant="ghost" size="sm" onClick={(ev) => { ev.stopPropagation(); setCancelTarget(e); setCancelReason('') }}>
+              <Ban className="w-3.5 h-3.5 text-red-500" />
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={(ev) => { ev.stopPropagation(); setDeleteTarget(e) }}>
+            <Trash2 className="w-3.5 h-3.5 text-red-500" />
+          </Button>
         </div>
       ),
     },
@@ -132,7 +159,7 @@ export function EventListPage() {
             <Select options={STATUS_OPTIONS} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} />
           </div>
           <div className="text-sm text-gray-500 flex items-center">
-            {filtered.length} standalone events
+            {filtered.length} {lang === 'zh' ? '个独立赛事' : 'standalone events'}
           </div>
         </div>
 
@@ -140,8 +167,48 @@ export function EventListPage() {
           columns={columns}
           data={filtered}
           keyExtractor={(e) => e.id}
+          onRowClick={(e) => navigate(`/events/${e.id}/edit`)}
         />
       </Card>
+
+      {cancelTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setCancelTarget(null)}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(ev) => ev.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('event.cancelEvent')}</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              {lang === 'zh' ? '确定取消赛事' : 'Cancel event'} 「{getName(cancelTarget)}」？
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('event.cancelReason')}</label>
+              <Input value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setCancelTarget(null)}>{t('common.cancel')}</Button>
+              <Button variant="primary" className="bg-red-600 hover:bg-red-700" onClick={handleCancel}>
+                {t('event.cancelEvent')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setDeleteTarget(null)}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6" onClick={(ev) => ev.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('event.deleteEvent')}</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              {t('event.deleteEventConfirm')}
+            </p>
+            <p className="text-sm font-medium text-gray-800 mb-4">「{getName(deleteTarget)}」</p>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setDeleteTarget(null)}>{t('common.cancel')}</Button>
+              <Button variant="primary" className="bg-red-600 hover:bg-red-700" onClick={handleDelete}>
+                {t('common.delete')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
