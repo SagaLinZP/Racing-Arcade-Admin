@@ -13,6 +13,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ArrowLeft, Save, Send, XCircle, Plus, Trash2 } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { cn } from '@/lib/utils'
+import { useManagedOptions } from '@/hooks/useManagedOptions'
 
 const GAME_OPTIONS = [
   { value: 'ACC', label: 'ACC PC' },
@@ -42,6 +43,8 @@ export function EventEditPage() {
   const { t } = useTranslation()
   const { state } = useApp()
   const lang = state.language
+  const weatherOptions = useManagedOptions('weather', lang)
+  const carClassOptions = useManagedOptions('carClass', lang)
   const navigate = useNavigate()
   const { id } = useParams()
   const [editLang, setEditLang] = useState<'en' | 'zh'>('en')
@@ -146,13 +149,12 @@ export function EventEditPage() {
             defaultValue={editLang === 'en' ? event.name_en : event.name_zh}
           />
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('event.coverImage')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('event.coverImage')} ({editLang === 'en' ? 'English' : '中文'})</label>
             <div className="flex items-center gap-3">
               <input type="file" accept="image/*" className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
               <span className="text-xs text-gray-400">或</span>
-              <Input className="flex-1" placeholder="粘贴图片链接..." defaultValue={event.coverImage} />
+              <Input className="flex-1" placeholder="粘贴图片链接..." defaultValue={editLang === 'en' ? (event as any).coverImage_en || '' : (event as any).coverImage_zh || ''} />
             </div>
-            {event.coverImage && <img src={event.coverImage} alt="cover" className="mt-2 h-20 w-auto rounded border" />}
           </div>
           <div className="md:col-span-2">
             <Textarea
@@ -169,8 +171,8 @@ export function EventEditPage() {
           <Select label={t('event.game')} options={GAME_OPTIONS} defaultValue={event.game} />
           <Input label={t('event.track')} defaultValue={event.track} />
           <Input label={t('event.trackLayout')} defaultValue={event.trackLayout ?? ''} />
-          <Input label={t('event.carClass')} defaultValue={event.carClass} />
-          <Input label={t('event.weather')} defaultValue={event.weather ?? 'Clear'} />
+          <Select label={t('event.carClass')} options={carClassOptions} defaultValue={event.carClass} />
+          <Select label={t('event.weather')} options={weatherOptions} defaultValue={event.weather ?? 'Clear'} />
           <div className="flex items-end">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" defaultChecked={event.hasPitstop} className="rounded border-gray-300" />
@@ -261,15 +263,14 @@ export function EventEditPage() {
       <Card>
         <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.scoringTable')}</h3>
         <div className="space-y-3">
-          <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 px-1">
+          <div className="grid grid-cols-10 gap-2 text-xs font-medium text-gray-500 px-1">
             <div className="col-span-2">{t('event.position')}</div>
             <div className="col-span-2">{t('event.points')}</div>
-            <div className="col-span-3">{t('event.noteEn')}</div>
-            <div className="col-span-3">{t('event.noteZh')}</div>
+            <div className="col-span-4">{t('event.note')} ({editLang === 'en' ? 'EN' : '中文'})</div>
             <div className="col-span-2" />
           </div>
           {scoringRows.map((row, idx) => (
-            <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+            <div key={idx} className="grid grid-cols-10 gap-2 items-center">
               <div className="col-span-2">
                 <Input
                   type="number"
@@ -284,16 +285,10 @@ export function EventEditPage() {
                   onChange={(e) => updateScoringRow(idx, 'points', Number(e.target.value))}
                 />
               </div>
-              <div className="col-span-3">
+              <div className="col-span-4">
                 <Input
-                  value={row.note_en ?? ''}
-                  onChange={(e) => updateScoringRow(idx, 'note_en', e.target.value)}
-                />
-              </div>
-              <div className="col-span-3">
-                <Input
-                  value={row.note_zh ?? ''}
-                  onChange={(e) => updateScoringRow(idx, 'note_zh', e.target.value)}
+                  value={editLang === 'en' ? (row.note_en ?? '') : (row.note_zh ?? '')}
+                  onChange={(e) => updateScoringRow(idx, editLang === 'en' ? 'note_en' : 'note_zh', e.target.value)}
                 />
               </div>
               <div className="col-span-2 flex justify-end">

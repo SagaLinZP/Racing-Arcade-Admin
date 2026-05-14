@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '@/hooks/useAppStore'
+import { useManagedOptions } from '@/hooks/useManagedOptions'
 import { championships } from '@/data/championships'
 import { events as allEvents } from '@/data/events'
 import { Card } from '@/components/ui/Card'
@@ -45,6 +46,8 @@ export function ChampionshipEditPage() {
   const { t } = useTranslation()
   const { state } = useApp()
   const lang = state.language
+  const weatherOptions = useManagedOptions('weather', lang)
+  const carClassOptions = useManagedOptions('carClass', lang)
   const navigate = useNavigate()
   const { id } = useParams()
   const [tab, setTab] = useState<TabKey>('info')
@@ -138,19 +141,18 @@ export function ChampionshipEditPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input label={`${t('championship.championshipName')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? ch.name_en : ch.name_zh} />
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('event.coverImage')}</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('event.coverImage')} ({editLang === 'en' ? 'English' : '中文'})</label>
                 <div className="flex items-center gap-3">
                   <input type="file" accept="image/*" className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
                   <span className="text-xs text-gray-400">或</span>
-                  <Input className="flex-1" placeholder="粘贴图片链接..." defaultValue={ch.coverImage} />
+                  <Input className="flex-1" placeholder="粘贴图片链接..." defaultValue={editLang === 'en' ? (ch as any).coverImage_en || ch.coverImage : (ch as any).coverImage_zh || ch.coverImage} />
                 </div>
-                {ch.coverImage && <img src={ch.coverImage} alt="cover" className="mt-2 h-20 w-auto rounded border" />}
               </div>
               <div className="md:col-span-2">
                 <Textarea label={`${t('common.description')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? ch.description_en : ch.description_zh} />
               </div>
               <Select label={t('event.game')} options={GAME_OPTIONS} defaultValue={ch.game} />
-              <Input label={t('event.carClass')} value={ch.carClass} />
+              <Select label={t('event.carClass')} options={carClassOptions} defaultValue={ch.carClass} />
               <Input label={t('event.streamUrl')} defaultValue={ch.streamUrl} />
             </div>
           </Card>
@@ -174,7 +176,7 @@ export function ChampionshipEditPage() {
           <Card>
             <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionRaceFormat')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Input label={t('event.weather')} value={ch.weather} />
+              <Select label={t('event.weather')} options={weatherOptions} defaultValue={ch.weather} />
               <div className="flex items-end gap-2 pb-0.5">
                 <label className="flex items-center gap-2 cursor-pointer mb-0.5">
                   <input
@@ -224,8 +226,7 @@ export function ChampionshipEditPage() {
                   <tr>
                     <th className="px-3 py-2 text-left font-medium text-gray-500">{t('event.position')}</th>
                     <th className="px-3 py-2 text-left font-medium text-gray-500">{t('event.points')}</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-500">{t('event.note')} (EN)</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-500">{t('event.note')} (中文)</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-500">{t('event.note')} ({editLang === 'en' ? 'EN' : '中文'})</th>
                     <th className="px-3 py-2 w-12"></th>
                   </tr>
                 </thead>
@@ -258,20 +259,10 @@ export function ChampionshipEditPage() {
                       </td>
                       <td className="px-3 py-1.5">
                         <Input
-                          defaultValue={row.note_en || ''}
+                          defaultValue={editLang === 'en' ? (row.note_en || '') : (row.note_zh || '')}
                           onChange={(e) => {
                             const next = [...scoringRows]
-                            next[idx] = { ...next[idx], note_en: e.target.value }
-                            setScoringRows(next)
-                          }}
-                        />
-                      </td>
-                      <td className="px-3 py-1.5">
-                        <Input
-                          defaultValue={row.note_zh || ''}
-                          onChange={(e) => {
-                            const next = [...scoringRows]
-                            next[idx] = { ...next[idx], note_zh: e.target.value }
+                            next[idx] = { ...next[idx], [editLang === 'en' ? 'note_en' : 'note_zh']: e.target.value }
                             setScoringRows(next)
                           }}
                         />

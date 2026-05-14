@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   Globe,
   LogOut,
+  Settings2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { setScrollContainer } from '@/lib/scrollContainer'
@@ -32,6 +33,7 @@ const navItems = [
   { path: '/teams', icon: Shield, labelKey: 'admin.teams' },
   { path: '/notifications', icon: Bell, labelKey: 'admin.notifications' },
   { path: '/devices', icon: Monitor, labelKey: 'admin.devices' },
+  { path: '/settings', icon: Settings2, labelKey: 'admin.settings' },
 ]
 
 export function AdminLayout() {

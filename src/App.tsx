@@ -22,6 +22,8 @@ import { TeamListPage } from './pages/teams/TeamListPage'
 import { TeamDetailPage } from './pages/teams/TeamDetailPage'
 import { NotificationPage } from './pages/notifications/NotificationPage'
 import { DeviceListPage } from './pages/devices/DeviceListPage'
+import { OptionsPage } from './pages/admin/OptionsPage'
+import { SettingsPage } from './pages/admin/SettingsPage'
 import './i18n'
 
 import { scrollToTop } from './lib/scrollContainer'
@@ -67,6 +69,8 @@ export default function App() {
               <Route path="/teams/:id" element={<TeamDetailPage />} />
               <Route path="/notifications" element={<NotificationPage />} />
               <Route path="/devices" element={<DeviceListPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/settings/options" element={<OptionsPage />} />
             </Route>
           )}
         </Routes>

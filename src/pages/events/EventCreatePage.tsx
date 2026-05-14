@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { eventTemplates } from '@/data/admin'
 import { ArrowLeft, Save, Send, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useManagedOptions } from '@/hooks/useManagedOptions'
 
 const GAME_OPTIONS = [
   { value: 'ACC', label: 'ACC PC' },
@@ -46,13 +47,15 @@ export function EventCreatePage() {
   const { t } = useTranslation()
   const { state } = useApp()
   const lang = state.language
+  const weatherOptions = useManagedOptions('weather', lang)
+  const carClassOptions = useManagedOptions('carClass', lang)
   const navigate = useNavigate()
   const [editLang, setEditLang] = useState<'en' | 'zh'>('en')
 
   const [form, setForm] = useState({
     name_en: '', name_zh: '',
     description_en: '', description_zh: '',
-    coverImage: '',
+    coverImage_en: '', coverImage_zh: '',
     game: 'ACC', track: '', trackLayout: '',
     carClass: 'GT3',
     carList: '',
@@ -188,11 +191,11 @@ export function EventCreatePage() {
             onChange={(e) => updateForm(editLang === 'en' ? 'name_en' : 'name_zh', e.target.value)}
           />
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('event.coverImage')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('event.coverImage')} ({editLang === 'en' ? 'English' : '中文'})</label>
             <div className="flex items-center gap-3">
               <input type="file" accept="image/*" className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
               <span className="text-xs text-gray-400">或</span>
-              <Input className="flex-1" placeholder="粘贴图片链接..." value={form.coverImage} onChange={(e) => updateForm('coverImage', e.target.value)} />
+              <Input className="flex-1" placeholder="粘贴图片链接..." value={editLang === 'en' ? form.coverImage_en : form.coverImage_zh} onChange={(e) => updateForm(editLang === 'en' ? 'coverImage_en' : 'coverImage_zh', e.target.value)} />
             </div>
           </div>
           <div className="md:col-span-2">
@@ -212,8 +215,8 @@ export function EventCreatePage() {
           <Select label={t('event.game')} options={GAME_OPTIONS} value={form.game} onChange={(e) => updateForm('game', e.target.value)} />
           <Input label={t('event.track')} value={form.track} onChange={(e) => updateForm('track', e.target.value)} />
           <Input label={t('event.trackLayout')} value={form.trackLayout} onChange={(e) => updateForm('trackLayout', e.target.value)} />
-          <Input label={t('event.carClass')} value={form.carClass} onChange={(e) => updateForm('carClass', e.target.value)} />
-          <Input label={t('event.weather')} value={form.weather} onChange={(e) => updateForm('weather', e.target.value)} />
+          <Select label={t('event.carClass')} options={carClassOptions} value={form.carClass} onChange={(e) => updateForm('carClass', e.target.value)} />
+          <Select label={t('event.weather')} options={weatherOptions} value={form.weather} onChange={(e) => updateForm('weather', e.target.value)} />
           <div className="flex items-end">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={form.hasPitstop} onChange={(e) => updateForm('hasPitstop', e.target.checked)} className="rounded border-gray-300" />
@@ -322,8 +325,7 @@ export function EventCreatePage() {
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-2 px-2 font-medium text-gray-600 w-24">{t('event.position')}</th>
                   <th className="text-left py-2 px-2 font-medium text-gray-600 w-24">{t('event.points')}</th>
-                  <th className="text-left py-2 px-2 font-medium text-gray-600">{t('event.noteEn')}</th>
-                  <th className="text-left py-2 px-2 font-medium text-gray-600">{t('event.noteZh')}</th>
+                  <th className="text-left py-2 px-2 font-medium text-gray-600">{t('event.note')} ({editLang === 'en' ? 'English' : '中文'})</th>
                   <th className="w-12" />
                 </tr>
               </thead>
@@ -349,16 +351,8 @@ export function EventCreatePage() {
                     <td className="py-2 px-2">
                       <input
                         type="text"
-                        value={row.note_en}
-                        onChange={(e) => updateScoringRow(idx, 'note_en', e.target.value)}
-                        className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      />
-                    </td>
-                    <td className="py-2 px-2">
-                      <input
-                        type="text"
-                        value={row.note_zh}
-                        onChange={(e) => updateScoringRow(idx, 'note_zh', e.target.value)}
+                        value={editLang === 'en' ? row.note_en : row.note_zh}
+                        onChange={(e) => updateScoringRow(idx, editLang === 'en' ? 'note_en' : 'note_zh', e.target.value)}
                         className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
                     </td>

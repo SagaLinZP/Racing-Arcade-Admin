@@ -8,6 +8,8 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { ArrowLeft, Save, Send, Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useManagedOptions } from '@/hooks/useManagedOptions'
+import { useApp } from '@/hooks/useAppStore'
 
 const GAME_OPTIONS = [
   { value: 'ACC', label: 'ACC PC' },
@@ -66,6 +68,10 @@ const emptySubEvent = (): SubEventDraft => ({
 export function ChampionshipCreatePage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { state } = useApp()
+  const lang = state.language
+  const weatherOptions = useManagedOptions('weather', lang)
+  const carClassOptions = useManagedOptions('carClass', lang)
   const [editLang, setEditLang] = useState<'en' | 'zh'>('en')
   const [subEvents, setSubEvents] = useState<SubEventDraft[]>([])
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null)
@@ -131,7 +137,7 @@ export function ChampionshipCreatePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input label={`${t('championship.championshipName')} (${editLang === 'en' ? 'EN' : '中文'})`} />
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('event.coverImage')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('event.coverImage')} ({editLang === 'en' ? 'English' : '中文'})</label>
             <div className="flex items-center gap-3">
               <input type="file" accept="image/*" className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
               <span className="text-xs text-gray-400">或</span>
@@ -140,7 +146,7 @@ export function ChampionshipCreatePage() {
           </div>
           <Input label={t('event.carList')} placeholder={t('event.carListPlaceholder')} />
           <Select label={t('event.game')} options={GAME_OPTIONS} />
-          <Input label={t('event.carClass')} />
+          <Select label={t('event.carClass')} options={carClassOptions} />
           <Input label={t('event.streamUrl')} />
           <div className="md:col-span-2"><Textarea label={`${t('common.description')} (${editLang === 'en' ? 'EN' : '中文'})`} /></div>
         </div>
@@ -167,7 +173,7 @@ export function ChampionshipCreatePage() {
             <Input label={t('event.raceDuration')} type="number" defaultValue={60} />
             <Select label={t('event.raceDurationType')} options={[{ value: 'time', label: t('event.timeBased') }, { value: 'laps', label: t('event.lapsBased') }]} />
           </div>
-          <Input label={t('event.weather')} />
+          <Select label={t('event.weather')} options={weatherOptions} />
           <div className="flex items-end">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" defaultChecked className="rounded border-gray-300" />
@@ -202,8 +208,7 @@ export function ChampionshipCreatePage() {
               <tr className="border-b text-left text-gray-500">
                 <th className="py-2 pr-3 font-medium w-24">{t('event.position')}</th>
                 <th className="py-2 pr-3 font-medium w-24">{t('event.points')}</th>
-                <th className="py-2 pr-3 font-medium">{t('event.noteEn')}</th>
-                <th className="py-2 pr-3 font-medium">{t('event.noteZh')}</th>
+                <th className="py-2 pr-3 font-medium">{t('event.note')} ({editLang === 'en' ? 'EN' : '中文'})</th>
                 <th className="py-2 w-10" />
               </tr>
             </thead>
@@ -230,16 +235,8 @@ export function ChampionshipCreatePage() {
                     <input
                       type="text"
                       className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-                      value={row.note_en}
-                      onChange={(e) => updateScoringRow(idx, 'note_en', e.target.value)}
-                    />
-                  </td>
-                  <td className="py-2 pr-3">
-                    <input
-                      type="text"
-                      className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-                      value={row.note_zh}
-                      onChange={(e) => updateScoringRow(idx, 'note_zh', e.target.value)}
+                      value={editLang === 'en' ? row.note_en : row.note_zh}
+                      onChange={(e) => updateScoringRow(idx, editLang === 'en' ? 'note_en' : 'note_zh', e.target.value)}
                     />
                   </td>
                   <td className="py-2">
