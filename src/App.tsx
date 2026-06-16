@@ -3,13 +3,11 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { AppContext, defaultState, type AppState } from './hooks/useAppStore'
 import { AdminLayout } from './components/layout/AdminLayout'
 import { LoginPage } from './pages/LoginPage'
-import { EventListPage } from './pages/events/EventListPage'
-import { EventCreatePage } from './pages/events/EventCreatePage'
-import { EventEditPage } from './pages/events/EventEditPage'
-import { ChampionshipListPage } from './pages/events/ChampionshipListPage'
-import { ChampionshipCreatePage } from './pages/events/ChampionshipCreatePage'
-import { ChampionshipEditPage } from './pages/events/ChampionshipEditPage'
-import { TemplateListPage } from './pages/events/TemplateListPage'
+import { CompetitionListPage } from './pages/competitions/CompetitionListPage'
+import { CompetitionCreatePage } from './pages/competitions/CompetitionCreatePage'
+import { CompetitionEditPage } from './pages/competitions/CompetitionEditPage'
+import { TemplateListPage } from './pages/templates/TemplateListPage'
+import { TemplateEditPage } from './pages/templates/TemplateEditPage'
 import { ResultListPage } from './pages/results/ResultListPage'
 import { ResultEntryPage } from './pages/results/ResultEntryPage'
 import { ProtestListPage } from './pages/protests/ProtestListPage'
@@ -21,9 +19,6 @@ import { NewsEditPage } from './pages/news/NewsEditPage'
 import { TeamListPage } from './pages/teams/TeamListPage'
 import { TeamDetailPage } from './pages/teams/TeamDetailPage'
 import { NotificationPage } from './pages/notifications/NotificationPage'
-import { DeviceListPage } from './pages/devices/DeviceListPage'
-import { OptionsPage } from './pages/admin/OptionsPage'
-import { SettingsPage } from './pages/admin/SettingsPage'
 import './i18n'
 
 import { scrollToTop } from './lib/scrollContainer'
@@ -48,14 +43,13 @@ export default function App() {
             <Route path="*" element={<LoginPage />} />
           ) : (
             <Route element={<AdminLayout />}>
-              <Route path="/" element={<ChampionshipListPage />} />
-              <Route path="/events" element={<EventListPage />} />
-              <Route path="/events/create" element={<EventCreatePage />} />
-              <Route path="/events/:id/edit" element={<EventEditPage />} />
-              <Route path="/championships" element={<ChampionshipListPage />} />
-              <Route path="/championships/create" element={<ChampionshipCreatePage />} />
-              <Route path="/championships/:id/edit" element={<ChampionshipEditPage />} />
+              <Route path="/" element={<CompetitionListPage />} />
+              <Route path="/competitions" element={<CompetitionListPage />} />
+              <Route path="/competitions/create" element={<CompetitionCreatePage />} />
+              <Route path="/competitions/:id/edit" element={<CompetitionEditPage />} />
               <Route path="/templates" element={<TemplateListPage />} />
+              <Route path="/templates/create" element={<TemplateEditPage />} />
+              <Route path="/templates/:id/edit" element={<TemplateEditPage />} />
               <Route path="/results" element={<ResultListPage />} />
               <Route path="/results/:id" element={<ResultEntryPage />} />
               <Route path="/protests" element={<ProtestListPage />} />
@@ -68,9 +62,6 @@ export default function App() {
               <Route path="/teams" element={<TeamListPage />} />
               <Route path="/teams/:id" element={<TeamDetailPage />} />
               <Route path="/notifications" element={<NotificationPage />} />
-              <Route path="/devices" element={<DeviceListPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/settings/options" element={<OptionsPage />} />
             </Route>
           )}
         </Routes>

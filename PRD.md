@@ -1,8 +1,8 @@
 # Racing Arcade — 产品需求文档（PRD）
 
-> **文档版本**：v1.0  
-> **最后更新**：2026-04-23  
-> **文档状态**：Draft  
+> **文档版本**：v1.2
+> **最后更新**：2026-06-16
+> **文档状态**：Draft
 
 ---
 
@@ -66,7 +66,7 @@ Racing Arcade 是一个**由 MOZA Racing 官方运营的模拟赛车赛事发布
 | **运营模式** | 用户共创（UGC），1277+ 社区自行发布赛事 | 官方自营，仅 MOZA 运营团队发布赛事 |
 | **盈利模式** | 免费 + Grid Pass 付费订阅（$5.99/月） | 完全免费 |
 | **赛事来源** | 任何用户可创建社区并发布赛事 | 仅官方发布，品质统一 |
-| **支持游戏** | 16+ 款（ACC、AC Evo、iRacing、LMU 等） | 多游戏平台（初期重点覆盖主流模拟赛车游戏） |
+| **支持游戏** | 16+ 款（ACC、AC Evo、iRacing、LMU 等） | 初期聚焦 AC / ACC，先打通自动开服与成绩导入闭环 |
 | **账号体系** | Discord / Steam 登录 | Pit House SSO（主）+ Discord / Steam 绑定 |
 | **赛事规模** | 每天 24 小时不间断排位赛 + 社区联赛 | 每周 5-10 场精选赛事 |
 | **Ranking 系统** | Grid Rating（Bronze/Silver/Gold/Platinum） | MVP 阶段不含 Rating，后续可扩展 |
@@ -84,7 +84,7 @@ Racing Arcade 是一个**由 MOZA Racing 官方运营的模拟赛车赛事发布
 |------|------|
 | 年龄 | 18-45 岁 |
 | 特征 | 热爱赛车运动，拥有模拟赛车设备（方向盘、踏板等） |
-| 痛点 | 缺少有组织、有品质保证的线上赛事；现有平台要么门槛高、要么赛事质量参差不齐 |
+| 痛点 | MOZA官方赛事目前为止没有一个清晰的展示平台 |
 | 期望 | 稳定的赛事安排、公平的竞赛环境、清晰的成绩展示 |
 | 设备 | 部分/全部使用 MOZA 硬件产品 |
 
@@ -171,7 +171,7 @@ flowchart TD
     K -- 是 --> L["直接登录"]
     K -- 否 --> M["创建新账号"]
     M --> N["补全必要信息"]
-    N --> O["选择常驻国家/区域"] & P["选择语言偏好"] & R["选择主要游玩的游戏<br>如 ACC / iRacing / LMU 等"]
+    N --> O["选择常驻国家/区域"] & P["选择语言偏好"] & R["选择主要游玩的游戏<br>AC / ACC"]
     O --> Q["注册完成，进入平台"]
     P --> Q
     R --> Q
@@ -188,9 +188,9 @@ flowchart TD
 5. 首次注册需补全以下信息：
    - **常驻国家/区域**（从下拉列表中选择）
    - **语言偏好**（中文 / 英文）
-   - **主要游玩的游戏**（多选，如 ACC / AC Evo / iRacing / LMU 等）
+   - **主要游玩的游戏**（多选，初期为 AC / ACC）
 6. 注册完成，进入平台首页
-7. 游戏 ID（Steam ID、iRacing ID 等）不在注册时要求填写，而是在报名对应平台赛事时按需校验和补充（详见 3.1.5）
+7. 游戏 ID（初期为 Steam 绑定）不在注册时要求填写，而是在报名对应平台赛事时按需校验和补充（详见 3.1.5）
 
 ### 3.1.3 账号绑定流程
 
@@ -228,14 +228,13 @@ flowchart TD
 
 ### 3.1.5 报名时的游戏 ID 校验
 
-游戏 ID（Steam ID、iRacing ID 等）不在注册时强制填写，而是在车手报名赛事时按需校验。
+游戏 ID（初期为 Steam 绑定）不在注册时强制填写，而是在车手报名赛事时按需校验。MVP 阶段赛事仅支持 AC / ACC，因此报名校验只要求用户完成 Steam 账号绑定。
 
 **校验规则**：
 
 | 赛事游戏平台 | 校验字段 | 校验方式 |
 |------------|---------|---------|
-| iRacing PC | iRacing ID | 用户需在账号设置中填写 iRacing ID，或报名时弹出填写 |
-| ACC / AC Evo / AC / LMU / rF2 / ETS2 等 Steam 平台游戏 | Steam 绑定 | 用户需已绑定 Steam 账号，或报名时弹出引导绑定 |
+| AC / ACC | Steam 绑定 | 用户需已绑定 Steam 账号，或报名时弹出引导绑定 |
 
 **报名校验流程**：
 
@@ -244,21 +243,15 @@ flowchart TD
     A[车手点击'报名'] --> B{检查该赛事游戏平台<br/>对应的 ID/绑定状态}
     B -->|已满足| C[完成报名]
     B -->|未满足| D[弹出补充引导]
-    
-    D --> E{校验类型}
-    E -->|需填写游戏 ID| F[弹出填写框<br/>如 iRacing ID]
-    E -->|需绑定 Steam| G[引导跳转<br/>Steam 授权绑定]
-    
-    F --> H{填写并提交}
-    G --> I{绑定成功}
-    
-    H -->|成功| C
-    H -->|取消| J[返回赛事详情页<br/>报名未完成]
-    I -->|成功| C
-    I -->|取消| J
+
+    D --> E[引导跳转<br/>Steam 授权绑定]
+    E --> F{绑定成功}
+
+    F -->|成功| C
+    F -->|取消| G[返回赛事详情页<br/>报名未完成]
 ```
 
-**补充信息持久化**：填写或绑定的游戏 ID 在报名成功后自动保存到用户账号中，后续报名同平台赛事时不再重复要求。
+**补充信息持久化**：绑定的 Steam ID 在报名成功后自动保存到用户账号中，后续报名 AC / ACC 赛事时不再重复要求。
 
 ## 3.2 区域识别与语言偏好
 
@@ -302,6 +295,39 @@ flowchart TD
 | 管理员仅录入单语内容 | 前台降级展示已有语言版本 |
 | 双语内容中某一语言版本明显过时 | 由运营团队内部流程保证内容同步，平台不校验 |
 
+### 3.2.4 区域内容筛选规则
+
+**区域筛选总原则**：
+
+- **公共内容按区域筛选**：赛事列表、新闻列表、日历页、排行榜等公共展示页面，仅展示发布到当前区域的赛事和数据。切换区域后，列表内容随之刷新
+- **用户个人数据不按区域筛选**：用户的报名记录（我的赛事）、通知、抗议、个人统计数据等，无论当前选择哪个区域，均展示完整数据，不因区域切换而隐藏
+- **详情页展示完整数据**：一旦用户通过列表进入某个具体赛事/锦标赛/新闻的详情页，展示该条目的完整数据，不受区域筛选影响
+
+**多区域赛事规则**：
+
+- 区域仅作为赛事的**发现和筛选维度**，不创建独立的赛事实例。一个赛事发布到多个区域时，仍然是同一个赛事（同一条记录、同一个 ID）
+- 报名数据**全局共享**：无论用户从哪个区域发起报名，都是对同一赛事的同一份报名记录。报名人数、参赛名单、成绩等数据不按区域拆分
+- 用户在一个区域报名后，切换到其他区域查看同一赛事时，显示"已报名"状态，不可重复报名
+- 赛事时间在所有区域统一为同一 UTC 时间，前端根据用户本地时区自动转换显示
+
+**各功能区域筛选行为**：
+
+| 功能/页面 | 是否按区域筛选 | 说明 |
+|----------|--------------|------|
+| 赛事列表 | 是 | 仅展示 `regions` 包含当前区域的赛事 |
+| 新闻列表 | 是 | 仅展示 `regions` 包含当前区域的新闻 |
+| 首页（近期赛事/新闻） | 是 | 跟随赛事列表和新闻列表的筛选结果 |
+| 日历页 | 是 | 仅展示当前区域的赛事 |
+| 排行榜 | 是 | 仅统计当前区域赛事的成绩和积分（见 6.3） |
+| 赛事详情页 | 否（进入后展示完整数据） | 从列表点击进入后展示该赛事全部信息 |
+| 分站详情页 | 否（进入后展示完整数据） | 同上 |
+| 新闻详情页 | 否（进入后展示完整数据） | 同上 |
+| 我的赛事 | 否（用户个人数据） | 展示用户已报名的所有赛事，包括其他区域的赛事 |
+| 通知中心 | 否（用户个人数据） | 展示所有通知，不区分区域 |
+| 我的抗议 | 否（用户个人数据） | 展示所有抗议记录 |
+| 车手档案 | 否（个人统计数据） | 车手的参赛次数、积分等统计数据为全区域汇总 |
+| 车队公开页 | 否（团队统计数据） | 车队统计数据为全区域汇总 |
+
 ## 3.3 车手档案页
 
 ### 3.3.1 档案信息
@@ -312,9 +338,8 @@ flowchart TD
 | | 头像 | 始终公开 | ✅ | |
 | | 所在国家 | 始终公开 | ✅ | 仅展示国家，不展示区域标识 |
 | | 个人简介 | 始终公开 | ✅ | |
-| **游戏信息** | iRacing ID | 可配置公开/私密 | ✅ | 默认私密，用户可设为公开 |
-| | Steam ID | 可配置公开/私密 | ✅ | 默认私密，用户可设为公开。通过 Steam 绑定自动获取 |
-| **MOZA 设备** | 当前使用设备列表 | 可配置公开/私密 | ✅ | 默认公开，用户可设为私密 |
+| **游戏信息** | Steam ID | 可配置公开/私密 | ✅ | 默认私密，用户可设为公开。通过 Steam 绑定自动获取；初期用于 AC / ACC 报名与成绩匹配 |
+| **MOZA 设备** | 已拥有的设备列表（从 Pit House 同步） | 可配置公开/私密 | 部分（选择展示哪些） | 默认公开，用户可设为私密；设备来源为 Pit House 自动同步，用户仅控制展示 |
 | | 如：R16/R21/R9 方向盘基座、CRP/CSR 踏板等 | | | |
 | **统计数据** | 总参赛次数 | 始终公开 | ❌ 自动计算 | |
 | | 胜场数 / 领奖台数 | 始终公开 | ❌ 自动计算 | |
@@ -324,7 +349,7 @@ flowchart TD
 **可见性规则**：
 
 - **始终公开**：基础信息（昵称、头像、区域、简介）和统计数据始终对所有访客可见
-- **可配置公开/私密**：游戏 ID（iRacing ID、Steam ID）和 MOZA 设备列表，用户可在账号设置中逐项切换可见性
+- **可配置公开/私密**：游戏 ID（初期为 Steam ID）和 MOZA 设备列表，用户可在账号设置中逐项切换可见性
   - 游戏 ID 默认为**私密**（仅自己可见），防止隐私泄露
   - MOZA 设备默认为**公开**，发挥品牌展示作用
   - 设为私密时，其他用户访问该档案页看不到对应字段
@@ -332,10 +357,11 @@ flowchart TD
 
 ### 3.3.2 MOZA 设备展示
 
-- 用户在账号设置中可手动选择自己使用的 MOZA 设备（从设备列表中勾选）
+- 平台通过 Pit House SSO 接口自动获取用户已拥有的 MOZA 设备列表（基于 Pit House 后台的设备注册/激活数据）
+- 用户无法手动添加设备，只能从已获取的设备列表中选择要在档案页公开展示的设备
 - 设备信息在车手档案页以产品图标+名称的形式展示
-- 设备列表由管理员在后台维护（随 MOZA 新品发布更新）
-- 设备展示为可选项，用户可以选择不展示
+- 设备展示为可选项，用户可以选择不展示任何设备
+- 新设备首次连接 Pit House 后自动同步到平台，用户无需手动操作
 
 ### 3.3.3 车手档案 URL
 
@@ -410,105 +436,261 @@ flowchart TD
 - 赛事发布到多个区域时，管理员填写时间时以第一个选中区域的默认时区为准，可手动调整
 - 夏令时（DST）处理：使用 IANA 时区数据库自动计算，管理员无需手动处理
 
-### 4.1.3 赛事（Event）核心字段
+### 4.1.3 赛事核心分层模型
 
 > **双语字段标记说明**：标记为 `中/英` 的字段，至少填写一种语言即可发布。
->
-> **适用范围**：以下为**独立赛事**（不属于任何锦标赛）的完整字段。锦标赛子赛事的字段见 4.1.5。
+
+平台统一采用 `Competition → Round → Stage → Session` 四层结构。赛事复杂度由 Round/Stage/Session 的层级关系自然体现：只有 1 个 Round 即为单场赛，多个 Round 即为锦标赛或系列赛，无需额外的形态字段。
+
+| 层级 | 中文含义 | 解决的问题 | 示例 |
+|------|----------|------------|------|
+| Competition | 整项赛事 / 锦标赛 / 年度赛事项目 | 承载品牌、规则、区域、积分、车型等公共信息 | MOZA GT3 年度锦标赛 2026 |
+| Round | 一站 / 一场分站 | 承载赛道、时间窗口、报名入口、分站状态 | 第 12 站 - 铃鹿 |
+| Stage | 分站内阶段 | 承载预选、正赛日、决赛、复活赛等流程阶段 | 长时间开放预选赛、正赛日 |
+| Session | 具体服务器/计时单元 | 承载可进入的服务器、具体开始结束时间、圈速榜、成绩 | Hotlap 服务器、Practice、Qualifying、Race |
+
+**建模原则**：
+
+- 1 个 Round 的 Competition = 单场比赛
+- 多个 Round 的 Competition = 多站赛事（锦标赛 / 系列赛）
+- 每个 Round 可只含"正赛日"阶段，也可含"预选赛"+"正赛日"等多个 Stage
+- "Stage"只表示 Round 内部流程，不表示整届赛事的大阶段
+- 车手报名默认以 Round 为目标；如业务需要，可允许报名目标下沉到 Stage 或 Session
+- 成绩永远绑定到 Session，再由 Stage/Round/Competition 聚合出晋级名单、分站成绩和总积分
+
+### 4.1.4 Competition 数据模型
+
+Competition 是前台列表中的主要卡片对象，也是详情页的主入口。
 
 | 字段名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| id | UUID | 自动 | 赛事唯一标识 |
-| name_zh / name_en | String | 是（至少一种） | 赛事名称（中/英） |
-| description_zh / description_en | RichText | 否 | 赛事描述（中/英） |
-| cover_image | URL | 否 | 赛事封面图片 |
-| game | Enum | 是 | 游戏平台（ACC PC / AC Evo PC / AC PC / iRacing PC / LMU PC / rF2 PC / ETS2 PC） |
-| track | String | 是 | 赛道名称 |
-| track_layout | String | 否 | 赛道布局（如 GP / Short / Endurance） |
-| car_class | String | 是 | 车型组（GT3 / GT4 / Porsche Cup / LMP2 / Formula 等） |
-| car_list | String[] | 否 | 可选车辆列表（若限制特定车辆） |
-| championship_id | UUID | 否 | 所属锦标赛 ID（为空则表示独立单场赛） |
+| id | UUID | 自动 | Competition 唯一标识 |
+| name_zh / name_en | String | 是（至少一种） | 赛事项目名称（中/英） |
+| description_zh / description_en | RichText | 否 | 赛事项目描述（中/英） |
+| cover_image | URL | 否 | 封面图片 |
 | regions | Enum[] | 是 | 发布区域（CN / AP / AM / EU，可多选） |
-| conditions | String | 否 | 比赛条件描述（天气、路面等） |
-| weather | Enum | 否 | 天气设置（晴天 / 多云 / 阴天 / 动态天气等） |
-| has_pitstop | Boolean | 否 | 是否需要进站 |
-| practice_duration | Integer | 否 | 练习赛时长（分钟） |
-| qualifying_duration | Integer | 否 | 排位赛时长（分钟） |
-| race_duration | Integer | 否 | 正赛时长（分钟）或圈数 |
-| race_duration_type | Enum | 否 | 时长制 / 圈数制 |
-| max_entries_per_split | Integer | 是 | 单 Split 最大参赛人数 |
-| max_splits | Integer | 否 | 最大 Split 数（服务器资源上限）。为空表示不限制。总容量 = max_splits × max_entries_per_split，超出后拒绝新报名 |
-| enable_multi_split | Boolean | 是 | 是否启用多 Split |
-| split_assignment_rule | Enum | 否 | 分组规则（按实力 / 随机 / 手动 / 先到先得） |
-| min_entries | Integer | 否 | 最低开赛人数阈值 |
-| registration_open_at | DateTime | 是 | 报名起始时间（默认当前时间，即发布即开放；管理员可设置未来时间，赛事进入 Upcoming 状态） |
-| registration_close_at | DateTime | 是 | 报名截止时间 |
-| cancel_registration_deadline | DateTime | 否 | 允许车手取消报名的截止时间 |
-| event_start_time | DateTime | 是 | 比赛开始时间（UTC） |
-| status | Enum | 自动 | 赛事状态（见 4.3） |
-| access_requirements | String | 否 | 准入条件描述（自由文本，如"需阅读规则并确认"） |
-| rules_zh / rules_en | RichText | 否 | 赛制规则（中/英） |
-| server_info | String | 否 | 服务器名称 / 密码（赛事开始前可见） |
-| server_join_link | URL | 否 | 游戏直连链接（赛事开始前可见） |
-| stream_url | URL | 否 | 直播嵌入链接 |
-| vod_url | URL | 否 | 赛后回放链接 |
-| scoring_rules_zh / scoring_rules_en | RichText | 否 | 积分规则自定义文字描述（中/英），可选 |
-| scoring_table | ScoringTableEntry[] | 否 | 积分表格（名次-积分-备注），可选。与 scoring_rules 可同时存在，先显示文字再显示表格 |
-| resources_zh / resources_en | RichText | 否 | 资源下载（中/英），自由文本区域，管理员可填写 MOD 下载链接、安装说明等任意内容 |
+| game | Enum | 是 | 游戏平台；MVP 仅开放 AC / ACC，后续可扩展其他模拟赛车游戏 |
+| car_class | String | 是 | 车型组（GT3 / GT4 / Porsche Cup / LMP2 / Formula 等） |
+| car_list | String[] | 否 | 可选车辆列表 |
+| default_ruleset | CompetitionRuleset | 是 | 默认赛制、Split、准入、积分、资源、直播等公共配置 |
+| rounds | Round[] | 是 | 分站列表，管理员可拖拽排序 |
+| status | Enum | 自动 | 从 Round/Stage/Session 状态聚合得到 |
 | created_by | UUID | 自动 | 创建者管理员 ID |
 | created_at | DateTime | 自动 | 创建时间 |
 | updated_at | DateTime | 自动 | 最后更新时间 |
 
-### 4.1.4 锦标赛（Championship）数据模型
-
-锦标赛是赛事的容器，承载赛事的公共属性。归属于锦标赛的各场赛事继承锦标赛的配置，自身仅保留本场独有的信息。
-
-**设计理念**：
-
-- 锦标赛定义通用规则（游戏平台、车型组、赛制、积分规则、区域、Split 配置等）
-- 各场赛事仅定义本场独有信息（赛道、开赛时间、报名截止时间、服务器信息等）
-- 赛事详情页同时展示锦标赛级公共信息和本场独有信息
-- 车手报名锦标赛赛事时，报名的是具体的某一场赛事
-
-**锦标赛字段**：
+**CompetitionRuleset**：
 
 | 字段名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| id | UUID | 自动 | 锦标赛唯一标识 |
-| name_zh / name_en | String | 是（至少一种） | 锦标赛名称（中/英） |
-| description_zh / description_en | RichText | 否 | 锦标赛描述（中/英） |
-| cover_image | URL | 否 | 锦标赛封面图片 |
-| regions | Enum[] | 是 | 发布区域 |
-| game | Enum | 是 | 游戏平台（同赛事 game 字段） |
-| car_class | String | 是 | 车型组（同赛事 car_class 字段） |
-| car_list | String[] | 否 | 可选车辆列表 |
-| weather | Enum | 否 | 天气设置 |
-| has_pitstop | Boolean | 否 | 是否需要进站 |
-| practice_duration | Integer | 否 | 练习赛时长（分钟） |
-| qualifying_duration | Integer | 否 | 排位赛时长（分钟） |
-| race_duration | Integer | 否 | 正赛时长（分钟）或圈数 |
-| race_duration_type | Enum | 否 | 时长制 / 圈数制 |
-| max_entries_per_split | Integer | 是 | 单 Split 最大参赛人数 |
-| max_splits | Integer | 否 | 最大 Split 数 |
-| enable_multi_split | Boolean | 是 | 是否启用多 Split |
-| split_assignment_rule | Enum | 否 | 分组规则 |
+| weather | Enum | 否 | 默认天气设置 |
+| has_pitstop | Boolean | 否 | 默认是否需要进站 |
 | min_entries | Integer | 否 | 最低开赛人数阈值 |
-| cancel_registration_deadline_offset | String | 否 | 取消报名截止规则描述（如"比赛开始前 2 小时"） |
-| access_requirements | String | 否 | 准入条件描述 |
-| scoring_rules_zh / scoring_rules_en | RichText | 否 | 积分规则自定义文字描述（中/英），可选 |
-| scoring_table | ScoringTableEntry[] | 否 | 积分表格（名次-积分-备注），可选 |
-| progression_rules_zh / progression_rules_en | RichText | 否 | 晋级/淘汰规则（中/英） |
-| rules_zh / rules_en | RichText | 否 | 赛事规则（中/英） |
-| resources_zh / resources_en | RichText | 否 | 资源下载（中/英） |
-| stream_url | URL | 否 | 直播嵌入链接（锦标赛通用） |
-| events | Event[] | 是 | 包含的赛事列表 |
-| created_by | UUID | 自动 | 创建者管理员 ID |
-| created_at | DateTime | 自动 | 创建时间 |
-| updated_at | DateTime | 自动 | 最后更新时间 |
+| access_requirements_zh / access_requirements_en | String | 否 | 准入条件描述（中/英） |
+| scoring_table | ScoringTableEntry[] | 否 | 默认积分表 |
+| resources_zh / resources_en | RichText | 否 | 默认资源下载（中/英） |
+| stream_url | URL | 否 | 默认直播链接 |
 
-> **结构说明**：锦标赛内包含各个赛事。轮次/分站信息由管理员写入各赛事的名称和描述中（如"第 1 站 - 蒙扎"、"Round 2 - Silverstone"）。锦标赛内的赛事排序由管理员手动调整（拖拽排序）。
+> **已合并字段**：赛制规则（rules）、积分规则说明（scoring_rules）、晋级规则说明（advancement_rules）已合并到 Competition 的 `description` 字段中，不再作为独立字段。
+> **已移除字段**：`cancel_registration_deadline_offset` 不再作为 Competition 级配置。
+> **Split 配置**：多 Split 配置已移至 Stage 层级（见 4.1.6 SplitConfig）。
 
-**积分表数据结构（ScoringTableEntry）**：
+### 4.1.5 Round 数据模型
+
+Round 是用户实际报名和参赛的主要单位，对应"一站"或"一场分站"。
+
+| 字段名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| id | UUID | 自动 | Round 唯一标识 |
+| competition_id | UUID | 是 | 所属 Competition |
+| name_zh / name_en | String | 是（至少一种） | 分站名称，如"第 12 站 - 铃鹿" |
+| description_zh / description_en | RichText | 否 | 分站补充说明 |
+| track | String | 否 | 赛道名称；纯线上热圈活动可为空 |
+| cover_image | URL | 否 | 分站封面图（横幅比例），未填则使用 Competition 封面 |
+| registration_open_at | DateTime | 是 | Round 报名起始时间 |
+| registration_close_at | DateTime | 是 | Round 报名截止时间 |
+| cancel_registration_deadline | DateTime | 否 | 允许取消 Round 报名的截止时间 |
+| stage_ids | UUID[] | 是 | 本 Round 下的 Stage 顺序（分站序号由排列顺序派生） |
+| rule_overrides | Partial<CompetitionRuleset> | 否 | 分站级规则覆盖，如特殊天气、双倍积分 |
+| status | Enum | 自动 | 从 Stage/Session 时间与结果聚合 |
+
+### 4.1.6 Stage 数据模型
+
+Stage 是 Round 内部的流程阶段，用来表达"预选赛 → 正赛日 → 决赛"这类同一站内的推进关系。
+
+| 字段名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| id | UUID | 自动 | Stage 唯一标识 |
+| round_id | UUID | 是 | 所属 Round |
+| type | Enum | 否 | qualifier / race_day / final / consolation / practice / custom。由模板预设，编辑器中不再可选择，不在头部显示类型徽章 |
+| name_zh / name_en | String | 是（至少一种） | 阶段名称，如"预选赛"、"正赛日" |
+| description_zh / description_en | RichText | 否 | 阶段说明（始终可编辑） |
+| starts_at | DateTime | 是 | 阶段开始时间 |
+| ends_at | DateTime | 是 | 阶段结束时间 |
+| session_ids | UUID[] | 是 | 本阶段下的 Session 顺序 |
+| split_config | SplitConfig | 否 | 本 Stage 的多 Split 配置（见下方） |
+| eligibility_source | Enum | 否 | `roundRegistration` / `previousStageResult` / `manualInvite`，各选项的子字段见下方 |
+| status | Enum | 自动 | 从时间与 Session 结果聚合 |
+
+**SplitConfig**（Stage 层级）：
+
+| 字段名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| enable_multi_split | Boolean | 是 | 是否启用多 Split |
+| max_entries_per_split | Integer | 是 | 单 Split 最大参赛人数 |
+| max_splits | Integer | 否 | 最大 Split 数。总报名容量 = max_splits × max_entries_per_split |
+| split_assignment_rule | Enum | 否 | 分组规则（按实力 / 随机 / 手动 / 先到先得） |
+
+**EligibilitySource 条件子字段**：
+
+| eligibility_source | 子字段 | 说明 |
+|--------------------|--------|------|
+| `roundRegistration` | 无（仅提示文案） | 所有已报名 Round 的车手均可参与 |
+| `previousStageResult` | metric (`bestLap` / `points` / `position`)、direction (`asc` / `desc`)、limit (Integer) | 按上一 Stage 成绩排序取前 N 名晋级 |
+| `manualInvite` | selected_driver_ids (UUID[]) | 管理员从已报名车手中多选勾选参赛名单 |
+
+### 4.1.7 Session 数据模型
+
+Session 是平台侧最小的计时、服务器和成绩归属单位，但不一定等同于游戏内的一次服务器 Session。对于长时间开放的预选赛，平台中的一个 `practice` Session 可以覆盖整个预选赛时间窗口，后台按管理员设定的间隔自动重启游戏服务器，产生多个游戏内 Session；Stage 结束后，系统导入这些游戏内 Session 的结果并合并为平台 Session 成绩。
+
+| 字段名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| id | UUID | 自动 | Session 唯一标识 |
+| stage_id | UUID | 是 | 所属 Stage |
+| type | Enum | 是 | `practice` / `qualifying` / `race` / `timeTrial` |
+| name_zh / name_en | String | 是（至少一种） | Session 名称 |
+| starts_at | DateTime | 是 | Session 开始时间；持续开放服务器使用开放起点 |
+| ends_at | DateTime | 是 | Session 结束时间；持续开放服务器使用关闭终点 |
+| duration_minutes | Integer | 否 | 固定时长；持续开放服务器可为空 |
+| race_duration | Integer | 否 | 正赛时长或圈数 |
+| race_duration_type | Enum | 否 | `time` / `laps` |
+| game_session_restart_policy | Enum | 否 | `none` / `fixedInterval` / `manual`，控制游戏服务器是否按规则重启 |
+| game_session_restart_interval_minutes | Integer | 否 | 当策略为 `fixedInterval` 时，每隔多少分钟自动重启一次游戏内 Session |
+| game_session_result_merge_rule | Enum | 否 | 多个游戏内 Session 合并规则，如 `bestLapPerDriver` / `bestResultPerDriver` / `allClassifications` |
+| server_info | String | 否 | 面向车手展示的服务器名称；默认从自动开服配置中生成 |
+| server_password | String | 否 | 服务器密码 |
+| server_join_link | URL | 否 | 游戏直连链接或 Hosted Session 链接 |
+| stream_url | URL | 否 | 本 Session 直播链接，未填则使用上层默认直播 |
+| vod_url | URL | 否 | 赛后回放链接 |
+| result_type | Enum | 是 | `classification` / `leaderboard` |
+| results | Result[] | 自动 | Session 成绩 |
+
+**长时间开放预选赛示例**：
+
+- Stage：预选赛，开放时间由管理员配置，可持续数小时、数天或更长
+- 平台 Session：`type = practice`，覆盖整个 Stage 时间窗口
+- 游戏服务器：按管理员设定的间隔自动重启游戏内 Session，避免单个房间长期运行不稳定
+- 结果导入：每次游戏内 Session 结束后导入圈速结果
+- 合并规则：`bestLapPerDriver`，每位车手只取所有游戏内 Session 中最快的一次有效圈速
+- 晋级规则：按合并后的平台 Session 榜单排序，取前 N 名进入正赛日 Stage
+
+### 4.1.8 自动开服配置（AC / ACC 初期范围）
+
+MVP 阶段赛事只面向 AC 与 ACC。后台创建赛事时，管理员不是只填写一段"服务器信息"，而是先填写可生成游戏专用配置文件的参数；系统将这些参数写入服务器配置目录并启动对应 Dedicated Server 工具。前台赛事详情页只复用其中对车手有意义且允许展示的字段。
+
+**配置归属原则**：
+
+- 自动开服配置绑定到 Session；一个平台 Session 可以生成一次或多次游戏内服务器 Session
+- Competition / Round 提供默认赛道、车型、规则、天气等模板，Session 可覆盖具体时长、密码、服务器名和重启策略
+- 基础设施字段（端口、容器路径、管理员密码、插件地址）由系统生成或运维配置，不要求普通赛事管理员手填
+- 隐私和安全字段（管理员密码、Steam GUID、内部端口、插件地址）不得在前台展示
+- 前台"服务器信息"卡片只展示服务器名称、加入密码、直连链接/加入方式、当前 Session 时间、赛道、车辆和必要规则摘要
+
+**SessionServerProvisioningConfig 数据模型**：
+
+| 字段名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| id | UUID | 自动 | 开服配置唯一标识 |
+| session_id | UUID | 是 | 绑定的平台 Session |
+| game | Enum | 是 | `AC` / `ACC` |
+| preset_id | UUID | 否 | 使用的后台开服模板 |
+| server_name | String | 是 | 游戏服务器名称；可由 Competition / Round / Session 名称生成 |
+| join_password | String | 否 | 车手加入密码；仅报名后展示 |
+| admin_password_secret_ref | String | 是 | 管理员密码的密钥引用，不明文存储或展示 |
+| visibility | Enum | 是 | `publicLobby` / `privateByPassword` / `privateByEntryList` |
+| track_code | String | 是 | 游戏内赛道标识，如 ACC `monza`、AC `ks_monza` |
+| track_layout_code | String | 否 | 游戏内赛道布局标识 |
+| car_group | String | 否 | 车型组，如 ACC `GT3` |
+| car_codes | String[] | 否 | 允许车辆标识；AC 必填，ACC 可由 `carGroup` 控制 |
+| max_slots | Integer | 是 | 最大车位/连接人数 |
+| weather_config | JSON | 否 | 游戏专用天气字段 |
+| rule_config | JSON | 否 | 游戏专用规则字段 |
+| assist_config | JSON | 否 | 游戏专用辅助限制字段 |
+| entry_list_source | Enum | 是 | `open` / `roundRegistrations` / `manualUpload` |
+| restart_policy | Enum | 否 | 继承 Session 的 `game_session_restart_policy` |
+| restart_interval_minutes | Integer | 否 | 继承 Session 的 `game_session_restart_interval_minutes` |
+| result_merge_rule | Enum | 否 | 继承 Session 的 `game_session_result_merge_rule` |
+| generated_files | FileRef[] | 自动 | 系统生成并投放到服务器的配置文件 |
+| runtime_status | Enum | 自动 | `pending` / `deployed` / `running` / `restarting` / `stopped` / `failed` |
+| last_deployed_at | DateTime | 自动 | 最近一次投放配置时间 |
+
+**后台自动开服流程**：
+
+```mermaid
+flowchart TD
+    A[管理员配置 Competition/Round/Stage/Session] --> B[选择 AC 或 ACC 开服模板]
+    B --> C[填写游戏专用参数]
+    C --> D[系统校验字段与容量]
+    D --> E[生成配置文件]
+    E --> F[投放到服务器配置目录]
+    F --> G[启动或重启 Dedicated Server]
+    G --> H[采集服务器状态与结果文件]
+    H --> I[导入并合并平台 Session 成绩]
+```
+
+**前台可复用字段**：
+
+| 前台展示位置 | ACC 来源字段 | AC 来源字段 | 展示规则 |
+|-------------|-------------|------------|----------|
+| 游戏平台 | Competition.game | Competition.game | 仅 AC / ACC |
+| 赛道/布局 | `event.json.track` | `TRACK` / `CONFIG_TRACK` | 可转为中英文显示名 |
+| 车型组/车辆 | `settings.json.carGroup`、`entrylist.json.forcedCarModel` | `CARS`、`entry_list.ini.MODEL` | 车手只看车型/车辆名，不看内部代码 |
+| 当前服务器 | `settings.json.serverName` | `[SERVER].NAME` | 报名后展示 |
+| 加入密码 | `settings.json.password` | `[SERVER].PASSWORD` | 报名后展示；为空则显示公开服务器 |
+| 参赛容量 | `settings.json.maxCarSlots` | `[SERVER].MAX_CLIENTS` | 用于容量与 Split 展示 |
+| Session 时长 | `event.json.sessions[].sessionDurationMinutes` | `[PRACTICE/QUALIFY/RACE].TIME` / `LAPS` | 转为 Practice / Qualifying / Race 时间线 |
+| 天气摘要 | `event.json.ambientTemp` / `trackTemp` / `cloudLevel` / `rain` / `weatherRandomness` | `[WEATHER_*]`、`[DYNAMIC_TRACK]`、`SUN_ANGLE` | 前台可做简要展示 |
+| 规则摘要 | `eventRules.json`、`assistRules.json` | `ABS_ALLOWED`、`TC_ALLOWED`、`DAMAGE_MULTIPLIER`、`FUEL_RATE`、`TYRE_WEAR_RATE`、`ALLOWED_TYRES_OUT`、进站窗口 | 前台展示可读规则，不展示原始字段名 |
+| 参赛名单 | `entrylist.json.entries[].drivers` | `entry_list.ini [CAR_N]` | 前台隐藏 Steam ID / GUID |
+| 不展示字段 | 端口、管理员密码、内部路径、BoP 细节、Steam ID | 端口、管理员密码、插件地址、GUID、线程参数 | 仅后台或系统使用 |
+
+**ACC Dedicated Server 配置文件字段**：
+
+| 文件 | 用途 | 字段 |
+|------|------|------|
+| `configuration.json` | 网络和大厅注册 | `udpPort`、`tcpPort`、`maxConnections`、`lanDiscovery`、`registerToLobby`、`configVersion` |
+| `settings.json` | 服务器基础设置 | `serverName`、`adminPassword`、`password`、`spectatorPassword`、`centralEntryListPath`、`carGroup`、`trackMedalsRequirement`、`safetyRatingRequirement`、`racecraftRatingRequirement`、`maxCarSlots`、`isRaceLocked`、`isLockedPrepPhase`、`shortFormationLap`、`dumpLeaderboards`、`dumpEntryList`、`randomizeTrackWhenEmpty`、`allowAutoDQ`、`ignorePrematureDisconnects`、`formationLapType`、`configVersion` |
+| `event.json` | 赛道、天气和 Session 编排 | `track`、`ambientTemp`、`trackTemp`、`cloudLevel`、`rain`、`weatherRandomness`、`simracerWeatherConditions`、`isFixedConditionQualification`、`preRaceWaitingTimeSeconds`、`sessionOverTimeSeconds`、`postQualySeconds`、`postRaceSeconds`、`sessions`、`configVersion` |
+| `event.json.sessions[]` | 游戏内 Session | `sessionType`（`P` / `Q` / `R`）、`dayOfWeekend`、`hourOfDay`、`sessionDurationMinutes`、`timeMultiplier` |
+| `eventRules.json` | 赛事规则 | `qualifyStandingType`、`pitWindowLengthSec`、`driverStintTimeSec`、`mandatoryPitstopCount`、`maxTotalDrivingTime`、`maxDriversCount`、`tyreSetCount`、`isRefuellingAllowedInRace`、`isRefuellingTimeFixed`、`isMandatoryPitstopRefuellingRequired`、`isMandatoryPitstopTyreChangeRequired`、`isMandatoryPitstopSwapDriverRequired` |
+| `assistRules.json` | 驾驶辅助限制 | `disableIdealLine`、`disableAutosteer`、`stabilityControlLevelMax`、`disableAutoPitLimiter`、`disableAutoGear`、`disableAutoClutch`、`disableAutoEngineStart`、`disableAutoWiper`、`disableAutoLights` |
+| `bop.json` | 性能平衡 | `entries[].track`、`entries[].carModel`、`entries[].ballastKg` |
+| `entrylist.json` | 车手/车辆名单 | `entries[].teamName`、`raceNumber`、`defaultGridPosition`、`ballastKg`、`restrictor`、`isServerAdmin`、`forcedCarModel`、`overrideCarModelForCustomCar`、`overrideDriverInfo`、`customCar`、`drivers`、`forceEntryList` |
+| `entrylist.json.drivers[]` | 车手身份 | `driverCategory`、`firstName`、`lastName`、`playerID`、`shortName`、`nationality` |
+
+**AC Dedicated Server 配置文件字段**：
+
+| 文件/段落 | 用途 | 字段 |
+|----------|------|------|
+| `server_cfg.ini [SERVER]` | 服务器、赛道、车辆、规则和网络 | `NAME`、`CARS`、`TRACK`、`CONFIG_TRACK`、`SUN_ANGLE`、`TIME_OF_DAY_MULT`、`MAX_CLIENTS`、`UDP_PORT`、`TCP_PORT`、`HTTP_PORT`、`PASSWORD`、`ADMIN_PASSWORD`、`REGISTER_TO_LOBBY`、`PICKUP_MODE_ENABLED`、`LOOP_MODE`、`LOCKED_ENTRY_LIST`、`TC_ALLOWED`、`ABS_ALLOWED`、`STABILITY_ALLOWED`、`AUTOCLUTCH_ALLOWED`、`DAMAGE_MULTIPLIER`、`FUEL_RATE`、`TYRE_WEAR_RATE`、`TYRE_BLANKETS_ALLOWED`、`ALLOWED_TYRES_OUT`、`QUALIFY_MAX_WAIT_PERC`、`START_RULE`、`RACE_OVER_TIME`、`RESULT_SCREEN_TIME`、`RACE_EXTRA_LAP`、`RACE_PIT_WINDOW_START`、`RACE_PIT_WINDOW_END`、`REVERSED_GRID_RACE_POSITIONS`、`MAX_BALLAST_KG`、`WELCOME_MESSAGE`、`CLIENT_SEND_INTERVAL_HZ`、`SLEEP_TIME`、`NUM_THREADS`、`UDP_PLUGIN_LOCAL_PORT`、`UDP_PLUGIN_ADDRESS`、`AUTH_PLUGIN_ADDRESS` |
+| `server_cfg.ini [PRACTICE]` | 练习/长时间预选 | `NAME`、`TIME`、`WAIT_TIME`、`IS_OPEN` |
+| `server_cfg.ini [QUALIFY]` | 排位 | `NAME`、`TIME`、`WAIT_TIME`、`IS_OPEN` |
+| `server_cfg.ini [RACE]` | 正赛 | `NAME`、`LAPS`、`TIME`、`WAIT_TIME`、`IS_OPEN` |
+| `server_cfg.ini [DYNAMIC_TRACK]` | 动态路面 | `SESSION_START`、`RANDOMNESS`、`LAP_GAIN`、`SESSION_TRANSFER` |
+| `server_cfg.ini [WEATHER_0..N]` | 天气 | `GRAPHICS`、`BASE_TEMPERATURE_AMBIENT`、`VARIATION_AMBIENT`、`BASE_TEMPERATURE_ROAD`、`VARIATION_ROAD`、`WIND_BASE_SPEED_MIN`、`WIND_BASE_SPEED_MAX`、`WIND_BASE_DIRECTION`、`WIND_VARIATION_DIRECTION` |
+| `entry_list.ini [CAR_N]` | 车位、车辆、车手和 BoP | `MODEL`、`SKIN`、`DRIVERNAME`、`TEAM`、`GUID`、`SPECTATOR_MODE`、`BALLAST`、`RESTRICTOR`、`FIXED_SETUP` |
+
+### 4.1.9 报名与成绩归属
+
+| 对象 | 默认归属 | 说明 |
+|------|----------|------|
+| Registration | Round | 用户报名某一站，获得该站预选资格；特殊活动可下沉到 Stage/Session |
+| Split Assignment | Session | 每个 Session 可独立分 Split，正赛可根据预选榜单重新分组 |
+| Result | Session | 所有成绩先落到 Session，再聚合到 Stage/Round/Competition |
+| Protest | Session | 抗议针对具体 Session 的具体成绩或事故 |
+| Advancement | Stage | 晋级名单由 Stage 的 eligibility_source 条件子字段配置生成，可由管理员复核 |
+
+### 4.1.10 积分表数据结构（ScoringTableEntry）
 
 管理员可选择使用纯文字描述积分规则，或使用结构化的积分表格，或两者兼有。前台展示时先显示自定义文字，再显示积分表格。
 
@@ -521,70 +703,7 @@ flowchart TD
 
 前台渲染逻辑：如果整张积分表的备注列全部为空，则不显示"备注"列。
 
-### 4.1.5 赛事（Event）关联锦标赛
-
-赛事有两种类型：**独立赛事**和**锦标赛子赛事**。
-
-#### 独立赛事
-
-不归属于任何锦标赛，自身包含全部属性（游戏、赛道、时间、规则等）。数据模型同 4.1.2 定义的全部字段。
-
-#### 锦标赛子赛事
-
-归属于某个锦标赛时，子赛事仅保留本场独有信息，其余属性继承锦标赛：
-
-| 子赛事独有字段 | 类型 | 必填 | 说明 |
-|---------------|------|------|------|
-| id | UUID | 自动 | 赛事唯一标识 |
-| championship_id | UUID | 是 | 所属锦标赛 ID |
-| name_zh / name_en | String | 是（至少一种） | 本场赛事名称（中/英），如"第 1 站 - 蒙扎" |
-| description_zh / description_en | RichText | 否 | 本场补充说明（中/英） |
-| cover_image | URL | 否 | 本场封面图（为空则使用锦标赛封面） |
-| track | String | 是 | 赛道名称 |
-| track_layout | String | 否 | 赛道布局 |
-| registration_open_at | DateTime | 是 | 报名起始时间（默认当前时间） |
-| registration_close_at | DateTime | 是 | 报名截止时间 |
-| event_start_time | DateTime | 是 | 比赛开始时间（UTC） |
-| server_info | String | 否 | 服务器名称 / 密码 |
-| server_join_link | URL | 否 | 游戏直连链接 |
-| stream_url | URL | 否 | 本场直播链接（为空则使用锦标赛通用直播链接） |
-| vod_url | URL | 否 | 赛后回放链接 |
-| resources_zh / resources_en | RichText | 否 | 本场额外资源（为空则展示锦标赛级资源） |
-| status | Enum | 自动 | 赛事状态 |
-| results | Result[] | 自动 | 本场比赛结果 |
-| protests | Protest[] | 自动 | 本场抗议记录 |
-
-**继承规则**：
-
-| 属性 | 来源 | 说明 |
-|------|------|------|
-| 游戏平台 | 锦标赛 | 子赛事不可修改 |
-| 车型组 / 车辆列表 | 锦标赛 | 子赛事不可修改 |
-| 赛制参数（练习/排位/正赛时长等） | 锦标赛 | 子赛事不可修改 |
-| Split 配置 | 锦标赛 | 子赛事不可修改 |
-| 积分规则 / 晋级规则 | 锦标赛 | 子赛事不可修改 |
-| 准入条件 | 锦标赛 | 子赛事不可修改 |
-| 赛事规则 | 锦标赛 | 子赛事不可修改 |
-| 发布区域 | 锦标赛 | 子赛事不可修改 |
-| 封面图 | 子赛事 > 锦标赛 | 子赛事有封面则用子赛事的，否则用锦标赛的 |
-| 直播链接 | 子赛事 > 锦标赛 | 子赛事有直播则用子赛事的，否则用锦标赛的 |
-| 资源下载 | 子赛事 > 锦标赛 | 子赛事有额外资源则追加展示，否则仅展示锦标赛级资源 |
-| 赛道 / 布局 | 子赛事 | 每场不同 |
-| 比赛时间 | 子赛事 | 每场不同 |
-| 服务器信息 | 子赛事 | 每场不同 |
-| 成绩 / 抗议 | 子赛事 | 每场独立 |
-
-**前台展示逻辑**：
-
-锦标赛子赛事**没有独立的详情页面**，所有子赛事信息都在锦标赛详情页中展示（见 5.2）。锦标赛详情页内按以下分区展示子赛事：
-
-1. **下一场可报名**：展示距当前最近一场处于 RegistrationOpen 状态的子赛事，跳过 Upcoming 状态的赛事
-2. **未来赛事**：按时间顺序展示所有未来的子赛事（含 Upcoming 和 RegistrationOpen 两种状态），Upcoming 状态不显示报名按钮
-3. **过往赛事**：按时间倒序展示所有已结束的子赛事（折叠/展开）
-
-每场子赛事在锦标赛页面中仅展示本场独有字段：赛道、比赛时间、报名状态（Upcoming/RegistrationOpen 等）、报名人数、服务器信息（报名后可见）、成绩（赛后）、抗议入口。
-
-### 4.1.6 资源下载（Resource）
+### 4.1.11 资源下载（Resource）
 
 部分赛事涉及自定义 MOD 赛道或车辆包，需要参赛车手提前下载安装。
 
@@ -597,154 +716,167 @@ flowchart TD
 
 ### 4.2.1 总览
 
-管理员进入后台后，选择创建**独立赛事**或**锦标赛**，两者的流程不同：
+管理员进入后台后统一创建 Competition，再根据需要配置 Round、Stage、Session。无论单场赛还是多站锦标赛都使用同一套编辑器，仅模板预设的 Round/Stage 结构不同。
 
 ```mermaid
 flowchart TD
-    A[管理员进入后台<br/>点击'创建'] --> B{选择创建类型}
-    
-    B -->|独立赛事| C[参见 4.2.2 独立赛事创建流程]
-    B -->|锦标赛| D[参见 4.2.3 锦标赛创建流程]
+    A[管理员进入后台<br/>点击'创建赛事'] --> B{选择赛事模板}
+
+    B -->|单场赛模板| C[创建 Competition<br/>自动生成 1 个 Round]
+    B -->|多站赛事模板| D[创建 Competition<br/>批量添加多个 Round]
+    B -->|含预选赛分站模板| E[创建 Competition<br/>每个 Round 内添加预选/正赛 Stage]
+
+    C --> F[配置公共规则]
+    D --> F
+    E --> F
+    F --> G[配置 Round]
+    G --> H[配置 Stage]
+    H --> I[配置 Session]
+    I --> J[预览并发布]
 ```
 
-### 4.2.2 独立赛事创建流程
+### 4.2.2 Competition 创建流程
 
-独立赛事不归属于任何锦标赛，所有信息在本赛事中完整填写。
+Competition 承载整项赛事的公共信息和默认规则。
 
 ```mermaid
 flowchart TD
-    A[管理员进入后台<br/>点击'创建独立赛事'] --> B{选择创建方式}
-    
+    A[点击'创建赛事'] --> B{选择创建方式}
+
     B -->|从空白创建| C[填写基础信息]
     B -->|从模板创建| C1[选择模板<br/>自动填充配置]
-    B -->|复制已有赛事| C2[选择已有赛事<br/>复制全部配置]
-    
+    B -->|复制已有赛事| C2[选择已有 Competition<br/>复制结构和配置]
+
     C1 --> C
     C2 --> C
-    
-    C --> D[设定游戏/赛道/车型]
-    D --> E[设定赛制<br/>练习/排位/正赛参数]
-    E --> F[配置多 Split<br/>是否启用/分组规则/人数上限]
+
+    C --> D[选择游戏 AC/ACC<br/>车型/公共规则]
+    D --> E[配置默认开服参数<br/>模板/容量/天气/规则]
+    E --> F[配置准入条件/积分表]
     F --> G[设定发布区域<br/>单区域/多区域/全球]
-    G --> H[设定报名截止时间<br/>取消报名截止时间<br/>比赛开始时间]
-    H --> I[填写准入条件<br/>和赛制规则<br/>当前语言版本]
-    I --> J[配置资源下载/直播链接<br/>可选]
-    J --> K[预览赛事]
-    
-    K --> L{是否确认?}
-    L -->|需要修改| C
-    L -->|确认| M[保存为草稿]
-    
-    M --> N{立即发布?}
-    N -->|是| N1{至少一种语言<br/>必填字段已完整?}
-    N1 -->|是| O[发布成功<br/>报名即时开放]
-    N1 -->|否| N2[提示补充必填字段]
-    N -->|否| P[保存为草稿<br/>后续手动发布]
+    G --> H[配置资源下载/直播链接<br/>可选]
+    H --> I[进入 Round 编排]
 ```
 
 **流程步骤**：
 
-1. 管理员在后台选择"创建独立赛事"
-2. 选择创建方式：空白创建 / 从模板创建 / 复制已有赛事
+1. 管理员在后台选择"创建赛事"
+2. 选择创建方式：空白创建 / 从模板创建 / 复制已有 Competition
 3. 在表单顶部选择当前填写语言（中文 / 英文），切换后所有双语字段显示对应语言的输入区域
-4. 填写基础信息（赛事名称、描述、封面图）—— 仅填写当前语言版本即可
-5. 设定游戏平台、赛道、车型组
-6. 设定赛制参数（练习/排位/正赛时长、天气、是否进站）
-7. 配置多 Split 选项
-   - 是否启用自动 Split
-   - 单服务器最大人数
-   - 分组规则（按实力/随机/手动/先到先得）
+4. 填写 Competition 基础信息（名称、描述、封面图）—— 仅填写当前语言版本即可
+5. 设定游戏平台、车型组、公共赛制参数、默认天气、默认是否进站；MVP 只允许选择 AC / ACC
+6. 配置默认开服参数：
+   - ACC：后台生成 `configuration.json`、`settings.json`、`event.json`、`eventRules.json`、`assistRules.json`、`bop.json`、`entrylist.json`
+   - AC：后台生成 `server_cfg.ini`、`entry_list.ini`
+   - 端口、管理员密码、容器路径由系统生成或运维模板提供
+   - 服务器名称、加入密码、赛道、车辆、Session 时长、天气和规则可复用到前台展示
+7. 配置准入条件和积分表
+   - 准入条件描述（中/英）
+   - 结构化积分表（可选）
+   - 赛制规则、积分规则说明、晋级规则说明已合并到描述字段中
 8. 选择发布区域（CN / AP / AM / EU，可多选或全选）
- 9. 设定报名起始时间（默认当前时间，可设为未来时间使赛事进入 Upcoming 状态）、报名截止时间、取消报名截止时间、比赛开始时间
-10. 填写准入条件和赛制规则（当前语言版本）
-11. 配置资源下载、直播链接（可选）
-12. 预览赛事信息
-13. 确认后保存为草稿或立即发布
-    - 发布时校验：至少一种语言的所有必填字段已填写
-    - 另一种语言的内容可后续随时补全（编辑已发布赛事时切换语言填写）
+9. 配置资源下载、直播链接（可选）
+10. 进入 Round 编排器
 
-### 4.2.3 锦标赛创建流程
+### 4.2.3 Round / Stage / Session 编排流程
 
-锦标赛的创建分为两步：先创建锦标赛（填写公共属性），再逐场添加子赛事（填写本场独有信息）。
+Round 编排器用于配置每一站的具体流程。管理员可以逐站添加，也可以用模板批量生成全赛季结构。
 
 ```mermaid
 flowchart TD
-    A[管理员点击'创建锦标赛'] --> B[填写锦标赛基础信息<br/>名称/描述/封面图]
-    B --> C[设定游戏平台/车型组]
-    C --> D[设定赛制参数<br/>练习/排位/正赛时长等]
-    D --> E[配置多 Split<br/>积分规则/晋级规则]
-    E --> F[设定发布区域<br/>准入条件/赛事规则]
-    F --> G[配置资源下载/直播链接<br/>可选]
-    G --> H[保存锦标赛<br/>草稿或发布]
-    
-    H --> I[在锦标赛中<br/>点击'添加子赛事']
-    I --> J[填写本场信息<br/>名称/赛道/布局]
-    J --> K[设定本场时间<br/>报名截止/比赛开始]
-    K --> L[配置本场服务器信息<br/>直播链接<br/>可选]
-    L --> M{继续添加?}
-    
-    M -->|是| I
-    M -->|否| N[完成]
-    
-    subgraph 注意
-        O[子赛事继承锦标赛的<br/>游戏/车型/赛制/Split<br/>区域/准入/积分规则等<br/>无需重复填写]
-    end
+    A[进入 Round 编排器] --> B{添加方式}
+    B -->|单个添加| C[填写 Round 信息<br/>名称/赛道/报名时间]
+    B -->|批量生成| D[填写起始日期<br/>重复规则/站数/赛道表]
+
+    D --> C
+    C --> E[添加 Stage]
+    E --> F[配置名称/描述/时间<br/>Eligibility Source]
+    F --> F1{eligibility_source?}
+    F1 -->|roundRegistration| F2[无需额外配置]
+    F1 -->|previousStageResult| F3[配置 metric/direction/limit]
+    F1 -->|manualInvite| F4[勾选已报名车手]
+
+    F2 & F3 & F4 --> K[添加 Session<br/>时间/结果/开服配置]
+    K --> L{继续添加 Stage?}
+    L -->|是| E
+    L -->|否| M{继续添加 Round?}
+    M -->|是| C
+    M -->|否| N[预览并发布]
 ```
 
 **流程步骤**：
 
-1. 管理员在后台点击"创建锦标赛"
-2. 填写锦标赛基础信息（名称中英/描述/封面图）
-3. 设定游戏平台、车型组（所有子赛事共用）
-4. 设定赛制参数（练习/排位/正赛时长、天气、是否进站，所有子赛事共用）
-5. 配置多 Split、积分规则、晋级/淘汰规则
-6. 设定发布区域、准入条件、赛事规则
-7. 配置资源下载、直播链接（可选，所有子赛事可继承）
-8. 保存锦标赛（草稿或发布）
-9. 在锦标赛管理页面中逐场添加子赛事：
-   - 填写本场名称（如"第 1 站 - 蒙扎"）
-   - 选择赛道和布局
-   - 设定本场报名截止时间和比赛开始时间
-   - 配置本场服务器信息（可选）
-   - 配置本场直播链接（可选，为空则使用锦标赛通用直播）
-   - 配置本场额外资源下载（可选，为空则展示锦标赛级资源）
-10. 可继续添加更多子赛事，或拖拽调整顺序
-11. 各子赛事可独立发布（发布后本场报名即时开放），也可批量发布
+1. 管理员为 Competition 添加 Round
+2. 填写 Round 名称、赛道、报名开始/截止、取消报名截止时间
+3. 如是长期锦标赛，可批量生成多个 Round，并逐站补充赛道
+4. 为 Round 添加 Stage（不再选择 Stage 类型，Stage 性质由名称和 Session 配置自然体现）：
+   - 设置名称、描述（始终可编辑）、时间窗口
+   - 配置 Eligibility Source：
+     - `roundRegistration`：无需额外配置（仅提示文案）
+     - `previousStageResult`：配置 metric（bestLap/points/position）、direction（asc/desc）、limit
+     - `manualInvite`：从已报名车手中勾选参赛名单
+   - 配置 Stage 级 Split（如需）
+   - 添加 Session（practice / qualifying / race / timeTrial）
+5. 为每个 Stage 添加 Session：
+   - practice：可用于长时间开放预选服务器，也可用于正式比赛前练习
+   - qualifying / race：固定时间的标准比赛 Session
+   - race：正赛或决赛 Session
+6. 配置 Session 开服参数、直播链接、结果类型：
+   - 从 Competition 默认开服配置继承赛道、车辆、天气和规则
+   - 可按 Session 覆盖服务器名称、加入密码、Session 时长、圈数、是否允许中途加入
+   - 长时间开放的 practice 预选可配置固定重启间隔，并在 Stage 结束后合并多个游戏内 Session 结果
+   - 系统根据 AC / ACC 自动生成对应配置文件，前台只展示可见字段
+7. 预览 Competition 详情、每个 Round 的阶段时间线、当前/下一可报名 Round
+8. 确认后保存为草稿或立即发布
+   - 发布时校验：至少一种语言的所有必填字段已填写
+   - 另一种语言的内容可后续随时补全
 
-**锦标赛模板**：
+### 4.2.4 模板与复制
 
-- 锦标赛同样支持保存为模板和复制功能
-- 复制锦标赛时，可选择是否同时复制子赛事结构（时间等信息需重新填写）
+- 单场赛模板：生成 1 个 Round，默认包含 Practice / Qualifying / Race
+- 多站赛事模板：批量生成多个 Round，每个 Round 复用相同 Stage/Session 结构
+- 含预选赛分站模板：每个 Round 默认包含"预选赛"Stage（长时间开放 practice Session）和"正赛日"Stage（Practice / Qualifying / Race）
+- 复制 Competition 时，可选择仅复制公共规则、复制 Round 结构、复制 Stage/Session 结构；所有时间必须重新确认
 
 ## 4.3 赛事状态流转
 
-> **实现说明**：赛事状态（Draft/Cancelled 除外）由系统根据当前时间和赛事日期字段自动计算，不依赖静态存储的 status 字段。计算逻辑：`getEventStatus(event)` 函数优先检查管理员覆盖状态（Cancelled/Draft），其次通过 results 数据检测已完成赛事，最终根据时间区间返回 Upcoming → RegistrationOpen → RegistrationClosed → InProgress。仅 Cancelled 和 Draft 为管理员手动设置的状态。
+> **实现说明**：状态由系统按 Competition / Round / Stage / Session 分层计算。`Draft`、`Cancelled` 为管理员手动覆盖；其余状态根据报名窗口、Stage/Session 时间窗口和成绩数据自动派生。前台列表主要展示 Competition 聚合状态；详情页展示 Round 当前状态和 Stage/Session 进度。
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Draft: 创建赛事
-    Draft --> Upcoming: 发布（设置报名起始时间）
-    Draft --> RegistrationOpen: 发布（报名起始时间为当前时间）
+    [*] --> Draft: 创建 Round
+    Draft --> Upcoming: 发布但报名未开放
+    Draft --> RegistrationOpen: 发布且报名已开放
     Upcoming --> RegistrationOpen: 到达报名起始时间
     RegistrationOpen --> RegistrationClosed: 到达报名截止时间<br/>或手动关闭报名
-    RegistrationOpen --> Cancelled: 管理员取消<br/>人数不足
-    RegistrationClosed --> InProgress: 到达比赛时间
-    RegistrationClosed --> Cancelled: 管理员取消
-    InProgress --> Completed: 比赛结束
-    Completed --> ResultsPublished: 成绩录入完成
-    Draft --> Draft: 编辑
+    RegistrationOpen --> Cancelled: 管理员取消
+    RegistrationClosed --> StagePending: 等待首个 Stage 开始
+    StagePending --> InStage: Stage 进行中
+    InStage --> StageCompleted: Stage 结束并生成结果
+    StageCompleted --> InStage: 下一 Stage 开始
+    StageCompleted --> Completed: 最后 Stage 结束
+    Completed --> ResultsPublished: 成绩/晋级名单发布
 ```
 
 | 状态 | 说明 | 可执行操作 |
 |------|------|-----------|
-| **Draft（草稿）** | 赛事已创建但未发布 | 编辑、删除、发布 |
-| **Upcoming（未来）** | 已发布但报名未开放（当前时间 < registrationOpenAt） | 编辑报名起始时间、取消赛事 |
-| **RegistrationOpen（报名中）** | 报名通道开放中 | 关闭报名、取消赛事 |
-| **RegistrationClosed（报名截止）** | 报名已截止，等待比赛开始 | 取消赛事、修改服务器信息 |
-| **InProgress（进行中）** | 比赛正在进行 | 无 |
-| **Completed（已结束）** | 比赛已结束 | 录入成绩 |
-| **ResultsPublished（成绩已发布）** | 成绩已录入并发布 | 修改成绩（需记录变更日志） |
-| **Cancelled（已取消）** | 赛事被取消 | 无 |
+| **Draft（草稿）** | Competition/Round/Stage/Session 已创建但未发布 | 编辑、删除、发布 |
+| **Upcoming（未来）** | 已发布但报名未开放 | 编辑报名起始时间、取消 |
+| **RegistrationOpen（报名中）** | Round 或指定目标开放报名 | 关闭报名、取消 |
+| **RegistrationClosed（报名截止）** | 报名已截止，等待 Stage/Session 开始 | 取消、修改服务器信息 |
+| **StagePending（等待阶段开始）** | Round 已报名截止，但首个 Stage 尚未开始 | 修改服务器信息、发布补充说明 |
+| **InStage（阶段进行中）** | 某个 Stage/Session 正在进行，如预选赛服务器开放中 | 展示当前 Stage、榜单或直播 |
+| **StageCompleted（阶段结束）** | 某个 Stage 已结束，但 Round 未完成 | 录入/复核结果、生成晋级名单 |
+| **Completed（已结束）** | Round 的最后 Stage 已结束 | 录入成绩 |
+| **ResultsPublished（成绩已发布）** | 成绩、积分或晋级名单已发布 | 修改成绩（需记录变更日志） |
+| **Cancelled（已取消）** | Competition/Round/Stage/Session 被取消 | 无 |
+
+**聚合规则**：
+
+- Competition 状态由其所有 Round 聚合：存在报名中 Round 则显示"报名中"；存在当前进行 Stage 则显示"进行中"；全部 Round 完成则显示"已结束"。
+- Round 状态由报名窗口与 Stage 状态决定。
+- Stage 状态由 Stage 时间窗口和 Session 结果决定。
+- Session 状态由具体开始/结束时间、服务器开放情况和成绩发布情况决定。
 
 ## 4.4 赛事模板系统
 
@@ -770,7 +902,11 @@ stateDiagram-v2
 
 当报名人数超过单个游戏服务器容量时，系统自动将参赛者分配到多个并行的游戏服务器（Split）中。每个 Split 独立进行比赛。
 
+> **配置层级**：多 Split 配置位于 **Stage 层级**（见 4.1.6 SplitConfig），而非 Competition 层级。每个 Stage 可独立决定是否启用多 Split 及其参数。
+
 ### 4.5.2 配置项
+
+> 以下配置项为 Stage 级 SplitConfig 字段。
 
 | 配置项 | 类型 | 说明 |
 |--------|------|------|
@@ -799,16 +935,16 @@ flowchart TD
     A[报名截止] --> B{是否启用多 Split?}
     B -->|否| C[所有车手进入单一 Split]
     B -->|是| D{报名人数 > 单 Split 上限?}
-    
+
     D -->|否| C
     D -->|是| E[按分组规则自动分组]
-    
+
     E --> F{分组规则}
     F -->|按实力| F1[按车手历史成绩排序<br/>均匀分配到各 Split<br/>Split 1 最强组]
     F -->|随机| F2[随机分配到各 Split]
     F -->|先到先得| F3[按报名时间顺序<br/>先到者进入较早 Split]
     F -->|手动| F4[管理员手动指定<br/>每个车手所在的 Split]
-    
+
     F1 & F2 & F3 & F4 --> G[生成分组结果]
     G --> H[管理员审核/微调]
     H --> I[公布分组结果]
@@ -845,16 +981,16 @@ flowchart TD
 |---------|------|---------|
 | 无限制 | 所有注册用户均可报名 | 默认选项 |
 | 规则确认 | 报名前需阅读并勾选确认赛事规则 | 勾选框 |
-| 自定义条件 | 文字描述准入条件（如"需持有 DLC"） | 自由文本 |
+| 自定义条件 | 双语文字描述准入条件（如"需持有 DLC"） | 自由文本（中/英） |
 
 > 注：MVP 阶段不含 Rating 系统，因此暂不包含基于 Rating 的准入门槛。后续版本可扩展。
 
 ### 4.6.2 报名确认流程
 
 1. 车手点击"报名"按钮
-2. 系统检查准入条件
-   - 若需规则确认：弹出赛事规则内容，车手需勾选"我已阅读并同意"
-   - 若有自定义条件：弹出条件说明，车手点击"确认参加"
+2. 系统检查准入条件和赛制规则
+   - 若有准入条件或赛制规则：弹出"报名前须知"弹窗，上方显示准入条件描述，下方显示赛制规则内容，车手需勾选"我已阅读并同意以上内容"
+   - 若均无：直接完成报名
 3. 检查通过后完成报名
 
 ## 4.7 赛事取消与最低人数
@@ -888,56 +1024,50 @@ flowchart TD
 
 ## 4.8 游戏平台参考指南
 
-不同游戏的多人联机方式、服务器搭建和成绩导出能力差异较大，直接影响管理员在后台的配置方式和前台车手的加入方式。
+不同游戏的多人联机方式、服务器搭建和成绩导出能力差异较大，直接影响管理员在后台的配置方式和前台车手的加入方式。MVP 阶段只支持 AC / ACC，目标是先把"后台填写参数 → 自动生成配置文件 → 自动启动服务器 → 自动导入成绩"跑通。
 
 ### 4.8.1 游戏分类
 
-#### A 类：自建专用服务器
+#### MVP：自建专用服务器
 
 管理员需要搭建或租用专用服务器，配置服务器参数后车手通过游戏内服务器浏览器加入。
 
 | 游戏 | 服务器获取 | 配置方式 | 车手加入方式 | 成绩导出能力 |
 |------|-----------|---------|------------|------------|
-| **ACC PC** | Steam 下载"ACC Dedicated Server"工具 | JSON 配置文件（configuration.json / event.json / entrylist.json），端口转发 UDP/TCP 9600 | 游戏内服务器浏览器 / Quick Join 排位匹配 | **优秀**：自动生成 JSON 结果文件、CSV 排名、MoTeC 遥测 |
-| **AC PC** | SteamCMD 下载（支持 Windows/Linux） | INI 配置文件（server_cfg.ini / entry_list.ini），端口转发 UDP 9600 + TCP 8081 | 游戏内服务器浏览器 / Content Manager / 直连 IP | **优秀**：JSON 结果 + 社区插件（KMRS、sTracker） |
-| **AC Evo PC** | Steam 下载专用服务器工具（v0.6 新增） | 配置方式持续完善中 | 游戏内服务器浏览器 | **一般**：MoTeC 遥测已支持，结果导出持续完善中 |
-| **LMU PC** | Steam 下载专用服务器工具（基于 rF2 架构） | JSON 配置文件，端口转发 | 游戏内服务器浏览器 / Quick Race 匹配 / 直连 IP | **良好**：JSON 结果文件 + rF2 插件生态 |
-| **rF2 PC** | Steam 免费下载"rFactor 2 Dedicated Server" | JSON 配置或内置 Web 管理界面（端口 5398），端口转发 | 游戏内服务器浏览器 / 直连 IP | **优秀**：JSON/XML 结果 + 插件 API + MoTeC 遥测 |
-| **ETS2 PC** | SteamCMD 下载 Dedicated Server（支持 Windows/Linux） | 服务器配置文件（server_config.sii），端口转发 | 游戏内服务器浏览器 / 直连 IP | **一般**：通过社区工具和日志获取部分结果信息 |
+| **ACC** | Steam 下载 ACC Dedicated Server 工具 | JSON 配置文件：`configuration.json`、`settings.json`、`event.json`、`eventRules.json`、`assistRules.json`、`bop.json`、`entrylist.json` | 游戏内服务器浏览器 / Quick Join / 直连链接（如有） | **优秀**：自动生成结果文件，可按 Steam ID 匹配 |
+| **AC** | SteamCMD 或游戏目录中的 Dedicated Server 工具 | INI 配置文件：`server_cfg.ini`、`entry_list.ini` | 游戏内服务器浏览器 / Content Manager / 直连 IP | **优秀**：结果文件 + 社区插件生态，可按 Steam GUID/SteamID64 匹配 |
 
-#### B 类：官方服务器
-
-游戏厂商提供全部服务器基础设施，无需自建。管理员通过游戏内或官网创建赛程。
-
-| 游戏 | 服务器类型 | 开赛方式 | 车手加入方式 | 成绩导出能力 |
-|------|-----------|---------|------------|------------|
-| **iRacing PC** | iRacing 官方基础设施 | 选择 Official Series 或创建 Hosted Session，按时间槽注册 | iRacing 官网注册 → 客户端参赛 | **优秀**：iRacing API（JSON）、CSV 导出 |
+> 后续扩展其他游戏时，需要新增对应的 `GameServerAdapter`，但不影响 Competition / Round / Stage / Session 的核心模型。
 
 ### 4.8.2 对平台功能的影响
 
-#### 管理员后台 — 服务器信息配置
+#### 管理员后台 — 自动开服配置
 
-不同游戏类型，管理员在后台填写的"服务器信息"内容不同：
+管理员创建赛事时先填写游戏服务器参数，平台再生成配置文件并启动服务器。后台表单应分为"通用字段"和"游戏高级字段"：
 
-| 游戏类型 | 管理员填写内容 | 示例 |
-|---------|--------------|------|
-| **A 类（自建服务器）** | 服务器名称 + 密码（车手在游戏内搜索加入），可选直连链接 | `服务器名: MOZA Race 01 / 密码: racing123` |
-| **B 类 - iRacing** | iRacing Session 名称 / 密码或 Hosted Session 链接 | `Session: MOZA GT3 Round 3 / Password: moza2026` |
+| 表单分组 | 通用字段 | 说明 |
+|---------|---------|------|
+| 基础信息 | 服务器名称、加入密码、公开/私密、最大车位 | 前台可复用服务器名称、加入密码、容量 |
+| 赛道与车辆 | 赛道、布局、车型组/车辆列表、涂装/车号 | 前台可复用赛道、车辆和车型组 |
+| Session 编排 | Practice / Qualifying / Race 的顺序、时长、圈数、是否允许中途加入 | 映射到平台 Session 时间线 |
+| 天气与环境 | 天气、气温、路温、时间倍率、动态路面 | 前台可展示为规则摘要 |
+| 赛事规则 | 进站、油耗、胎耗、损伤、辅助限制、发车/编队规则 | 前台展示可读规则，不展示原始字段名 |
+| Entry List / Split | 报名车手、Steam ID、车队、车号、配重、限流 | Steam ID 不前台展示 |
+| 基础设施 | 端口、管理员密码、容器路径、插件地址、结果文件路径 | 系统/运维字段，不给前台 |
 
-前台赛事详情页的"服务器信息"板块根据游戏类型展示对应内容，并给出加入指引文字（如"请在游戏内搜索服务器名称"或"请在 iRacing 客户端中查找对应 Session"）。
+前台赛事详情页的"服务器信息"板块根据 AC / ACC 展示同一套用户心智：服务器名称、密码、加入方式、当前 Session、赛道、车辆、规则摘要。底层字段来自不同配置文件，但前台不暴露这种差异。
 
 #### 成绩导入能力
 
 | 导入等级 | 游戏 | 导入方式 |
 |---------|------|---------|
-| **可自动导入** | ACC、AC、LMU、rF2 | 上传 JSON/XML 结果文件，系统自动解析 |
-| **API 导入** | iRacing | 调用 iRacing membersite API 获取成绩 |
-| **仅手动录入** | AC Evo（暂）、ETS2 | 无结构化数据导出，管理员手动输入成绩 |
+| **可自动导入** | ACC、AC | 读取游戏/插件输出的结果文件，系统解析并按 Steam 账号匹配车手 |
 
 ### 4.8.3 后续迭代建议
 
-- **AC Evo**：目前处于 Early Access，服务器配置和结果导出能力持续完善中，需持续跟进
-- **ETS2**：关注 SCS Software 是否开放更完善的多人联机结果数据接口
+- 抽象 `GameServerAdapter`：负责把平台标准字段转换为游戏配置文件，并暴露可前台复用字段
+- 抽象 `ResultImporter`：负责解析游戏结果文件并转换为统一 Result
+- AC / ACC 稳定后，再评估 AC Evo、iRacing、LMU、rF2、ETS2 等游戏是否进入创建器
 
 ### 4.8.4 玩家身份映射
 
@@ -947,29 +1077,23 @@ flowchart TD
 
 | 游戏 | 游戏内唯一标识 | 平台用户对应字段 | 匹配方式 |
 |------|--------------|----------------|---------|
-| ACC / AC / AC Evo / LMU / rF2 / ETS2 | SteamID64 | 用户绑定的 Steam 账号获取的 SteamID64 | **自动匹配**（结果文件含 SteamID64） |
-| iRacing | iRacing Customer ID（custId） | 用户填写的 iRacing ID | **自动匹配**（API 返回 custId） |
+| ACC / AC | SteamID64 / Steam GUID | 用户绑定的 Steam 账号获取的 SteamID64 | **自动匹配**（结果文件或 Entry List 含 Steam 标识） |
 
-**自动匹配流程**（适用于 ACC / AC / LMU / rF2 / iRacing 等支持结果文件或 API 的游戏）：
+**自动匹配流程**：
 
 ```mermaid
 flowchart TD
     A[管理员上传/导入成绩文件] --> B[系统解析结果文件<br/>提取每位玩家的游戏内标识]
-    B --> C{匹配类型}
-    
-    C -->|SteamID64| D[在平台用户中查找<br/>Steam 绑定记录]
-    C -->|iRacing custId| E[在平台用户中查找<br/>iRacing ID 记录]
-    
-    D --> F{找到匹配用户?}
-    E --> F
-    
-    F -->|是| G[自动关联成绩到该用户]
-    F -->|否| H[标记为'未匹配玩家'<br/>显示游戏内标识]
-    
-    H --> I[管理员手动匹配]
-    I --> J{管理员选择平台用户}
-    J -->|匹配成功| K[关联成绩<br/>并记录匹配关系]
-    J -->|无对应用户| L[标记为'外部选手'<br/>成绩展示但不计入平台统计]
+    B --> C[在平台用户中查找<br/>Steam 绑定记录]
+    C --> D{找到匹配用户?}
+
+    D -->|是| E[自动关联成绩到该用户]
+    D -->|否| F[标记为'未匹配玩家'<br/>显示游戏内标识]
+
+    F --> G[管理员手动匹配]
+    G --> H{管理员选择平台用户}
+    H -->|匹配成功| I[关联成绩<br/>并记录匹配关系]
+    H -->|无对应用户| J[标记为'外部选手'<br/>成绩展示但不计入平台统计]
 ```
 
 **匹配失败处理**：
@@ -979,8 +1103,7 @@ flowchart TD
 | 结果文件中的玩家未在平台注册 | 标记为"未匹配"，管理员可标记为"外部选手"，成绩展示但不计入平台用户统计 |
 | 结果文件中的玩家已注册但未绑定对应游戏 ID | 标记为"未匹配"，显示游戏内 ID。管理员可通知该用户补充游戏 ID 后重新匹配 |
 | 多个平台用户绑定了相同的 Steam 账号 | 系统不允许（绑定时校验唯一性） |
-| 用户更换了 Steam/iRacing 账号 | 用户可在账号设置中更新，管理员可在后台手动修改匹配关系 |
-| 手动录入成绩（AC Evo / ETS2） | 管理员直接从平台已报名车手列表中选择，无需匹配步骤 |
+| 用户更换了 Steam 账号 | 用户可在账号设置中更新，管理员可在后台手动修改匹配关系 |
 
 ---
 
@@ -998,7 +1121,7 @@ flowchart TD
 
 | 筛选项 | 类型 | 说明 |
 |--------|------|------|
-| 游戏平台 | 多选 | AC / ACC / AC Evo / iRacing / LMU / F1 25 等 |
+| 游戏平台 | 多选 | AC / ACC |
 | 车型组 | 多选 | GT3 / GT4 / Formula 等 |
 | 时间范围 | 单选 | 本周 / 本月 / 未来所有 |
 
@@ -1012,140 +1135,115 @@ flowchart TD
 
 ### 5.1.4 列表卡片信息
 
-**独立赛事卡片**展示：
+赛事列表统一展示 Competition 卡片。
+
+**Competition 卡片**展示：
 
 - 封面图 + 游戏平台标签
-- 赛事图标 + 赛事名称
+- 赛事名称
 - 车型组
-- 赛道名称
-- 比赛时间（用户本地时间）
-- 报名人数（如 X / 30）+ 报名状态标签（右对齐）
-
-**锦标赛卡片**展示：
-
-- 封面图 + 游戏平台标签 + 锦标赛标签
-- 锦标赛图标 + 锦标赛名称
-- 车型组 + 子赛事数量
-- 下一场赛道名称
-- 下一场比赛时间
-- 下一场报名人数 + 下一场报名状态标签（右对齐）
+- Round 数量（仅多 Round 赛事显示）
+- 当前/下一 Round 名称、赛道、比赛时间
+- 当前 Stage 标签（如预选赛开放中、正赛日、决赛）
+- 当前报名人数 / 容量 + 状态标签（右对齐）
+- 如当前 Stage 是预选赛，可展示晋级线摘要（如"前 30 晋级，当前第 30 名 1:58.234"）
 
 ## 5.2 赛事详情页
 
-平台有两种详情页：**独立赛事详情页**和**锦标赛详情页**。
+平台统一使用 Competition 详情页。无论单场赛还是多站锦标赛都通过同一个页面结构展示，只是 Round/Stage 数量不同。
 
-### 5.2.1 独立赛事详情页
-
-独立赛事拥有自己的详情页，展示完整赛事信息。
+### 5.2.1 Competition 详情页
 
 ```
 ┌──────────────────────────────────────────┐
-│ 封面图 + 赛事名称 + 状态标签             │
+│ 封面图 + Competition 名称 + 状态标签      │
 ├──────────────────────────────────────────┤
 │ 基础信息栏                               │
 │ ├── 游戏平台                             │
-│ ├── 赛道 / 布局                          │
 │ ├── 车型组                               │
 │ ├── 天气 / 进站                          │
-│ ├── 比赛时间（本地时间 + UTC）           │
-│ └── 赛制信息                             │
-│ ├── 练习赛 / 排位赛 / 正赛 时长          │
-│ ├── 赛制规则（富文本）                   │
-│ └── 积分规则（自定义文字 + 积分表格）   │
+│ └── Round 数量                           │
 ├──────────────────────────────────────────┤
-│ 报名信息                                 │
-│ ├── 报名按钮 / 已报名状态                │
-│ ├── 报名人数 / 预计 Split 数             │
+│ Tab：概览 / 赛程 / 预选榜 / 成绩 / 积分榜 │
+├──────────────────────────────────────────┤
+│ Tab 1: 概览                              │
+│ ├── 描述（含赛制/积分/晋级规则）         │
 │ ├── 准入条件                             │
-│ └── 取消报名按钮 + 截止时间              │
+│ ├── 积分表                               │
+│ ├── 资源下载                             │
+│ └── 公告 / 更新日志                      │
 ├──────────────────────────────────────────┤
-│ Split 分组（分组公布后显示）             │
-│ ├── Split 1: 参赛名单 / 时间 / 服务器   │
-│ ├── Split 2: ...                        │
-│ └── ...                                 │
+│ Tab 2: 赛程                              │
+│ ├── Round 列表                           │
+│ ├── 每个 Round 展示 Stage 时间线          │
+│ └── 点击 Round 进入分站详情              │
 ├──────────────────────────────────────────┤
-│ 资源下载（公开可见，无需登录）           │
-│ ├── 下载链接 + 安装说明                  │
-│ └── 仅在管理员添加了资源时显示           │
+│ Tab 3: 预选榜                            │
+│ ├── 当前/历史预选 Stage 选择             │
+│ ├── 圈速榜 / 积分榜                      │
+│ └── 晋级线与候选名单                     │
 ├──────────────────────────────────────────┤
-│ 服务器信息（报名后展示，未填写时提示稍后提供）│
-│ ├── 服务器名称 / 密码                    │
-│ └── 直连链接                             │
+│ Tab 4: 成绩                              │
+│ ├── Round / Stage / Session 筛选          │
+│ └── 成绩表                               │
 ├──────────────────────────────────────────┤
-│ 直播区域（赛事期间展示）                 │
-│ └── 嵌入 Twitch / YouTube 播放器        │
+│ Tab 5: 积分榜                            │
+│ └── Competition 总积分 / 分阶段积分      │
 ├──────────────────────────────────────────┤
-│ 参赛名单（完整列表）                     │
-├──────────────────────────────────────────┤
-│ 成绩（赛后展示）                         │
-│ └── 排名 / 车手 / 成绩 / 最快圈等       │
-├──────────────────────────────────────────┤
-│ 赛事公告 / 更新日志                      │
+│ 右侧栏：当前/下一 Round 行动区           │
+│ ├── 当前 Stage 状态                      │
+│ ├── 报名/取消报名                        │
+│ ├── 当前服务器信息（报名后可见）          │
+│ └── 添加到日历                           │
 └──────────────────────────────────────────┘
 ```
 
-### 5.2.2 锦标赛详情页
+### 5.2.2 Round 详情页
 
-锦标赛详情页是锦标赛及其所有子赛事的统一展示页面。子赛事**没有独立页面**，全部在锦标赛页面内展示。
+Round 详情页用于展示某一站内部的完整 Stage / Session 流程。该页可以是独立路由，也可以在 Competition 详情页中以内嵌面板呈现。
 
 ```
 ┌──────────────────────────────────────────┐
-│ 封面图 + 锦标赛名称 + 状态标签           │
+│ Round 名称 + 赛道 + 当前状态             │
 ├──────────────────────────────────────────┤
-│ Tab 切换：锦标赛信息 / 赛程 / 成绩       │
+│ Stage 时间线：预选赛 → 正赛日 → 决赛     │
 ├──────────────────────────────────────────┤
-│ Tab 1: 锦标赛公共信息                    │
-│ ├── 游戏平台                             │
-│ ├── 车型组 / 车辆列表                    │
-│ ├── 天气 / 进站                          │
-│ ├── 赛制参数（练习/排位/正赛时长）       │
-│ ├── 赛制规则（富文本）                   │
-│ ├── 积分规则（自定义文字 + 积分表格）   │
-│ ├── 晋级/淘汰规则                        │
-│ ├── 准入条件                             │
-│ ├── 资源下载（锦标赛级）                 │
-│ └── 积分榜（锦标赛总积分排名）           │
+│ 当前 Stage 卡片                          │
+│ ├── Stage 名称 / 时间窗口                │
+│ ├── 晋级规则 / 当前晋级线                │
+│ ├── 可进入 Session / 服务器信息          │
+│ └── 当前榜单或直播                       │
 ├──────────────────────────────────────────┤
-│ Tab 2: 赛程                              │
-│ ├── ▶ 下一场可报名（侧边栏突出显示）    │
-│ │   ├── 子赛事名称                       │
-│ │   ├── 赛道 / 布局                      │
-│ │   ├── 比赛时间                         │
-│ │   ├── 报名人数（数字独立一行凸显）     │
-│ │   ├── 报名按钮 / 取消报名按钮          │
-│ │   └── 服务器信息（独立卡片，报名后可见，未填写时提示稍后提供）│
-│ ├── 未来赛事（不显示状态标签、报名按钮）  │
-│ │   ├── 子赛事名称 / 赛道 / 时间          │
-│ │   └── ...更多未来赛事                    │
-│ └── 过往赛事（不含状态标签，不含服务器信息）│
-│     ├── 子赛事卡片：名称/赛道/时间       │
-│     ├── 成绩摘要（冠军/领奖台）          │
-│     ├── "查看成绩"→ 跳转成绩 Tab         │
-│     ├── 直播回放链接                     │
-│     ├── 抗议入口                         │
-│     └── ...更多过往赛事                  │
+│ Stage 详情列表                           │
+│ ├── 预选赛 Stage                         │
+│ │   ├── Practice Session（长时间开放）   │
+│ │   ├── 圈速榜                           │
+│ │   └── 晋级候选名单                     │
+│ ├── 正赛日 Stage                         │
+│ │   ├── Practice Session                 │
+│ │   ├── Qualifying Session               │
+│ │   └── Race Session                     │
+│ └── 决赛 Stage（如有）                   │
 ├──────────────────────────────────────────┤
-│ Tab 3: 成绩（右侧栏隐藏，全宽展示）      │
-│ ├── 赛事筛选（必须选择具体赛事）         │
-│ ├── 环节切换（正赛/排位赛）              │
-│ └── 成绩表                               │
-│     └── 排名/车手/车队/用时/圈数/积分    │
+│ 报名和服务器信息                         │
+│ ├── Round 报名状态                       │
+│ ├── 当前可参与 Session                   │
+│ └── 服务器名称 / 密码 / 直连链接         │
 ├──────────────────────────────────────────┤
-│ 锦标赛公告 / 更新日志                    │
+│ 成绩与抗议入口                           │
+│ ├── 按 Session 展示成绩                  │
+│ └── 赛后可提交抗议                       │
 └──────────────────────────────────────────┘
 ```
 
-**子赛事在锦标赛页面中的展示规则**：
+**Round 展示规则**：
 
-- 子赛事仅展示本场独有字段：名称、赛道、布局、比赛时间、报名人数、服务器信息（报名后可见）、成绩、抗议入口
-- 公共信息（游戏、车型、赛制等）由锦标赛页面顶部统一展示，子赛事区域不重复
-- 下一场可报名的子赛事在右侧栏突出显示（含独立的服务器信息卡片）
-- 未来赛事和过往赛事默认折叠，用户可展开查看详情
-- 未来赛事显示状态标签（区分 Upcoming / RegistrationOpen），过往赛事不显示状态标签
-- Upcoming 状态的子赛事不显示报名按钮，显示"尚未开放报名"
-- 车手报名/取消报名操作在锦标赛页面内完成（每场子赛事有独立的报名按钮）
-- 过往赛事点击"查看成绩"跳转至成绩 Tab 并自动筛选到该赛事
-- 成绩 Tab 必须选择具体赛事查看，不支持全部赛事混合展示
+- Round 只展示本分站特有信息：名称、赛道、报名窗口、Stage 时间线、当前服务器、成绩、抗议入口
+- Competition 公共信息（游戏、车型、公共规则、资源等）在 Competition 详情页顶部统一展示
+- Stage 可折叠展开；当前 Stage 默认展开并置顶
+- 预选赛 Stage 展示持续开放服务器、圈速榜、晋级线和候选名单
+- 正赛日 Stage 展示 Practice / Qualifying / Race 的 Session 顺序、时间和服务器信息
+- 成绩必须绑定具体 Session；Competition 详情页仅做聚合展示
 
 ### 5.2.3 双时区显示
 
@@ -1157,46 +1255,46 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A[车手进入赛事详情页] --> B{赛事状态?}
-    B -->|Upcoming| B0[显示'尚未开放报名'<br/>不显示报名按钮]
-    B -->|非报名中| B1[显示'报名已截止'等]
-    B -->|RegistrationOpen| C{车手是否已登录?}
-    
-    C -->|否| C1[提示登录]
-    C -->|是| D{车手是否已报名?}
-    
-    D -->|是| D1[显示'已报名'状态<br/>+ 取消报名按钮]
-    D -->|否| E{是否缺少该赛事<br/>所需的 游戏 ID/绑定?}
-    
-    E -->|是| E2[弹出补充引导<br/>填写 iRacing ID 或<br/>绑定 Steam]
-    E -->|否| E3{是否有准入条件?}
-    
-    E2 --> E2A{补充成功?}
+    A["车手进入 Competition/Round 详情页"] --> B{"Round 报名状态?"}
+    B -->|Upcoming| B0["显示尚未开放报名<br/>不显示报名按钮"]
+    B -->|非报名中| B1["显示报名已截止等"]
+    B -->|RegistrationOpen| C{"车手是否已登录?"}
+
+    C -->|否| C1["提示登录"]
+    C -->|是| D{"车手是否已报名?"}
+
+    D -->|是| D1["显示已报名状态<br/>+ 取消报名按钮"]
+    D -->|否| E{"是否缺少该 Competition<br/>所需的游戏 ID/绑定?"}
+
+    E -->|是| E2["弹出补充引导<br/>绑定 Steam"]
+    E -->|否| E3{"是否有准入条件或赛制规则?"}
+
+    E2 --> E2A{"补充成功?"}
     E2A -->|是| E3
-    E2A -->|取消| D2[返回赛事详情页]
-    
-    E3 -->|无| F[点击'立即报名']
-    E3 -->|需确认规则| E1[弹出规则确认<br/>勾选同意]
-    
+    E2A -->|取消| D2["返回详情页"]
+
+    E3 -->|无| F["点击立即报名"]
+    E3 -->|有| E1["弹出报名前须知<br/>准入条件 + 赛制规则<br/>勾选同意"]
+
     E1 --> F
-    F --> G{报名是否成功?}
-    
-    G -->|是| H[显示报名成功<br/>+ 添加到日历按钮<br/>+ 分组待公布提示]
-    G -->|否（名额已满）| G1[显示'名额已满'<br/>+ 加入候补名单]
-    G -->|否（已被禁赛）| G2[显示'当前无法报名<br/>请查看账号状态']
+    F --> G{"报名是否成功?"}
+
+    G -->|是| H["显示报名成功<br/>+ 添加到日历按钮<br/>+ 分组/晋级待公布提示"]
+    G -->|名额已满| G1["显示名额已满<br/>+ 加入候补名单"]
+    G -->|已被禁赛| G2["显示当前无法报名<br/>请查看账号状态"]
 ```
 
 ### 5.3.1 报名成功后操作
 
 | 操作 | 说明 |
 |------|------|
-| **添加到日历** | 生成 .ics 文件，用户可导入 Google Calendar / Outlook / Apple Calendar 等。包含赛事名称、时间、赛道、服务器信息 |
-| **查看参赛名单** | 在赛事详情页查看所有已报名车手 |
+| **添加到日历** | 生成 .ics 文件，用户可导入 Google Calendar / Outlook / Apple Calendar 等。包含 Competition / Round / Session 名称、时间、赛道、服务器信息 |
+| **查看参赛名单** | 在 Round 详情页查看所有已报名车手 |
 | **等待分组通知** | 若启用多 Split，提示"报名截止后将公布分组结果" |
 
 ### 5.3.2 取消报名流程
 
-1. 车手在赛事详情页点击"取消报名"
+1. 车手在 Competition 或 Round 详情页点击"取消报名"
 2. 系统检查是否在取消报名截止时间之前
    - 若已过截止时间：提示"已过取消报名截止时间，如需退出请联系管理员"
    - 若仍在截止时间之前：弹出确认对话框
@@ -1222,17 +1320,19 @@ flowchart TD
 ### 5.5.1 展示规则
 
 - 服务器信息卡片在**报名后**对已报名车手始终可见
-- 如管理员已填写服务器信息（名称/密码），正常展示
+- 如后台自动开服配置已生成可展示信息（名称/密码/加入方式），正常展示
 - 如管理员尚未填写，卡片仍显示，提示"比赛进入方式稍后提供"
 - 未报名用户看不到服务器信息卡片
 - 直连链接（如有）同步展示
+- 展示字段来自 AC / ACC 开服配置的可见子集，不展示管理员密码、端口、Steam ID/GUID、插件地址和内部路径
 
 ### 5.5.2 展示方式
 
 | 方式 | 说明 | 适用场景 |
 |------|------|---------|
-| 文字信息 | 展示服务器名称、密码 | 所有游戏 |
+| 文字信息 | 展示服务器名称、密码 | AC / ACC |
 | 直连链接 | 点击链接直接启动游戏并加入服务器 | 支持 URL Scheme 的游戏（如 ACC 的 `acc://` 链接） |
+| 规则摘要 | 展示赛道、车辆、Session 时长、必要规则和天气摘要 | AC / ACC |
 
 两种方式同时展示，车手可选择使用。
 
@@ -1241,7 +1341,7 @@ flowchart TD
 | 边缘情况 | 处理方案 |
 |---------|---------|
 | 赛事详情页加载时赛事刚刚被取消 | 页面顶部显示醒目的"本场赛事已取消"横幅，附取消原因 |
-| 用户尝试报名其他区域的赛事 | 允许报名，但在报名确认时额外提示"该赛事位于 XX 区域，请注意时区差异" |
+| 用户尝试报名其他区域的赛事 | 允许报名，但在报名确认时额外提示"该赛事的服务器可能不位于您的当前区域，服务器连通性和延时可能受影响。" |
 | 报名时网络中断 | 前端防重复提交，后端幂等设计。恢复网络后查询报名状态 |
 | .ics 文件中的时区信息 | 使用 IANA 时区标准（如 Asia/Shanghai），确保各日历应用正确解析 |
 | 车手在多台设备上同时操作 | 以最后一次操作为准，服务端校验报名状态 |
@@ -1255,28 +1355,27 @@ flowchart TD
 
 ### 6.1.1 混合录入模式
 
-平台支持两种成绩录入方式，具体能力取决于游戏平台（详见 4.8.2）：
+平台 MVP 阶段优先支持自动导入，具体能力取决于游戏平台（详见 4.8.2）：
 
 | 方式 | 说明 | 适用游戏 |
 |------|------|---------|
-| **自动导入** | 上传游戏生成的结果文件（JSON/XML），系统自动解析并匹配车手 | ACC、AC、LMU、rF2 |
-| **API 导入** | 通过游戏官方 API 自动获取比赛结果 | iRacing |
-| **手动录入** | 管理员手动输入成绩表 | AC Evo（暂）、ETS2 |
+| **自动导入** | 上传或读取游戏/插件生成的结果文件，系统自动解析并匹配车手 | ACC、AC |
+| **手动录入** | 管理员手动修正或补录成绩表 | ACC、AC 的兜底能力 |
 
 ### 6.1.2 成绩录入流程
 
 ```mermaid
 flowchart TD
     A[管理员进入已结束赛事<br/>点击'录入成绩'] --> B{选择录入方式}
-    
-    B -->|自动导入| C[上传结果文件<br/>或输入 API 地址]
+
+    B -->|自动导入| C[上传结果文件<br/>或选择服务器结果目录]
     B -->|手动录入| D[手动输入成绩表]
-    
+
     C --> E[系统解析结果]
     E --> F{解析是否成功?}
     F -->|是| G[预览成绩]
     F -->|否| F1[显示错误原因<br/>支持修正后重试]
-    
+
     D --> G
     G --> H[管理员确认/编辑]
     H --> I[保存为草稿]
@@ -1333,6 +1432,14 @@ flowchart TD
 - 按时间段筛选（本赛季 / 全部时间）
 - 按游戏平台筛选
 
+### 6.3.3 排行榜区域筛选规则
+
+排行榜的数据源仅包含**发布到当前区域的赛事**的成绩：
+
+- 切换区域后，排行榜重新计算：仅统计 `regions` 包含当前区域的赛事成绩和积分
+- 同一车手在不同区域可能有不同的积分和排名（因为不同区域的赛事集合不同）
+- 车手档案页的统计数据（总积分、胜场等）为全区域汇总，与排行榜的区域筛选相互独立
+
 ## 6.4 边缘情况处理
 
 | 边缘情况 | 处理方案 |
@@ -1356,16 +1463,16 @@ flowchart TD
     A[车手进入赛事成绩页<br/>或个人参赛历史] --> B[点击'提交抗议']
     B --> C[选择抗议对象<br/>指定另一车手]
     C --> D[选择抗议类型]
-    
+
     D --> D1[危险驾驶]
     D --> D2[多次变线]
     D --> D3[其他]
-    
+
     D1 & D2 & D3 --> E[填写详细描述]
     E --> F[上传证据<br/>截图/视频链接]
     F --> G[选择发生圈数<br/>和具体位置]
     G --> H[确认提交]
-    
+
     H --> I[系统生成抗议编号]
     I --> J[通知被抗议车手<br/>被提出抗议]
     I --> K[通知管理员<br/>有新抗议待处理]
@@ -1470,7 +1577,6 @@ flowchart TD
 |--------|------|
 | 区域 | 当前区域 / 全部区域 |
 | 游戏平台 | 多选 |
-| 赛事类型 | 独立赛事 / 锦标赛 / 全部 |
 | 已报名赛事 | 仅展示用户已报名的赛事（需登录） |
 
 ## 8.3 时区处理
@@ -1541,7 +1647,7 @@ flowchart TD
     A[队长点击'邀请成员'] --> B[输入用户名<br/>或搜索用户]
     B --> C[发送邀请]
     C --> D[被邀请者收到<br/>站内通知]
-    
+
     D --> E{是否接受?}
     E -->|接受| F[加入车队<br/>成为成员]
     E -->|拒绝| G[队长收到拒绝通知]
@@ -1615,13 +1721,18 @@ flowchart TD
 | 渠道 | 说明 | 默认状态 |
 |------|------|---------|
 | **站内通知** | 平台内通知中心，登录后可见 | 始终开启 |
+| **Pit House 推送** | 通过 Pit House 客户端推送通知弹窗 | 默认开启，用户可关闭 |
 | **邮件通知** | 发送至用户绑定的邮箱 | 默认开启，用户可关闭 |
+
+**Pit House 推送说明**：
+
+Pit House 是 MOZA 设备调节软件，用户在赛车过程中通常保持开启。通过 Pit House 推送通知可以确保车手即使关闭了浏览器网页也能及时收到重要赛事通知（如赛事开始提醒、赛事取消等）。推送实现方式为平台后端通过 API 调用 Pit House 后端服务，Pit House 客户端轮询或接收推送后展示系统通知弹窗。
 
 ### 10.1.2 通知渠道配置
 
 - 管理员可在后台配置每类通知的渠道
-- 可选项：**仅站内** / **站内 + 邮件**
-- 用户可在账号设置中关闭邮件通知（站内通知不可关闭）
+- 可选项：**仅站内** / **站内 + Pit House** / **站内 + 邮件** / **站内 + Pit House + 邮件**
+- 用户可在账号设置中关闭 Pit House 推送和邮件通知（站内通知不可关闭）
 
 ## 10.2 通知类型与触发场景
 
@@ -1629,9 +1740,9 @@ flowchart TD
 |---------|---------|---------|--------|
 | **报名确认** | 车手成功报名赛事 | 站内 | 报名车手 |
 | **报名取消确认** | 车手取消报名 | 站内 | 取消车手 |
-| **赛事取消** | 管理员取消赛事 | 站内 + 邮件 | 所有已报名车手 |
-| **赛事时间变更** | 管理员修改比赛时间 | 站内 + 邮件 | 所有已报名车手 |
-| **赛事开始提醒** | 比赛开始前（如提前 1 小时） | 站内 + 邮件 | 所有已报名车手 |
+| **赛事取消** | 管理员取消赛事 | 站内 + Pit House + 邮件 | 所有已报名车手 |
+| **赛事时间变更** | 管理员修改比赛时间 | 站内 + Pit House + 邮件 | 所有已报名车手 |
+| **赛事开始提醒** | 比赛开始前（如提前 1 小时） | 站内 + Pit House + 邮件 | 所有已报名车手 |
 | **分组结果公布** | Split 分组完成并公布 | 站内 + 邮件 | 所有已报名车手 |
 | **成绩公布** | 赛事成绩录入并发布 | 站内 | 所有参赛车手 |
 | **抗议通知** | 车手被提出抗议 | 站内 + 邮件 | 被抗议车手 |
@@ -1640,7 +1751,7 @@ flowchart TD
 | **封禁通知** | 车手被封禁 | 站内 + 邮件 | 被封禁车手 |
 | **解封通知** | 车手被封禁解除 | 站内 + 邮件 | 被解封车手 |
 | **车队邀请** | 被邀请加入车队 | 站内 + 邮件 | 被邀请者 |
-| **候补转正** | 候补车手获得名额 | 站内 + 邮件 | 候补车手 |
+| **候补转正** | 候补车手获得名额 | 站内 + Pit House + 邮件 | 候补车手 |
 | **锦标赛晋级** | 管理员标记车手晋级 | 站内 | 晋级车手 |
 | **新闻/公告** | 管理员发布新闻或公告 | 站内 | 所有用户 |
 
@@ -1689,8 +1800,9 @@ flowchart TD
 
 | 设置项 | 选项 |
 |--------|------|
+| Pit House 推送总开关 | 开 / 关 |
 | 邮件通知总开关 | 开 / 关 |
-| 按类型细粒度控制 | 每类通知可单独开关邮件渠道 |
+| 按类型细粒度控制 | 每类通知可单独开关 Pit House 和邮件渠道 |
 
 > 注：站内通知始终开启，不可关闭。
 
@@ -1698,11 +1810,12 @@ flowchart TD
 
 | 边缘情况 | 处理方案 |
 |---------|---------|
-| 邮件发送失败 | 重试 3 次，3 次均失败则标记发送失败，站内通知正常发出。后台可查看发送失败的邮件列表 |
+| 邮件发送失败 | 重试 3 次，3 次均失败则标记发送失败，站内通知和 Pit House 推送正常发出。后台可查看发送失败的邮件列表 |
+| Pit House 客户端离线 | 推送消息进入队列，客户端下次上线时拉取未读推送。重要通知（赛事取消、时间变更）同时通过邮件兜底 |
 | 大量用户同时触发通知（如赛事取消） | 使用消息队列异步发送，避免阻塞。后台可查看发送进度 |
-| 用户未绑定邮箱但开启了邮件通知 | 系统发送站内通知，邮件不发送（无目标地址） |
+| 用户未绑定邮箱但开启了邮件通知 | 系统发送站内通知和 Pit House 推送，邮件不发送（无目标地址） |
 | 通知内容包含链接但目标页面已被删除 | 通知仍然展示，链接点击后显示"该内容已不可用" |
-| 用户设置了邮箱但长时间未验证 | 仅发送站内通知，邮箱标记为"未验证"状态，提示用户验证邮箱 |
+| 用户设置了邮箱但长时间未验证 | 仅发送站内通知和 Pit House 推送，邮箱标记为"未验证"状态，提示用户验证邮箱 |
 | 候补转正通知中限定确认时间 | 通知中明确标注"请在 X 小时内确认"，超时后名额自动释放 |
 
 ---
@@ -1921,7 +2034,7 @@ flowchart TD
 | 封禁体系 | 完整的用户封禁/禁赛管理 |
 | 邮件通知 | 邮件通知渠道、通知偏好设置 |
 | API 自动导入 | 对接支持 API 的游戏自动导入成绩 |
-| 锦标赛增强 | 锦标赛赛事管理、积分榜、人工晋级管理 |
+| Competition 增强 | Round/Stage/Session 管理、积分榜、人工晋级管理 |
 | 直播嵌入 | Twitch/YouTube 直播嵌入 |
 
 ### Phase 3 — 增长与运营
@@ -1948,4 +2061,15 @@ flowchart TD
 
 ---
 
-> **文档结束**  
+> **v3.0 变更摘要**：赛事核心结构从 Event / Championship 双模型调整为 `Competition → Round → Stage → Session`。每一站为 Round，站内流程为 Stage，具体服务器和成绩归属为 Session。赛事复杂度由 Round/Stage 层级关系自然体现，不再需要独立的形态字段。
+
+> **v3.1 变更摘要**：明确 MVP 阶段赛事仅支持 AC / ACC；新增 Session 自动开服配置模型，补充 ACC 七个 Dedicated Server 配置文件字段与 AC 两个核心 INI 配置文件字段，并说明后台字段到前台服务器信息展示的复用边界。
+
+> **v3.2 变更摘要**（CompetitionRuleset 精简）：
+> - **合并字段**：`rules_zh/en`、`scoring_rules_zh/en`、`advancement_rules_zh/en` 合并到 Competition `description` 字段，不再作为 CompetitionRuleset 独立字段
+> - **移除字段**：`cancel_registration_deadline_offset` 不再作为 Competition 级配置
+> - **Split 配置下移**：多 Split 配置（enable_multi_split、max_entries_per_split、max_splits、split_assignment_rule）从 CompetitionRuleset 移至 Stage 层级（SplitConfig）
+> - **Round 精简**：移除 `round_number`（由排列顺序派生）和 `track_layout`（赛道布局不再单独配置）
+> - **Stage 精简**：`type` 不再在编辑器中可选择（由模板预设）；`description` 始终可编辑；`eligibility_source` 新增条件子字段（roundRegistration 无额外字段 / previousStageResult 含 metric+direction+limit / manualInvite 含车手勾选列表）；原 `AdvancementRule` 子模型由条件子字段替代
+
+> **文档结束**

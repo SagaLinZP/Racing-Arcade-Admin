@@ -33,6 +33,7 @@ src/
 │       ├── DataTable.tsx      # 泛型 <T>，columns, data, onRowClick?, keyExtractor, emptyMessage?
 │       ├── StatusBadge.tsx    # status (string), label (string)
 │       ├── Modal.tsx          # isOpen, onClose, title, children, size?
+│       ├── ImageUpload.tsx    # label, value/onChange, defaultValue, aspectRatio?(video|square|banner)
 │       └── Badge.tsx, EmptyState.tsx, Pagination.tsx
 ├── data/                      # Mock 数据（所有数据的唯一来源）
 │   ├── events.ts              # SimEvent 接口 + mock 事件数组

@@ -1,0 +1,1189 @@
+import type { Region, ScoringTableEntry } from '@/lib/utils'
+
+export type GamePlatform = 'AC' | 'ACC'
+
+export type CompetitionStatus =
+  | 'Draft'
+  | 'Upcoming'
+  | 'RegistrationOpen'
+  | 'RegistrationClosed'
+  | 'InProgress'
+  | 'Completed'
+  | 'Cancelled'
+
+export type RoundStatus = CompetitionStatus | 'ResultsPublished'
+
+export type StageType = 'qualifier' | 'race_day' | 'final' | 'consolation' | 'practice' | 'custom'
+export type SessionType = 'practice' | 'qualifying' | 'race' | 'timeTrial'
+export type ResultStatus = 'Finished' | 'DNF' | 'DNS' | 'DSQ' | 'Qualified' | 'Eliminated'
+export type RestartPolicy = 'none' | 'fixedInterval' | 'manual'
+export type MergeRule = 'bestLapPerDriver' | 'bestResultPerDriver' | 'allClassifications'
+
+export interface SessionTemplate {
+  id: string
+  name_zh: string
+  name_en: string
+  description_zh?: string
+  description_en?: string
+  game: GamePlatform
+  sessionType: SessionType
+  gameConfig: SessionGameConfig
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SessionGameConfig {
+  track?: string
+  trackLayout?: string
+  cars?: string
+  carGroup?: string
+  cloudLevel?: number
+  rain?: number
+  weatherRandomness?: number
+  ambientTemp?: number
+  trackTemp?: number
+  timeMultiplier?: number
+  sunAngle?: number
+  weatherGraphics?: string
+  baseTempAmbient?: number
+  variationAmbient?: number
+  baseTempRoad?: number
+  variationRoad?: number
+  windSpeedMin?: number
+  windSpeedMax?: number
+  windDirection?: number
+  windVariationDirection?: number
+  formationLapType?: number
+  preRaceWaitingTimeSeconds?: number
+  sessionOverTimeSeconds?: number
+  postQualySeconds?: number
+  postRaceSeconds?: number
+  isFixedConditionQualification?: boolean
+  pitWindowLengthSec?: number
+  driverStintTimeSec?: number
+  mandatoryPitstopCount?: number
+  maxDriversCount?: number
+  tyreSetCount?: number
+  isRefuellingAllowedInRace?: boolean
+  isMandatoryPitstopRefuellingRequired?: boolean
+  isMandatoryPitstopTyreChangeRequired?: boolean
+  isMandatoryPitstopSwapDriverRequired?: boolean
+  damageMultiplier?: number
+  fuelRate?: number
+  tyreWearRate?: number
+  tcAllowed?: number
+  absAllowed?: number
+  stabilityAllowed?: boolean
+  autoclutchAllowed?: boolean
+  stabilityControlLevelMax?: number
+  disableIdealLine?: boolean
+  disableAutosteer?: boolean
+  disableAutoGear?: boolean
+  disableAutoClutch?: boolean
+  disableAutoPitLimiter?: boolean
+  disableAutoEngineStart?: boolean
+  disableAutoWiper?: boolean
+  disableAutoLights?: boolean
+  forceVirtualMirror?: boolean
+  legalTyres?: string
+  startRule?: number
+  racePitWindowStart?: number
+  racePitWindowEnd?: number
+  reversedGridRacePositions?: number
+  raceExtraLap?: boolean
+  tyreBlanketsAllowed?: boolean
+  loopMode?: boolean
+  trackMedalsRequirement?: number
+  safetyRatingRequirement?: number
+  racecraftRatingRequirement?: number
+  trackGripSessionStart?: number
+  trackGripRandomness?: number
+  trackGripLapGain?: number
+  trackGripSessionTransfer?: number
+}
+
+export interface SessionResult {
+  position: number
+  driverId: string
+  teamId?: string
+  splitNumber?: number
+  totalTime?: string
+  bestLap?: string
+  lapsCompleted?: number
+  gapToLeader?: string
+  status: ResultStatus
+  penalty?: string
+  points?: number
+}
+
+export interface Split {
+  id: string
+  sessionId: string
+  splitNumber: number
+  serverName?: string
+  serverPassword?: string
+  serverJoinLink?: string
+  adminPassword?: string
+  spectatorPassword?: string
+  maxConnections?: number
+  registerToLobby?: boolean
+  results?: SessionResult[]
+  resultsPublishedAt?: string
+}
+
+export interface Session {
+  id: string
+  stageId: string
+  type: SessionType
+  name_zh: string
+  name_en: string
+  startsAt: string
+  endsAt: string
+  durationMinutes?: number
+  raceDuration?: number
+  raceDurationType?: 'time' | 'laps'
+  gameSessionRestartPolicy?: RestartPolicy
+  gameSessionRestartIntervalMinutes?: number
+  gameSessionResultMergeRule?: MergeRule
+  streamUrl?: string
+  vodUrl?: string
+  resultType: 'classification' | 'leaderboard'
+  gameConfig?: SessionGameConfig
+  splits: Split[]
+}
+
+export interface AdvancementRule {
+  sourceSessionId?: string
+  metric: 'bestLap' | 'points' | 'position' | 'manual'
+  direction: 'asc' | 'desc'
+  limit?: number
+  targetStageId?: string
+  fallbackPolicy?: 'none' | 'fillNext'
+}
+
+export interface Stage {
+  id: string
+  roundId: string
+  type: StageType
+  name_zh: string
+  name_en: string
+  description_zh?: string
+  description_en?: string
+  startsAt: string
+  endsAt: string
+  sessions: Session[]
+  eligibilitySource?: 'roundRegistration' | 'previousStageResult' | 'manualInvite'
+  advancementRule?: AdvancementRule
+  maxEntriesPerSplit?: number
+  maxSplits?: number
+  enableMultiSplit?: boolean
+  splitAssignmentRule?: string
+  minEntries?: number
+}
+
+export interface Round {
+  id: string
+  competitionId: string
+  roundNumber?: number
+  name_zh: string
+  name_en: string
+  description_zh?: string
+  description_en?: string
+  track?: string
+  trackLayout?: string
+  coverImage?: string
+  registrationOpenAt: string
+  registrationCloseAt: string
+  cancelRegistrationDeadline?: string
+  stages: Stage[]
+  currentRegistrations: number
+  registeredDriverIds: string[]
+  cancelledReason_zh?: string
+  cancelledReason_en?: string
+}
+
+export interface CompetitionRuleset {
+  accessRequirements_zh?: string
+  accessRequirements_en?: string
+  scoringTable?: ScoringTableEntry[]
+  resources_zh?: string
+  resources_en?: string
+  streamUrl?: string
+}
+
+export interface Competition {
+  id: string
+  name_zh: string
+  name_en: string
+  description_zh: string
+  description_en: string
+  coverImage: string
+  regions: Region[]
+  game: GamePlatform
+  carClass: string
+  carList?: string[]
+  defaultRuleset: CompetitionRuleset
+  rounds: Round[]
+  statusOverride?: 'Draft' | 'Cancelled'
+  cancelledReason_zh?: string
+  cancelledReason_en?: string
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+}
+
+const coverColors = ['#1a1a2e', '#16213e', '#0f3460', '#533483', '#2b2d42', '#1b263b', '#415a77', '#2d6a4f']
+
+export function getCoverGradient(id: string): string {
+  const idx = parseInt(id.replace(/\D/g, ''), 10) || 0
+  const c1 = coverColors[idx % coverColors.length]
+  const c2 = coverColors[(idx + 3) % coverColors.length]
+  return `linear-gradient(135deg, ${c1}, ${c2})`
+}
+
+export function totalCapacity(c: Competition): number | undefined {
+  for (const round of c.rounds) {
+    for (const stage of round.stages) {
+      if (stage.maxEntriesPerSplit && stage.maxSplits) {
+        return stage.maxSplits * stage.maxEntriesPerSplit
+      }
+    }
+  }
+  return undefined
+}
+
+export function totalRegistrations(c: Competition): number {
+  return c.rounds.reduce((sum, r) => sum + r.currentRegistrations, 0)
+}
+
+export function createDefaultGameConfig(game: GamePlatform): SessionGameConfig {
+  if (game === 'ACC') {
+    return {
+      track: 'monza',
+      carGroup: 'GT3',
+      cloudLevel: 0.3,
+      rain: 0,
+      weatherRandomness: 1,
+      ambientTemp: 26,
+      trackTemp: 30,
+      timeMultiplier: 1,
+      formationLapType: 1,
+      preRaceWaitingTimeSeconds: 60,
+      sessionOverTimeSeconds: 120,
+      postQualySeconds: 600,
+      postRaceSeconds: 600,
+      mandatoryPitstopCount: 0,
+      pitWindowLengthSec: -1,
+      driverStintTimeSec: 0,
+      maxDriversCount: 1,
+      tyreSetCount: 0,
+      isRefuellingAllowedInRace: true,
+      isMandatoryPitstopRefuellingRequired: false,
+      isMandatoryPitstopTyreChangeRequired: false,
+      isMandatoryPitstopSwapDriverRequired: false,
+      stabilityControlLevelMax: 0,
+      disableIdealLine: false,
+      disableAutosteer: false,
+      disableAutoGear: false,
+      disableAutoClutch: false,
+      disableAutoPitLimiter: false,
+      disableAutoEngineStart: false,
+      disableAutoWiper: false,
+      disableAutoLights: false,
+      trackMedalsRequirement: -1,
+      safetyRatingRequirement: -1,
+      racecraftRatingRequirement: -1,
+    }
+  }
+  return {
+    track: '',
+    trackLayout: '',
+    cars: '',
+    sunAngle: 40,
+    weatherGraphics: '3_clear',
+    baseTempAmbient: 26,
+    variationAmbient: 1,
+    baseTempRoad: 8,
+    variationRoad: 1,
+    windSpeedMin: 2,
+    windSpeedMax: 10,
+    windDirection: 0,
+    windVariationDirection: 0,
+    damageMultiplier: 100,
+    fuelRate: 100,
+    tyreWearRate: 100,
+    tcAllowed: 0,
+    absAllowed: 0,
+    stabilityAllowed: false,
+    autoclutchAllowed: false,
+    forceVirtualMirror: false,
+    legalTyres: '',
+    startRule: 0,
+    racePitWindowStart: 0,
+    racePitWindowEnd: 0,
+    reversedGridRacePositions: 0,
+    raceExtraLap: false,
+    tyreBlanketsAllowed: true,
+    loopMode: false,
+    trackGripSessionStart: 96,
+    trackGripRandomness: 1,
+    trackGripLapGain: 120,
+    trackGripSessionTransfer: 50,
+    timeMultiplier: 1,
+  }
+}
+
+export function createDefaultSplit(sessionId: string, splitNumber: number): Split {
+  return {
+    id: `${sessionId}_sp${splitNumber}_${Date.now()}`,
+    sessionId,
+    splitNumber,
+    serverName: '',
+    serverPassword: '',
+    adminPassword: '',
+    spectatorPassword: '',
+    maxConnections: 30,
+    registerToLobby: true,
+  }
+}
+
+export function createDefaultSession(stageId: string, game: GamePlatform, sessionCount: number): Session {
+  const sessionId = `new_session_${Date.now()}`
+  return {
+    id: sessionId,
+    stageId,
+    type: 'practice',
+    name_zh: `新场次 ${sessionCount + 1}`,
+    name_en: `New Session ${sessionCount + 1}`,
+    startsAt: new Date().toISOString().slice(0, 16),
+    endsAt: new Date().toISOString().slice(0, 16),
+    durationMinutes: 30,
+    resultType: 'classification',
+    gameConfig: createDefaultGameConfig(game),
+    splits: [createDefaultSplit(sessionId, 1)],
+  }
+}
+
+export const competitions: Competition[] = [
+  {
+    id: 'c1',
+    name_zh: 'MOZA GT3 挑战赛 2026',
+    name_en: 'MOZA GT3 Challenge 2026',
+    description_zh: 'MOZA Racing 官方 GT3 挑战赛，顶级 GT3 赛事。共 5 站比赛，积分最高者获得年度总冠军。',
+    description_en: 'The official MOZA Racing GT3 Challenge, a premier GT3 series. 5 rounds, highest points scorer wins the title.',
+    coverImage: '',
+    regions: ['CN', 'AP', 'AM', 'EU'],
+    game: 'ACC',
+    carClass: 'GT3',
+    defaultRuleset: {
+      accessRequirements_zh: '必须阅读并同意规则',
+      accessRequirements_en: 'Must read and agree to the rules',
+      scoringTable: [
+        { position: 1, points: 25 },
+        { position: 2, points: 18 },
+        { position: 3, points: 15 },
+        { position: 4, points: 12 },
+        { position: 5, points: 10 },
+        { position: 6, points: 8 },
+        { position: 7, points: 6 },
+        { position: 8, points: 4 },
+        { position: 9, points: 2 },
+        { position: 10, points: 1 },
+      ],
+      resources_zh: 'ACC GT3 车辆包：https://example.com/gt3-pack\n安装说明：解压至 ACC 用户目录下的 Content/Cars 文件夹',
+      resources_en: 'ACC GT3 Car Pack: https://example.com/gt3-pack\nInstall: Extract to Content/Cars folder in your ACC user directory',
+      streamUrl: 'https://twitch.tv/mozaracing',
+    },
+    rounds: [
+      {
+        id: 'c1r1',
+        competitionId: 'c1',
+        roundNumber: 1,
+        name_zh: '第 1 站 - 蒙扎',
+        name_en: 'Round 1 - Monza',
+        track: 'Monza',
+        trackLayout: 'GP',
+        registrationOpenAt: '2026-04-06T12:00:00Z',
+        registrationCloseAt: '2026-04-25T12:00:00Z',
+        cancelRegistrationDeadline: '2026-04-24T12:00:00Z',
+        currentRegistrations: 87,
+        registeredDriverIds: ['d1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'd8', 'd9', 'd10'],
+        stages: [
+          {
+            id: 'c1r1s1',
+            roundId: 'c1r1',
+            type: 'race_day',
+            name_zh: '正赛日',
+            name_en: 'Race Day',
+            startsAt: '2026-05-09T11:00:00Z',
+            endsAt: '2026-05-09T14:00:00Z',
+            maxEntriesPerSplit: 30,
+            maxSplits: 4,
+            enableMultiSplit: true,
+            splitAssignmentRule: 'By Skill',
+            minEntries: 10,
+            sessions: [
+              { id: 'c1r1s1se1', stageId: 'c1r1s1', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-05-09T11:00:00Z', endsAt: '2026-05-09T11:30:00Z', durationMinutes: 30, resultType: 'classification', splits: [{ id: 'c1r1s1se1sp1', sessionId: 'c1r1s1se1', splitNumber: 1 }] },
+              { id: 'c1r1s1se2', stageId: 'c1r1s1', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', startsAt: '2026-05-09T11:30:00Z', endsAt: '2026-05-09T11:45:00Z', durationMinutes: 15, resultType: 'classification', splits: [{ id: 'c1r1s1se2sp1', sessionId: 'c1r1s1se2', splitNumber: 1 }] },
+              { id: 'c1r1s1se3', stageId: 'c1r1s1', type: 'race', name_zh: '正赛', name_en: 'Race', startsAt: '2026-05-09T12:00:00Z', endsAt: '2026-05-09T13:00:00Z', raceDuration: 60, raceDurationType: 'time', resultType: 'classification', gameConfig: { track: 'monza', carGroup: 'GT3', cloudLevel: 0.3, rain: 0, weatherRandomness: 1, ambientTemp: 26, trackTemp: 32, timeMultiplier: 1, formationLapType: 1, preRaceWaitingTimeSeconds: 60, sessionOverTimeSeconds: 120, postQualySeconds: 600, postRaceSeconds: 600, mandatoryPitstopCount: 1, pitWindowLengthSec: 600, driverStintTimeSec: 0, maxDriversCount: 2, tyreSetCount: 5, isRefuellingAllowedInRace: true, isMandatoryPitstopRefuellingRequired: true, isMandatoryPitstopTyreChangeRequired: false, isMandatoryPitstopSwapDriverRequired: false, stabilityControlLevelMax: 0, disableIdealLine: false, disableAutosteer: false, disableAutoGear: false, disableAutoClutch: false, disableAutoPitLimiter: false, disableAutoEngineStart: false, disableAutoWiper: false, disableAutoLights: false, trackMedalsRequirement: 1, safetyRatingRequirement: 40, racecraftRatingRequirement: 0 }, splits: [{ id: 'c1r1s1se3sp1', sessionId: 'c1r1s1se3', splitNumber: 1, serverName: 'Racing Arcade EU #1', serverPassword: 'race2026', adminPassword: 'admin123', maxConnections: 30, registerToLobby: true }] },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'c1r2',
+        competitionId: 'c1',
+        roundNumber: 2,
+        name_zh: '第 2 站 - 巴塞罗那',
+        name_en: 'Round 2 - Barcelona',
+        track: 'Barcelona',
+        trackLayout: 'GP',
+        registrationOpenAt: '2026-04-20T14:00:00Z',
+        registrationCloseAt: '2026-05-10T18:00:00Z',
+        currentRegistrations: 22,
+        registeredDriverIds: ['d1', 'd2', 'd3'],
+        stages: [
+          {
+            id: 'c1r2s0',
+            roundId: 'c1r2',
+            type: 'qualifier',
+            name_zh: '预选赛',
+            name_en: 'Qualifier',
+            description_zh: '开放预选服务器，取最快圈速决定正赛日排位。',
+            description_en: 'Open qualifier server. Best lap determines race day grid.',
+            startsAt: '2026-05-16T00:00:00Z',
+            endsAt: '2026-05-22T00:00:00Z',
+            eligibilitySource: 'roundRegistration',
+            advancementRule: { metric: 'bestLap', direction: 'asc', limit: 30, targetStageId: 'c1r2s1', fallbackPolicy: 'fillNext' },
+            maxEntriesPerSplit: 60,
+            enableMultiSplit: false,
+            sessions: [
+              {
+                id: 'c1r2s0se1',
+                stageId: 'c1r2s0',
+                type: 'practice',
+                name_zh: '热圈服务器',
+                name_en: 'Hotlap Server',
+                startsAt: '2026-05-16T00:00:00Z',
+                endsAt: '2026-05-22T00:00:00Z',
+                gameSessionRestartPolicy: 'fixedInterval',
+                gameSessionRestartIntervalMinutes: 120,
+                gameSessionResultMergeRule: 'bestLapPerDriver',
+                resultType: 'leaderboard',
+                splits: [{ id: 'c1r2s0se1sp1', sessionId: 'c1r2s0se1', splitNumber: 1, serverName: 'MOZA GT3 Barcelona Qualifier', serverPassword: 'mozaqualc1r2', resultsPublishedAt: '2026-05-22T00:30:00Z', results: [
+                  { position: 1, driverId: 'd1', bestLap: '1:39.123', status: 'Qualified' },
+                  { position: 2, driverId: 'd4', bestLap: '1:39.456', status: 'Qualified' },
+                  { position: 3, driverId: 'd8', bestLap: '1:39.789', status: 'Qualified' },
+                  { position: 4, driverId: 'd3', bestLap: '1:40.012', status: 'Qualified' },
+                  { position: 5, driverId: 'd24', bestLap: '1:40.345', status: 'Qualified' },
+                ] }],
+              },
+            ],
+          },
+          {
+            id: 'c1r2s1',
+            roundId: 'c1r2',
+            type: 'race_day',
+            name_zh: '正赛日',
+            name_en: 'Race Day',
+            startsAt: '2026-05-23T13:00:00Z',
+            endsAt: '2026-05-23T16:00:00Z',
+            eligibilitySource: 'previousStageResult',
+            maxEntriesPerSplit: 30,
+            maxSplits: 4,
+            enableMultiSplit: true,
+            splitAssignmentRule: 'By Skill',
+            minEntries: 10,
+            sessions: [
+              { id: 'c1r2s1se1', stageId: 'c1r2s1', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-05-23T13:00:00Z', endsAt: '2026-05-23T13:30:00Z', durationMinutes: 30, resultType: 'classification', splits: [{ id: 'c1r2s1se1sp1', sessionId: 'c1r2s1se1', splitNumber: 1 }] },
+              { id: 'c1r2s1se2', stageId: 'c1r2s1', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', startsAt: '2026-05-23T13:30:00Z', endsAt: '2026-05-23T13:45:00Z', durationMinutes: 15, resultType: 'classification', splits: [{ id: 'c1r2s1se2sp1', sessionId: 'c1r2s1se2', splitNumber: 1 }] },
+              {
+                id: 'c1r2s1se3',
+                stageId: 'c1r2s1',
+                type: 'race',
+                name_zh: '正赛',
+                name_en: 'Race',
+                startsAt: '2026-05-23T14:00:00Z',
+                endsAt: '2026-05-23T15:00:00Z',
+                raceDuration: 60,
+                raceDurationType: 'time',
+                resultType: 'classification',
+                vodUrl: 'https://twitch.tv/videos/example9',
+                gameConfig: { track: 'nurburgring', carGroup: 'GT3', cloudLevel: 0.5, rain: 0.1, weatherRandomness: 2, ambientTemp: 20, trackTemp: 28, timeMultiplier: 1, formationLapType: 1, preRaceWaitingTimeSeconds: 60, sessionOverTimeSeconds: 120, postQualySeconds: 600, postRaceSeconds: 600, mandatoryPitstopCount: 1, pitWindowLengthSec: 0, driverStintTimeSec: 0, maxDriversCount: 2, tyreSetCount: 5, isRefuellingAllowedInRace: true, isMandatoryPitstopRefuellingRequired: true, isMandatoryPitstopTyreChangeRequired: false, isMandatoryPitstopSwapDriverRequired: false, stabilityControlLevelMax: 0, disableIdealLine: false, disableAutosteer: false, disableAutoGear: false, disableAutoClutch: false, disableAutoPitLimiter: false, disableAutoEngineStart: false, disableAutoWiper: false, disableAutoLights: false, trackMedalsRequirement: 1, safetyRatingRequirement: 40, racecraftRatingRequirement: 0 },
+                splits: [{ id: 'c1r2s1se3sp1', sessionId: 'c1r2s1se3', splitNumber: 1, serverName: 'Racing Arcade EU #2', serverPassword: 'nurburg2026', adminPassword: 'admin456', maxConnections: 30, registerToLobby: true, resultsPublishedAt: '2026-05-23T16:00:00Z', results: [
+                  { position: 1, driverId: 'd4', teamId: 't2', splitNumber: 1, totalTime: '55:42.123', bestLap: '1:40.234', lapsCompleted: 33, gapToLeader: '-', status: 'Finished', points: 25 },
+                  { position: 2, driverId: 'd8', teamId: 't4', splitNumber: 1, totalTime: '55:48.456', bestLap: '1:40.567', lapsCompleted: 33, gapToLeader: '+6.333', status: 'Finished', points: 18 },
+                  { position: 3, driverId: 'd1', teamId: 't1', splitNumber: 1, totalTime: '55:55.789', bestLap: '1:41.012', lapsCompleted: 33, gapToLeader: '+13.666', status: 'Finished', points: 15 },
+                  { position: 4, driverId: 'd24', teamId: 't5', splitNumber: 1, totalTime: '56:02.123', bestLap: '1:41.234', lapsCompleted: 33, gapToLeader: '+20.000', status: 'Finished', points: 12 },
+                  { position: 5, driverId: 'd3', teamId: 't2', splitNumber: 1, totalTime: '56:08.456', bestLap: '1:41.456', lapsCompleted: 33, gapToLeader: '+26.333', status: 'Finished', points: 10 },
+                ] }],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'c1r3',
+        competitionId: 'c1',
+        roundNumber: 3,
+        name_zh: '第 3 站 - 迪拜',
+        name_en: 'Round 3 - Dubai',
+        track: 'Dubai',
+        trackLayout: 'GP',
+        registrationOpenAt: '2026-06-08T12:00:00Z',
+        registrationCloseAt: '2026-06-26T12:00:00Z',
+        currentRegistrations: 28,
+        registeredDriverIds: ['d2', 'd3', 'd4'],
+        stages: [
+          {
+            id: 'c1r3s0',
+            roundId: 'c1r3',
+            type: 'qualifier',
+            name_zh: '预选赛',
+            name_en: 'Qualifier',
+            description_zh: '长时间开放预选服务器，取最快有效圈速。',
+            description_en: 'Long-running qualifier server. Best valid lap per driver.',
+            startsAt: '2026-06-20T00:00:00Z',
+            endsAt: '2026-06-26T00:00:00Z',
+            eligibilitySource: 'roundRegistration',
+            advancementRule: { metric: 'bestLap', direction: 'asc', limit: 30, targetStageId: 'c1r3s1', fallbackPolicy: 'fillNext' },
+            maxEntriesPerSplit: 60,
+            enableMultiSplit: false,
+            sessions: [
+              {
+                id: 'c1r3s0se1',
+                stageId: 'c1r3s0',
+                type: 'practice',
+                name_zh: '热圈服务器',
+                name_en: 'Hotlap Server',
+                startsAt: '2026-06-20T00:00:00Z',
+                endsAt: '2026-06-26T00:00:00Z',
+                gameSessionRestartPolicy: 'fixedInterval',
+                gameSessionRestartIntervalMinutes: 120,
+                gameSessionResultMergeRule: 'bestLapPerDriver',
+                resultType: 'leaderboard', splits: [{ id: 'c1r3s0se1sp1', sessionId: 'c1r3s0se1', splitNumber: 1, serverName: 'MOZA GT3 Dubai Qualifier', serverPassword: 'mozaqualc1r3' }] },
+            ],
+          },
+          {
+            id: 'c1r3s1',
+            roundId: 'c1r3',
+            type: 'race_day',
+            name_zh: '正赛日',
+            name_en: 'Race Day',
+            startsAt: '2026-06-28T13:00:00Z',
+            endsAt: '2026-06-28T16:00:00Z',
+            eligibilitySource: 'previousStageResult',
+            maxEntriesPerSplit: 30,
+            maxSplits: 4,
+            enableMultiSplit: true,
+            splitAssignmentRule: 'By Skill',
+            minEntries: 10,
+            sessions: [
+              { id: 'c1r3s1se1', stageId: 'c1r3s1', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-06-28T13:00:00Z', endsAt: '2026-06-28T13:30:00Z', durationMinutes: 30, resultType: 'classification', splits: [{ id: 'c1r3s1se1sp1', sessionId: 'c1r3s1se1', splitNumber: 1 }] },
+              { id: 'c1r3s1se2', stageId: 'c1r3s1', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', startsAt: '2026-06-28T13:30:00Z', endsAt: '2026-06-28T13:45:00Z', durationMinutes: 15, resultType: 'classification', splits: [{ id: 'c1r3s1se2sp1', sessionId: 'c1r3s1se2', splitNumber: 1 }] },
+              { id: 'c1r3s1se3', stageId: 'c1r3s1', type: 'race', name_zh: '正赛', name_en: 'Race', startsAt: '2026-06-28T14:00:00Z', endsAt: '2026-06-28T15:00:00Z', raceDuration: 60, raceDurationType: 'time', resultType: 'classification', splits: [{ id: 'c1r3s1se3sp1', sessionId: 'c1r3s1se3', splitNumber: 1 }] },
+            ],
+          },
+        ],
+      },
+    ],
+    createdBy: 'admin1',
+    createdAt: '2026-02-01T10:00:00Z',
+    updatedAt: '2026-06-12T12:00:00Z',
+  },
+  {
+    id: 'c2',
+    name_zh: '耐力系列赛',
+    name_en: 'Endurance Series',
+    description_zh: '耐力系列赛，专注于长时间耐力赛。共 3 站，考验车手的持久力和策略。',
+    description_en: 'The Endurance Series, focusing on long-distance endurance races. 3 rounds testing driver stamina and strategy.',
+    coverImage: '',
+    regions: ['AP', 'CN'],
+    game: 'ACC',
+    carClass: 'GT3',
+    defaultRuleset: {
+      accessRequirements_zh: '至少完成10场ACC比赛',
+      accessRequirements_en: 'Minimum 10 ACC races completed',
+      scoringTable: [
+        { position: 1, points: 50, note_zh: '标准积分×2', note_en: 'Standard points ×2' },
+        { position: 2, points: 36, note_zh: '标准积分×2', note_en: 'Standard points ×2' },
+        { position: 3, points: 30, note_zh: '标准积分×2', note_en: 'Standard points ×2' },
+        { position: 4, points: 24 },
+        { position: 5, points: 20 },
+      ],
+      resources_zh: '耐力赛准备指南：https://example.com/endurance-guide',
+      resources_en: 'Endurance Prep Guide: https://example.com/endurance-guide',
+      streamUrl: 'https://twitch.tv/mozaap',
+    },
+    rounds: [
+      {
+        id: 'c2r1',
+        competitionId: 'c2',
+        roundNumber: 1,
+        name_zh: '第 1 站 - 伊莫拉',
+        name_en: 'Round 1 - Imola',
+        track: 'Imola',
+        registrationOpenAt: '2026-04-01T06:00:00Z',
+        registrationCloseAt: '2026-04-25T12:00:00Z',
+        currentRegistrations: 23,
+        registeredDriverIds: ['d1', 'd2', 'd3'],
+        stages: [
+          {
+            id: 'c2r1s1',
+            roundId: 'c2r1',
+            type: 'race_day',
+            name_zh: '正赛日',
+            name_en: 'Race Day',
+            startsAt: '2026-05-03T04:00:00Z',
+            endsAt: '2026-05-03T08:00:00Z',
+            maxEntriesPerSplit: 30,
+            maxSplits: 2,
+            enableMultiSplit: true,
+            splitAssignmentRule: 'By Skill',
+            minEntries: 15,
+            sessions: [
+              { id: 'c2r1s1se1', stageId: 'c2r1s1', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-05-03T04:00:00Z', endsAt: '2026-05-03T04:45:00Z', durationMinutes: 45, resultType: 'classification', splits: [{ id: 'c2r1s1se1sp1', sessionId: 'c2r1s1se1', splitNumber: 1 }] },
+              { id: 'c2r1s1se2', stageId: 'c2r1s1', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', startsAt: '2026-05-03T04:45:00Z', endsAt: '2026-05-03T05:05:00Z', durationMinutes: 20, resultType: 'classification', splits: [{ id: 'c2r1s1se2sp1', sessionId: 'c2r1s1se2', splitNumber: 1 }] },
+              {
+                id: 'c2r1s1se3',
+                stageId: 'c2r1s1',
+                type: 'race',
+                name_zh: '正赛',
+                name_en: 'Race',
+                startsAt: '2026-05-03T05:30:00Z',
+                endsAt: '2026-05-03T07:30:00Z',
+                raceDuration: 120,
+                raceDurationType: 'time',
+                resultType: 'classification',
+                vodUrl: 'https://twitch.tv/videos/example11',
+                splits: [{ id: 'c2r1s1se3sp1', sessionId: 'c2r1s1se3', splitNumber: 1, resultsPublishedAt: '2026-05-03T08:00:00Z', results: [
+                  { position: 1, driverId: 'd2', teamId: 't1', splitNumber: 1, totalTime: '2:22:15.678', bestLap: '1:41.234', lapsCompleted: 69, gapToLeader: '-', status: 'Finished', points: 50 },
+                  { position: 2, driverId: 'd6', teamId: 't3', splitNumber: 1, totalTime: '2:22:23.901', bestLap: '1:41.567', lapsCompleted: 69, gapToLeader: '+8.223', status: 'Finished', points: 36 },
+                  { position: 3, driverId: 'd8', teamId: 't4', splitNumber: 1, totalTime: '2:22:28.123', bestLap: '1:41.890', lapsCompleted: 69, gapToLeader: '+12.445', status: 'Finished', points: 30 },
+                ] }],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'c2r2',
+        competitionId: 'c2',
+        roundNumber: 2,
+        name_zh: '第 2 站 - 铃鹿',
+        name_en: 'Round 2 - Suzuka',
+        track: 'Suzuka',
+        trackLayout: 'GP',
+        registrationOpenAt: '2026-05-10T06:00:00Z',
+        registrationCloseAt: '2026-06-10T12:00:00Z',
+        currentRegistrations: 42,
+        registeredDriverIds: ['d1', 'd2', 'd5'],
+        stages: [
+          {
+            id: 'c2r2s0',
+            roundId: 'c2r2',
+            type: 'qualifier',
+            name_zh: '预选赛',
+            name_en: 'Qualifier',
+            description_zh: '开放预选服务器，取最快圈速决定正赛日排位。',
+            description_en: 'Open qualifier server. Best lap determines race day grid.',
+            startsAt: '2026-06-12T00:00:00Z',
+            endsAt: '2026-06-18T00:00:00Z',
+            eligibilitySource: 'roundRegistration',
+            advancementRule: { metric: 'bestLap', direction: 'asc', limit: 60, targetStageId: 'c2r2s1', fallbackPolicy: 'fillNext' },
+            maxEntriesPerSplit: 60,
+            enableMultiSplit: false,
+            sessions: [
+              {
+                id: 'c2r2s0se1',
+                stageId: 'c2r2s0',
+                type: 'practice',
+                name_zh: '热圈服务器',
+                name_en: 'Hotlap Server',
+                startsAt: '2026-06-12T00:00:00Z',
+                endsAt: '2026-06-18T00:00:00Z',
+                gameSessionRestartPolicy: 'fixedInterval',
+                gameSessionRestartIntervalMinutes: 180,
+                gameSessionResultMergeRule: 'bestLapPerDriver',
+                resultType: 'leaderboard', splits: [{ id: 'c2r2s0se1sp1', sessionId: 'c2r2s0se1', splitNumber: 1, serverName: 'MOZA Endurance Suzuka Qualifier', serverPassword: 'mozaqualc2r2' }] },
+            ],
+          },
+          {
+            id: 'c2r2s1',
+            roundId: 'c2r2',
+            type: 'race_day',
+            name_zh: '正赛日',
+            name_en: 'Race Day',
+            startsAt: '2026-06-21T04:00:00Z',
+            endsAt: '2026-06-21T08:00:00Z',
+            eligibilitySource: 'previousStageResult',
+            maxEntriesPerSplit: 30,
+            maxSplits: 2,
+            enableMultiSplit: true,
+            splitAssignmentRule: 'By Skill',
+            minEntries: 15,
+            sessions: [
+              { id: 'c2r2s1se1', stageId: 'c2r2s1', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-06-21T04:00:00Z', endsAt: '2026-06-21T04:45:00Z', durationMinutes: 45, resultType: 'classification', splits: [{ id: 'c2r2s1se1sp1', sessionId: 'c2r2s1se1', splitNumber: 1 }] },
+              { id: 'c2r2s1se2', stageId: 'c2r2s1', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', startsAt: '2026-06-21T04:45:00Z', endsAt: '2026-06-21T05:05:00Z', durationMinutes: 20, resultType: 'classification', splits: [{ id: 'c2r2s1se2sp1', sessionId: 'c2r2s1se2', splitNumber: 1 }] },
+              { id: 'c2r2s1se3', stageId: 'c2r2s1', type: 'race', name_zh: '正赛', name_en: 'Race', startsAt: '2026-06-21T05:30:00Z', endsAt: '2026-06-21T07:30:00Z', raceDuration: 120, raceDurationType: 'time', resultType: 'classification', splits: [{ id: 'c2r2s1se3sp1', sessionId: 'c2r2s1se3', splitNumber: 1 }] },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'c2r3',
+        competitionId: 'c2',
+        roundNumber: 3,
+        name_zh: '第 3 站 - 雪邦',
+        name_en: 'Round 3 - Sepang',
+        track: 'Sepang',
+        registrationOpenAt: '2026-07-05T06:00:00Z',
+        registrationCloseAt: '2026-07-20T06:00:00Z',
+        currentRegistrations: 18,
+        registeredDriverIds: ['d2', 'd6', 'd9'],
+        stages: [
+          {
+            id: 'c2r3s0',
+            roundId: 'c2r3',
+            type: 'qualifier',
+            name_zh: '预选赛',
+            name_en: 'Qualifier',
+            description_zh: '开放预选服务器，取最快圈速决定正赛日排位。',
+            description_en: 'Open qualifier server. Best lap determines race day grid.',
+            startsAt: '2026-07-15T00:00:00Z',
+            endsAt: '2026-07-22T00:00:00Z',
+            eligibilitySource: 'roundRegistration',
+            advancementRule: { metric: 'bestLap', direction: 'asc', limit: 60, targetStageId: 'c2r3s1', fallbackPolicy: 'fillNext' },
+            maxEntriesPerSplit: 60,
+            enableMultiSplit: false,
+            sessions: [
+              {
+                id: 'c2r3s0se1',
+                stageId: 'c2r3s0',
+                type: 'practice',
+                name_zh: '热圈服务器',
+                name_en: 'Hotlap Server',
+                startsAt: '2026-07-15T00:00:00Z',
+                endsAt: '2026-07-22T00:00:00Z',
+                gameSessionRestartPolicy: 'fixedInterval',
+                gameSessionRestartIntervalMinutes: 180,
+                gameSessionResultMergeRule: 'bestLapPerDriver',
+                resultType: 'leaderboard', splits: [{ id: 'c2r3s0se1sp1', sessionId: 'c2r3s0se1', splitNumber: 1, serverName: 'MOZA Endurance Sepang Qualifier', serverPassword: 'mozaqualc2r3' }] },
+            ],
+          },
+          {
+            id: 'c2r3s1',
+            roundId: 'c2r3',
+            type: 'race_day',
+            name_zh: '正赛日',
+            name_en: 'Race Day',
+            startsAt: '2026-07-26T04:00:00Z',
+            endsAt: '2026-07-26T08:00:00Z',
+            eligibilitySource: 'previousStageResult',
+            maxEntriesPerSplit: 30,
+            maxSplits: 2,
+            enableMultiSplit: true,
+            splitAssignmentRule: 'By Skill',
+            minEntries: 15,
+            sessions: [
+              { id: 'c2r3s1se1', stageId: 'c2r3s1', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-07-26T04:00:00Z', endsAt: '2026-07-26T04:45:00Z', durationMinutes: 45, resultType: 'classification', splits: [{ id: 'c2r3s1se1sp1', sessionId: 'c2r3s1se1', splitNumber: 1 }] },
+              { id: 'c2r3s1se2', stageId: 'c2r3s1', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', startsAt: '2026-07-26T04:45:00Z', endsAt: '2026-07-26T05:05:00Z', durationMinutes: 20, resultType: 'classification', splits: [{ id: 'c2r3s1se2sp1', sessionId: 'c2r3s1se2', splitNumber: 1 }] },
+              { id: 'c2r3s1se3', stageId: 'c2r3s1', type: 'race', name_zh: '正赛', name_en: 'Race', startsAt: '2026-07-26T05:30:00Z', endsAt: '2026-07-26T07:30:00Z', raceDuration: 120, raceDurationType: 'time', resultType: 'classification', splits: [{ id: 'c2r3s1se3sp1', sessionId: 'c2r3s1se3', splitNumber: 1 }] },
+            ],
+          },
+        ],
+      },
+    ],
+    createdBy: 'admin1',
+    createdAt: '2026-02-10T10:00:00Z',
+    updatedAt: '2026-06-10T06:00:00Z',
+  },
+  {
+    id: 'c3',
+    name_zh: 'CN GT4 杯 - 上海',
+    name_en: 'CN GT4 Cup - Shanghai',
+    description_zh: 'GT4 杯赛，在上海国际赛车场举行，30 分钟冲刺赛。',
+    description_en: 'GT4 Cup at Shanghai International Circuit, a 30-minute sprint race.',
+    coverImage: '',
+    regions: ['CN'],
+    game: 'ACC',
+    carClass: 'GT4',
+    defaultRuleset: {
+    },
+    rounds: [
+      {
+        id: 'c3r1',
+        competitionId: 'c3',
+        roundNumber: 1,
+        name_zh: 'GT4 杯 - 上海',
+        name_en: 'GT4 Cup - Shanghai',
+        track: 'Shanghai',
+        registrationOpenAt: '2026-06-05T12:00:00Z',
+        registrationCloseAt: '2026-06-25T12:00:00Z',
+        currentRegistrations: 12,
+        registeredDriverIds: ['d1', 'd5', 'd11'],
+        stages: [
+          {
+            id: 'c3r1s1',
+            roundId: 'c3r1',
+            type: 'race_day',
+            name_zh: '正赛日',
+            name_en: 'Race Day',
+            startsAt: '2026-06-29T11:00:00Z',
+            endsAt: '2026-06-29T13:00:00Z',
+            maxEntriesPerSplit: 25,
+            enableMultiSplit: false,
+            minEntries: 8,
+            sessions: [
+              { id: 'c3r1s1se1', stageId: 'c3r1s1', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-06-29T11:00:00Z', endsAt: '2026-06-29T11:20:00Z', durationMinutes: 20, resultType: 'classification', splits: [{ id: 'c3r1s1se1sp1', sessionId: 'c3r1s1se1', splitNumber: 1 }] },
+              { id: 'c3r1s1se2', stageId: 'c3r1s1', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', startsAt: '2026-06-29T11:20:00Z', endsAt: '2026-06-29T11:30:00Z', durationMinutes: 10, resultType: 'classification', splits: [{ id: 'c3r1s1se2sp1', sessionId: 'c3r1s1se2', splitNumber: 1 }] },
+              { id: 'c3r1s1se3', stageId: 'c3r1s1', type: 'race', name_zh: '正赛', name_en: 'Race', startsAt: '2026-06-29T11:45:00Z', endsAt: '2026-06-29T12:15:00Z', raceDuration: 30, raceDurationType: 'time', resultType: 'classification', splits: [{ id: 'c3r1s1se3sp1', sessionId: 'c3r1s1se3', splitNumber: 1 }] },
+            ],
+          },
+        ],
+      },
+    ],
+    createdBy: 'admin1',
+    createdAt: '2026-05-20T10:00:00Z',
+    updatedAt: '2026-06-05T12:00:00Z',
+  },
+  {
+    id: 'c4',
+    name_zh: 'AM 冲刺赛 - COTA',
+    name_en: 'AM Sprint Race - COTA',
+    description_zh: '冲刺赛，在美国奥斯汀 COTA 赛道举行，15 圈激烈竞速。',
+    description_en: 'Sprint Race at Circuit of the Americas, Austin, Texas. 15 laps of intense racing.',
+    coverImage: '',
+    regions: ['AM'],
+    game: 'ACC',
+    carClass: 'GT3',
+    defaultRuleset: {
+    },
+    rounds: [
+      {
+        id: 'c4r1',
+        competitionId: 'c4',
+        roundNumber: 1,
+        name_zh: 'AM 冲刺赛 - COTA',
+        name_en: 'AM Sprint - COTA',
+        track: 'COTA',
+        registrationOpenAt: '2026-04-20T22:00:00Z',
+        registrationCloseAt: '2026-05-15T18:00:00Z',
+        currentRegistrations: 20,
+        registeredDriverIds: ['d1', 'd2', 'd3'],
+        stages: [
+          {
+            id: 'c4r1s1',
+            roundId: 'c4r1',
+            type: 'race_day',
+            name_zh: '正赛日',
+            name_en: 'Race Day',
+            startsAt: '2026-05-30T20:00:00Z',
+            endsAt: '2026-05-30T23:00:00Z',
+            maxEntriesPerSplit: 25,
+            enableMultiSplit: false,
+            sessions: [
+              { id: 'c4r1s1se1', stageId: 'c4r1s1', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-05-30T20:00:00Z', endsAt: '2026-05-30T20:20:00Z', durationMinutes: 20, resultType: 'classification', splits: [{ id: 'c4r1s1se1sp1', sessionId: 'c4r1s1se1', splitNumber: 1 }] },
+              { id: 'c4r1s1se2', stageId: 'c4r1s1', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', startsAt: '2026-05-30T20:20:00Z', endsAt: '2026-05-30T20:30:00Z', durationMinutes: 10, resultType: 'classification', splits: [{ id: 'c4r1s1se2sp1', sessionId: 'c4r1s1se2', splitNumber: 1 }] },
+              {
+                id: 'c4r1s1se3',
+                stageId: 'c4r1s1',
+                type: 'race',
+                name_zh: '正赛',
+                name_en: 'Race',
+                startsAt: '2026-05-30T22:00:00Z',
+                endsAt: '2026-05-30T22:45:00Z',
+                raceDuration: 15,
+                raceDurationType: 'laps',
+                resultType: 'classification',
+                splits: [{ id: 'c4r1s1se3sp1', sessionId: 'c4r1s1se3', splitNumber: 1, resultsPublishedAt: '2026-05-30T23:00:00Z', results: [
+                  { position: 1, driverId: 'd3', teamId: 't2', splitNumber: 1, totalTime: '30:01.845', bestLap: '2:00.123', lapsCompleted: 15, gapToLeader: '-', status: 'Finished', points: 25 },
+                  { position: 2, driverId: 'd7', teamId: 't3', splitNumber: 1, totalTime: '30:08.234', bestLap: '2:00.456', lapsCompleted: 15, gapToLeader: '+6.389', status: 'Finished', points: 18 },
+                  { position: 3, driverId: 'd15', teamId: 't2', splitNumber: 1, totalTime: '30:15.678', bestLap: '2:01.012', lapsCompleted: 15, gapToLeader: '+13.833', status: 'Finished', points: 15 },
+                  { position: 4, driverId: 'd1', teamId: 't1', splitNumber: 1, totalTime: '30:22.456', bestLap: '2:01.234', lapsCompleted: 15, gapToLeader: '+20.611', status: 'Finished', points: 12 },
+                  { position: 5, driverId: 'd16', splitNumber: 1, totalTime: '30:28.901', bestLap: '2:01.567', lapsCompleted: 15, gapToLeader: '+27.056', status: 'Finished', points: 10 },
+                ] }],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    createdBy: 'admin1',
+    createdAt: '2026-03-15T10:00:00Z',
+    updatedAt: '2026-05-30T22:00:00Z',
+  },
+  {
+    id: 'c5',
+    name_zh: 'MOZA GT3 邀请赛',
+    name_en: 'MOZA GT3 Invitational',
+    description_zh: '含预选赛的 GT3 邀请赛。每站包含长时间开放预选赛和正赛日两个阶段。',
+    description_en: 'GT3 Invitational with qualifier stages. Each round features a long-running qualifier and a race day.',
+    coverImage: '',
+    regions: ['CN', 'AP', 'AM', 'EU'],
+    game: 'ACC',
+    carClass: 'GT3',
+    defaultRuleset: {
+      scoringTable: [
+        { position: 1, points: 25 },
+        { position: 2, points: 18 },
+        { position: 3, points: 15 },
+      ],
+    },
+    rounds: [
+      {
+        id: 'c5r1',
+        competitionId: 'c5',
+        roundNumber: 1,
+        name_zh: '第 1 站 - 银石',
+        name_en: 'Round 1 - Silverstone',
+        track: 'Silverstone',
+        trackLayout: 'GP',
+        registrationOpenAt: '2026-07-01T14:00:00Z',
+        registrationCloseAt: '2026-07-15T12:00:00Z',
+        currentRegistrations: 15,
+        registeredDriverIds: ['d3', 'd8', 'd14'],
+        stages: [
+          {
+            id: 'c5r1s1',
+            roundId: 'c5r1',
+            type: 'qualifier',
+            name_zh: '预选赛',
+            name_en: 'Qualifier',
+            description_zh: '长时间开放预选服务器，按固定间隔自动重启，取最快有效圈速合并榜单。',
+            description_en: 'Long-running qualifier server with fixed-interval restarts. Best valid lap per driver is merged.',
+            startsAt: '2026-07-18T00:00:00Z',
+            endsAt: '2026-07-20T00:00:00Z',
+            eligibilitySource: 'roundRegistration',
+            advancementRule: { metric: 'bestLap', direction: 'asc', limit: 30, targetStageId: 'c5r1s2', fallbackPolicy: 'fillNext' },
+            maxEntriesPerSplit: 60,
+            enableMultiSplit: false,
+            sessions: [
+              {
+                id: 'c5r1s1se1',
+                stageId: 'c5r1s1',
+                type: 'practice',
+                name_zh: '热圈服务器',
+                name_en: 'Hotlap Server',
+                startsAt: '2026-07-18T00:00:00Z',
+                endsAt: '2026-07-20T00:00:00Z',
+                gameSessionRestartPolicy: 'fixedInterval',
+                gameSessionRestartIntervalMinutes: 120,
+                gameSessionResultMergeRule: 'bestLapPerDriver',
+                resultType: 'leaderboard', splits: [{ id: 'c5r1s1se1sp1', sessionId: 'c5r1s1se1', splitNumber: 1, serverName: 'MOZA GT3 Silverstone Qualifier', serverPassword: 'mozaqual2026' }] },
+            ],
+          },
+          {
+            id: 'c5r1s2',
+            roundId: 'c5r1',
+            type: 'race_day',
+            name_zh: '正赛日',
+            name_en: 'Race Day',
+            startsAt: '2026-07-22T13:00:00Z',
+            endsAt: '2026-07-22T16:00:00Z',
+            eligibilitySource: 'previousStageResult',
+            maxEntriesPerSplit: 30,
+            maxSplits: 3,
+            enableMultiSplit: true,
+            splitAssignmentRule: 'First Come First Served',
+            sessions: [
+              { id: 'c5r1s2se1', stageId: 'c5r1s2', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-07-22T13:00:00Z', endsAt: '2026-07-22T13:30:00Z', durationMinutes: 30, resultType: 'classification', splits: [{ id: 'c5r1s2se1sp1', sessionId: 'c5r1s2se1', splitNumber: 1 }] },
+              { id: 'c5r1s2se2', stageId: 'c5r1s2', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', startsAt: '2026-07-22T13:30:00Z', endsAt: '2026-07-22T13:45:00Z', durationMinutes: 15, resultType: 'classification', splits: [{ id: 'c5r1s2se2sp1', sessionId: 'c5r1s2se2', splitNumber: 1 }] },
+              { id: 'c5r1s2se3', stageId: 'c5r1s2', type: 'race', name_zh: '正赛', name_en: 'Race', startsAt: '2026-07-22T14:00:00Z', endsAt: '2026-07-22T15:00:00Z', raceDuration: 60, raceDurationType: 'time', resultType: 'classification', gameConfig: { track: 'silverstone', carGroup: 'GT4', cloudLevel: 0.7, rain: 0, weatherRandomness: 3, ambientTemp: 18, trackTemp: 24, timeMultiplier: 1, formationLapType: 3, preRaceWaitingTimeSeconds: 60, sessionOverTimeSeconds: 120, postQualySeconds: 600, postRaceSeconds: 600, mandatoryPitstopCount: 0, pitWindowLengthSec: -1, driverStintTimeSec: 0, maxDriversCount: 2, tyreSetCount: 4, isRefuellingAllowedInRace: false, isMandatoryPitstopRefuellingRequired: false, isMandatoryPitstopTyreChangeRequired: false, isMandatoryPitstopSwapDriverRequired: false, stabilityControlLevelMax: 100, disableIdealLine: false, disableAutosteer: false, disableAutoGear: true, disableAutoClutch: false, disableAutoPitLimiter: false, disableAutoEngineStart: false, disableAutoWiper: false, disableAutoLights: false, trackMedalsRequirement: 0, safetyRatingRequirement: 20, racecraftRatingRequirement: 0 }, splits: [{ id: 'c5r1s2se3sp1', sessionId: 'c5r1s2se3', splitNumber: 1, serverName: 'Racing Arcade AM #1', serverPassword: 'silverstone1', adminPassword: 'admin789', maxConnections: 30, registerToLobby: true }] },
+            ],
+          },
+        ],
+      },
+    ],
+    statusOverride: 'Draft',
+    createdBy: 'admin1',
+    createdAt: '2026-05-01T10:00:00Z',
+    updatedAt: '2026-06-10T10:00:00Z',
+  },
+  {
+    id: 'c6',
+    name_zh: 'EU 独立赛 - 纽博格林',
+    name_en: 'EU Standalone - Nürburgring',
+    description_zh: 'MOZA 独立赛事，在德国纽博格林赛道举行。该赛事已被取消。',
+    description_en: 'MOZA Standalone event at Nürburgring, Germany. This event has been cancelled.',
+    coverImage: '',
+    regions: ['EU'],
+    game: 'ACC',
+    carClass: 'GT3',
+    defaultRuleset: {
+    },
+    rounds: [
+      {
+        id: 'c6r1',
+        competitionId: 'c6',
+        roundNumber: 1,
+        name_zh: 'EU 独立赛 - 纽博格林',
+        name_en: 'EU Standalone - Nürburgring',
+        track: 'Nürburgring',
+        trackLayout: 'GP',
+        registrationOpenAt: '2026-04-01T12:00:00Z',
+        registrationCloseAt: '2026-05-05T12:00:00Z',
+        currentRegistrations: 0,
+        registeredDriverIds: [],
+        cancelledReason_zh: '由于报名人数不足，本场赛事已取消。',
+        cancelledReason_en: 'This event has been cancelled due to insufficient registrations.',
+        stages: [
+          {
+            id: 'c6r1s1',
+            roundId: 'c6r1',
+            type: 'race_day',
+            name_zh: '正赛日',
+            name_en: 'Race Day',
+            startsAt: '2026-05-10T16:00:00Z',
+            endsAt: '2026-05-10T19:00:00Z',
+            maxEntriesPerSplit: 30,
+            enableMultiSplit: false,
+            sessions: [
+              { id: 'c6r1s1se1', stageId: 'c6r1s1', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-05-10T16:00:00Z', endsAt: '2026-05-10T16:30:00Z', durationMinutes: 30, resultType: 'classification', splits: [{ id: 'c6r1s1se1sp1', sessionId: 'c6r1s1se1', splitNumber: 1 }] },
+              { id: 'c6r1s1se2', stageId: 'c6r1s1', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', startsAt: '2026-05-10T16:30:00Z', endsAt: '2026-05-10T16:45:00Z', durationMinutes: 15, resultType: 'classification', splits: [{ id: 'c6r1s1se2sp1', sessionId: 'c6r1s1se2', splitNumber: 1 }] },
+              { id: 'c6r1s1se3', stageId: 'c6r1s1', type: 'race', name_zh: '正赛', name_en: 'Race', startsAt: '2026-05-10T17:00:00Z', endsAt: '2026-05-10T18:00:00Z', raceDuration: 60, raceDurationType: 'time', resultType: 'classification', splits: [{ id: 'c6r1s1se3sp1', sessionId: 'c6r1s1se3', splitNumber: 1 }] },
+            ],
+          },
+        ],
+      },
+    ],
+    statusOverride: 'Cancelled',
+    cancelledReason_zh: '由于报名人数不足，本场赛事已取消。',
+    cancelledReason_en: 'This event has been cancelled due to insufficient registrations.',
+    createdBy: 'admin1',
+    createdAt: '2026-03-01T10:00:00Z',
+    updatedAt: '2026-05-05T12:00:00Z',
+  },
+]
+
+export function createDefaultTemplate(game: GamePlatform): SessionTemplate {
+  const now = new Date().toISOString()
+  return {
+    id: `tpl_${Date.now()}`,
+    name_zh: '新模板',
+    name_en: 'New Template',
+    description_zh: '',
+    description_en: '',
+    game,
+    sessionType: 'race',
+    gameConfig: createDefaultGameConfig(game),
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
+export const sessionTemplates: SessionTemplate[] = [
+  {
+    id: 'tpl_gt3_sprint',
+    name_zh: 'GT3 冲刺赛 60 分钟',
+    name_en: 'GT3 Sprint 60min',
+    description_zh: '标准 GT3 冲刺赛配置，Monza 赛道，60 分钟',
+    description_en: 'Standard GT3 sprint config, Monza, 60 minutes',
+    game: 'ACC',
+    sessionType: 'race',
+    gameConfig: {
+      ...createDefaultGameConfig('ACC'),
+      track: 'monza',
+      carGroup: 'GT3',
+      ambientTemp: 26,
+      trackTemp: 30,
+      cloudLevel: 0.3,
+      rain: 0,
+      weatherRandomness: 1,
+      timeMultiplier: 1,
+      mandatoryPitstopCount: 0,
+      isRefuellingAllowedInRace: true,
+      formationLapType: 3,
+      stabilityControlLevelMax: 0,
+      trackMedalsRequirement: -1,
+      safetyRatingRequirement: -1,
+      racecraftRatingRequirement: -1,
+    },
+    createdAt: '2026-01-15T10:00:00Z',
+    updatedAt: '2026-01-15T10:00:00Z',
+  },
+  {
+    id: 'tpl_gt3_endurance',
+    name_zh: 'GT3 耐力赛 120 分钟',
+    name_en: 'GT3 Endurance 120min',
+    description_zh: '长距离耐力赛，Spa 赛道，强制进站',
+    description_en: 'Long endurance race, Spa, mandatory pit stop',
+    game: 'ACC',
+    sessionType: 'race',
+    gameConfig: {
+      ...createDefaultGameConfig('ACC'),
+      track: 'spa_24h',
+      carGroup: 'GT3',
+      ambientTemp: 22,
+      trackTemp: 26,
+      cloudLevel: 0.5,
+      rain: 0,
+      weatherRandomness: 3,
+      timeMultiplier: 1,
+      mandatoryPitstopCount: 1,
+      pitWindowLengthSec: 1200,
+      isRefuellingAllowedInRace: true,
+      isMandatoryPitstopTyreChangeRequired: true,
+      isMandatoryPitstopRefuellingRequired: true,
+      maxDriversCount: 2,
+      formationLapType: 3,
+      stabilityControlLevelMax: 0,
+      trackMedalsRequirement: 1,
+      safetyRatingRequirement: 50,
+      racecraftRatingRequirement: 50,
+    },
+    createdAt: '2026-02-01T10:00:00Z',
+    updatedAt: '2026-03-10T14:00:00Z',
+  },
+  {
+    id: 'tpl_gt4_sprint',
+    name_zh: 'GT4 冲刺赛 30 分钟',
+    name_en: 'GT4 Sprint 30min',
+    description_zh: '入门级 GT4 短赛，Silverstone 赛道',
+    description_en: 'Entry-level GT4 short race, Silverstone',
+    game: 'ACC',
+    sessionType: 'race',
+    gameConfig: {
+      ...createDefaultGameConfig('ACC'),
+      track: 'silverstone',
+      carGroup: 'GT4',
+      ambientTemp: 20,
+      trackTemp: 24,
+      cloudLevel: 0.4,
+      rain: 0,
+      weatherRandomness: 2,
+      timeMultiplier: 1,
+      mandatoryPitstopCount: 0,
+      isRefuellingAllowedInRace: false,
+      formationLapType: 1,
+      stabilityControlLevelMax: 100,
+      trackMedalsRequirement: -1,
+      safetyRatingRequirement: -1,
+      racecraftRatingRequirement: -1,
+    },
+    createdAt: '2026-02-20T10:00:00Z',
+    updatedAt: '2026-02-20T10:00:00Z',
+  },
+  {
+    id: 'tpl_ac_practice',
+    name_zh: 'AC 自由练习',
+    name_en: 'AC Free Practice',
+    description_zh: 'Assetto Corsa 通用自由练习配置',
+    description_en: 'Assetto Corsa general free practice config',
+    game: 'AC',
+    sessionType: 'practice',
+    gameConfig: {
+      ...createDefaultGameConfig('AC'),
+      damageMultiplier: 0,
+      fuelRate: 100,
+      tyreWearRate: 100,
+      tcAllowed: 2,
+      absAllowed: 2,
+      stabilityAllowed: true,
+      autoclutchAllowed: true,
+      forceVirtualMirror: true,
+    },
+    createdAt: '2026-03-05T10:00:00Z',
+    updatedAt: '2026-03-05T10:00:00Z',
+  },
+]

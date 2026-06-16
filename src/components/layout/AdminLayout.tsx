@@ -3,7 +3,6 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '@/hooks/useAppStore'
 import {
-  Calendar,
   Trophy,
   ClipboardList,
   AlertTriangle,
@@ -11,20 +10,17 @@ import {
   Newspaper,
   Shield,
   Bell,
-  Monitor,
   FileText,
   Menu,
   ChevronLeft,
   Globe,
   LogOut,
-  Settings2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { setScrollContainer } from '@/lib/scrollContainer'
 
 const navItems = [
-  { path: '/championships', icon: Trophy, labelKey: 'admin.championships' },
-  { path: '/events', icon: Calendar, labelKey: 'admin.events' },
+  { path: '/competitions', icon: Trophy, labelKey: 'admin.competitions' },
   { path: '/templates', icon: FileText, labelKey: 'admin.templates' },
   { path: '/results', icon: ClipboardList, labelKey: 'admin.results' },
   { path: '/protests', icon: AlertTriangle, labelKey: 'admin.protests' },
@@ -32,8 +28,6 @@ const navItems = [
   { path: '/news', icon: Newspaper, labelKey: 'admin.news' },
   { path: '/teams', icon: Shield, labelKey: 'admin.teams' },
   { path: '/notifications', icon: Bell, labelKey: 'admin.notifications' },
-  { path: '/devices', icon: Monitor, labelKey: 'admin.devices' },
-  { path: '/settings', icon: Settings2, labelKey: 'admin.settings' },
 ]
 
 export function AdminLayout() {

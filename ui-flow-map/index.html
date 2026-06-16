@@ -1,0 +1,1217 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Racing Arcade UI Flow Map</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #05070b;
+        --panel: #0a1018;
+        --panel-2: #101824;
+        --panel-3: #172233;
+        --line: #263342;
+        --line-strong: #ff8b3d;
+        --text: #f1f7ff;
+        --muted: #8ea0b4;
+        --soft: #c1d0df;
+        --primary: #ff8b3d;
+        --primary-2: #ffb36f;
+        --green: #4ae6a6;
+        --yellow: #ffcc4d;
+        --purple: #b79cff;
+        --orange: #ff8b3d;
+        --shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+      
+      * {
+        box-sizing: border-box;
+      }
+      
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--text);
+      }
+      
+      button,
+      input {
+        font: inherit;
+      }
+      
+      button {
+        cursor: pointer;
+      }
+      
+      .topbar {
+        position: relative;
+        z-index: 20;
+        height: 74px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 14px 22px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--bg);
+        text-rendering: geometricPrecision;
+      }
+      
+      .topbar::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -1px;
+        height: 2px;
+        background: var(--line-strong);
+        opacity: 0.9;
+      }
+      
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-width: 0;
+      }
+      
+      .brand-mark {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        border: 1px solid rgba(255, 139, 61, 0.55);
+        border-radius: 2px;
+        background: transparent;
+        color: var(--primary-2);
+        font-weight: 900;
+        letter-spacing: 0;
+      }
+      
+      .brand h1 {
+        margin: 0;
+        font-size: 18px;
+        line-height: 1.25;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+      
+      .brand p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      
+      .toolbar button,
+      .filter-list button {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: transparent;
+        color: var(--soft);
+        border-radius: 2px;
+        padding: 8px 11px;
+        transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+      }
+      
+      .toolbar button:hover,
+      .filter-list button:hover {
+        background: rgba(255, 139, 61, 0.14);
+        color: var(--text);
+        border-color: rgba(255, 139, 61, 0.7);
+      }
+      
+      .zoom-label {
+        min-width: 58px;
+        text-align: center;
+        color: var(--primary-2);
+        font-weight: 700;
+        font-size: 13px;
+      }
+      
+      .workspace {
+        height: calc(100vh - 74px);
+        display: block;
+        min-height: 0;
+      }
+      
+      .eyebrow {
+        color: var(--primary-2);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      
+      .filter-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      
+      .filter-list button {
+        padding: 7px 10px;
+        font-size: 12px;
+      }
+      
+      .filter-list button.active {
+        background: rgba(255, 139, 61, 0.16);
+        border-color: var(--primary);
+        color: var(--text);
+      }
+      
+      .search-box {
+        display: block;
+      }
+      
+      .search-box input {
+        width: 100%;
+        height: 40px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 10px;
+        outline: none;
+        padding: 0 12px;
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+      }
+      
+      .search-box input:focus {
+        border-color: rgba(255, 139, 61, 0.8);
+        box-shadow: 0 0 0 3px rgba(255, 139, 61, 0.12);
+      }
+      
+      .legend {
+        display: grid;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      
+      .legend-dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 99px;
+        margin-right: 8px;
+        vertical-align: -1px;
+      }
+      
+      .legend-dot.page {
+        background: var(--primary);
+      }
+      
+      .legend-dot.modal {
+        background: var(--purple);
+      }
+      
+      .legend-dot.state {
+        background: var(--yellow);
+      }
+      
+      .legend-line {
+        display: inline-block;
+        width: 24px;
+        height: 2px;
+        margin-right: 8px;
+        vertical-align: 3px;
+      }
+      
+      .legend-line.primary {
+        background: var(--line-strong);
+      }
+      
+      .legend-line.secondary {
+        background: rgba(185, 200, 218, 0.72);
+      }
+      
+      .canvas-shell {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+      }
+      
+      .viewport {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        cursor: default;
+        background: var(--bg);
+        overscroll-behavior: contain;
+        scrollbar-color: rgba(255, 139, 61, 0.55) transparent;
+        scrollbar-width: thin;
+      }
+      
+      .viewport::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      
+      .viewport::-webkit-scrollbar-thumb {
+        background: rgba(255, 139, 61, 0.42);
+        border: 3px solid var(--bg);
+      }
+      
+      .viewport::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      
+      .board-scaler {
+        position: relative;
+        min-width: 100%;
+        min-height: 100%;
+      }
+      
+      .board {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 3200px;
+        height: 2560px;
+        transform-origin: 0 0;
+        text-rendering: geometricPrecision;
+        -webkit-font-smoothing: antialiased;
+      }
+      
+      .edges-layer,
+      .groups-layer,
+      .nodes-layer {
+        position: absolute;
+        inset: 0;
+      }
+      
+      .edges-layer {
+        z-index: 1;
+        overflow: visible;
+      }
+      
+      .groups-layer {
+        z-index: 2;
+        pointer-events: none;
+      }
+      
+      .nodes-layer {
+        z-index: 3;
+      }
+      
+      .group-box {
+        position: absolute;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.075);
+        border-radius: 2px;
+        background: transparent;
+      }
+      
+      .group-box::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: auto;
+        left: 0;
+        width: 150px;
+        height: 2px;
+        background: var(--line-strong);
+      }
+      
+      .group-box::after {
+        content: none;
+      }
+      
+      .group-box h3 {
+        position: absolute;
+        left: 18px;
+        top: 14px;
+        width: 250px;
+        margin: 0;
+        color: rgba(241, 247, 255, 0.86);
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+      }
+      
+      .group-box p {
+        position: absolute;
+        left: 18px;
+        top: 38px;
+        width: 255px;
+        margin: 0;
+        color: rgba(147, 164, 186, 0.74);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      
+      .flow-node {
+        position: absolute;
+        width: 244px;
+        min-height: 156px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 2px;
+        padding: 14px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        user-select: none;
+        cursor: default;
+        transition:
+          border-color 160ms ease,
+          box-shadow 160ms ease,
+          opacity 160ms ease;
+      }
+      
+      .flow-node::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto;
+        height: 2px;
+        background: var(--line-strong);
+      }
+      
+      .flow-node::after {
+        content: none;
+      }
+      
+      .flow-node.dimmed {
+        opacity: 0.22;
+      }
+      
+      .flow-node.hidden-by-search {
+        opacity: 0.1;
+      }
+      
+      .flow-node.modal {
+        border-color: rgba(255, 139, 61, 0.5);
+      }
+      
+      .flow-node.state {
+        border-color: rgba(246, 200, 95, 0.4);
+      }
+      
+      .node-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      
+      .node-number {
+        width: 28px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        border: 1px solid rgba(255, 139, 61, 0.48);
+        border-radius: 2px;
+        background: rgba(255, 139, 61, 0.12);
+        color: var(--primary-2);
+        font-size: 12px;
+        font-weight: 900;
+      }
+      
+      .node-type {
+        border-radius: 999px;
+        padding: 4px 8px;
+        background: rgba(255, 255, 255, 0.045);
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+      
+      .flow-node h4 {
+        margin: 0;
+        color: var(--text);
+        font-size: 15px;
+        line-height: 1.35;
+      }
+      
+      .route {
+        color: var(--primary-2);
+        font-size: 11px;
+        word-break: break-all;
+      }
+      
+      .node-purpose {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      
+      .node-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: auto;
+      }
+      
+      .node-actions span {
+        border: 1px solid rgba(255, 255, 255, 0.075);
+        border-radius: 2px;
+        padding: 4px 7px;
+        background: rgba(255, 255, 255, 0.035);
+        color: var(--soft);
+        font-size: 10px;
+      }
+      
+      .edge-path {
+        fill: none;
+        stroke: rgba(185, 200, 218, 0.54);
+        stroke-width: 2.4;
+      }
+      
+      .edge-path.primary {
+        stroke: var(--line-strong);
+        stroke-width: 2.6;
+      }
+      
+      .edge-path.warning {
+        stroke: var(--yellow);
+      }
+      
+      .edge-path.dimmed {
+        opacity: 0.16;
+      }
+      
+      .edge-label {
+        paint-order: stroke;
+        stroke: rgba(11, 16, 24, 0.92);
+        stroke-width: 5px;
+        stroke-linejoin: round;
+        fill: rgba(238, 245, 255, 0.82);
+        font-size: 12px;
+        font-weight: 700;
+        pointer-events: none;
+      }
+      
+      .edge-label.dimmed {
+        opacity: 0.18;
+      }
+      
+      @media (max-width: 640px) {
+        .topbar {
+          height: auto;
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      
+        .workspace {
+          height: calc(100vh - 128px);
+        }
+      }
+      
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">RA</div>
+        <div>
+          <h1>Racing Arcade 页面动线图</h1>
+          <p>给 UI 设计师使用的交互顺序、页面关系与关键状态白板</p>
+        </div>
+      </div>
+      <div class="toolbar" aria-label="画布工具">
+        <button id="fitView" type="button" title="适配全部内容">适配</button>
+        <button id="zoomOut" type="button" title="缩小">-</button>
+        <span id="zoomLabel" class="zoom-label">100%</span>
+        <button id="zoomIn" type="button" title="放大">+</button>
+        <button id="resetView" type="button" title="重置视图">重置</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="canvas-shell" aria-label="可滚动缩放页面动线画布">
+        <div id="viewport" class="viewport">
+          <div id="boardScaler" class="board-scaler">
+            <div id="board" class="board">
+              <svg id="edgesLayer" class="edges-layer" aria-hidden="true"></svg>
+              <div id="groupsLayer" class="groups-layer"></div>
+              <div id="nodesLayer" class="nodes-layer"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const board = document.getElementById('board')
+      const boardScaler = document.getElementById('boardScaler')
+      const viewport = document.getElementById('viewport')
+      const groupsLayer = document.getElementById('groupsLayer')
+      const nodesLayer = document.getElementById('nodesLayer')
+      const edgesLayer = document.getElementById('edgesLayer')
+      const zoomLabel = document.getElementById('zoomLabel')
+      const searchInput = document.getElementById('searchInput')
+      const flowFilters = document.getElementById('flowFilters')
+      
+      const MIN_BOARD_W = 3200
+      const MIN_BOARD_H = 2320
+      const NODE_W = 236
+      const NODE_H = 156
+      const LANE_X = 64
+      const MIN_LANE_W = 3000
+      const LANE_H = 210
+      const NODE_START_X = 390
+      const NODE_Y_OFFSET = 27
+      const MIN_EDGE_GAP = 112
+      const EDGE_LABEL_PADDING = 52
+      const BOARD_PADDING_X = 160
+      const BOARD_PADDING_Y = 110
+      let edgeLabelMeasureContext = null
+      
+      const flows = [
+        { id: 'all', label: '全部' },
+        { id: 'onboarding', label: '登录注册' },
+        { id: 'registration', label: '独立赛事报名' },
+        { id: 'championship', label: '锦标赛参赛' },
+        { id: 'calendar', label: '日历发现' },
+        { id: 'content', label: '内容浏览' },
+        { id: 'spectator', label: '观赛排行' },
+        { id: 'personal', label: '个人中心' },
+        { id: 'team', label: '车队' },
+        { id: 'protest', label: '抗议申诉' },
+      ]
+      
+      const screenLibrary = {
+        login: {
+          order: 'P1',
+          type: 'page',
+          title: '登录页',
+          route: '/login',
+          purpose: '选择 Pit House SSO、Discord 或 Steam 完成授权登录。',
+          actions: ['选择登录方式', '授权回调'],
+          ui: ['Pit House 作为主按钮', '展示当前区域/语言', '失败状态轻提示'],
+        },
+        register: {
+          order: 'P2',
+          type: 'page',
+          title: '注册信息补全',
+          route: '/register/complete',
+          purpose: '首次登录后补齐昵称、国家/区域、语言偏好和主要游玩游戏。',
+          actions: ['填昵称', '选国家', '选语言', '选游戏'],
+          ui: ['必填项清楚', '完成按钮禁用态明确', '游戏为多选标签'],
+        },
+        home: {
+          order: 'P3',
+          type: 'page',
+          title: '首页',
+          route: '/',
+          purpose: '承接登录后或访客进入，展示近期赛事、新闻和排行榜速览。',
+          actions: ['查看赛事', '点赛事卡片', '点新闻'],
+          ui: ['首屏突出最近可参加内容', '已登录用户建议加下一场比赛/待办'],
+        },
+        events: {
+          order: 'P4',
+          type: 'page',
+          title: '赛事列表',
+          route: '/events',
+          purpose: '按报名中/已结束展示独立赛事与锦标赛。',
+          actions: ['浏览赛事', '筛选赛事', '点赛事卡片'],
+          ui: ['独立赛事和锦标赛卡片要区分', '后续补搜索和可报名筛选'],
+        },
+        eventDetail: {
+          order: 'P5',
+          type: 'page',
+          title: '独立赛事详情',
+          route: '/events/{id}',
+          purpose: '展示独立赛事详情、报名入口、服务器信息、参赛名单和成绩。',
+          actions: ['看赛制', '报名', '取消报名', '看成绩'],
+          ui: ['报名操作区要稳定可见', '服务器信息仅报名后可见', '赛后展示抗议入口'],
+        },
+        championship: {
+          order: 'P6',
+          type: 'page',
+          title: '锦标赛详情',
+          route: '/championships/{id}',
+          purpose: '锦标赛统一承载信息、赛程、成绩和下一场报名侧栏。',
+          actions: ['看信息', '切赛程', '切成绩', '报名子赛事'],
+          ui: ['子赛事不做独立详情页', '右侧栏突出下一场可报名赛事'],
+        },
+        champSchedule: {
+          order: 'P6A',
+          type: 'page',
+          title: '锦标赛赛程 Tab',
+          route: '?tab=schedule&event={eventId}',
+          purpose: '展示未来/过往子赛事，并支持直接定位具体站点。',
+          actions: ['展开赛事', '查看成绩', '报名子赛事'],
+          ui: ['被定位子赛事高亮', '未来/报名中/过往要清楚分层'],
+        },
+        champResults: {
+          order: 'P6B',
+          type: 'page',
+          title: '锦标赛成绩 Tab',
+          route: '?tab=results&event={eventId}',
+          purpose: '选择具体历史赛事，查看正赛/排位成绩。',
+          actions: ['选赛事', '切正赛/排位', '点车手/车队'],
+          ui: ['结果表全宽展示', '必须选具体赛事', '移动端表格可横向滚动'],
+        },
+        calendar: {
+          order: 'P7',
+          type: 'page',
+          title: '赛事日历',
+          route: '/calendar',
+          purpose: '用月历、周历、列表视角查看赛事时间。',
+          actions: ['切视图', '筛游戏', '只看我的赛事', '点日历卡片'],
+          ui: ['周历看密度', '子赛事跳转要带 tab/event 定位'],
+        },
+        leaderboard: {
+          order: 'P8',
+          type: 'page',
+          title: '排行榜',
+          route: '/leaderboard',
+          purpose: '展示积分、胜场、参赛次数、领奖台等排行。',
+          actions: ['切指标', '切时间', '筛游戏', '点车手'],
+          ui: ['说明排名口径', 'Top 车手有视觉层级'],
+        },
+        notifications: {
+          order: 'P9',
+          type: 'page',
+          title: '通知中心',
+          route: '/notifications',
+          purpose: '承接报名、候补、成绩、抗议、处罚、车队邀请等消息。',
+          actions: ['标记已读', '点击通知', '处理待办'],
+          ui: ['建议区分消息与待处理任务', '重要通知需要明确下一步按钮'],
+        },
+        settings: {
+          order: 'P10',
+          type: 'page',
+          title: '账号设置',
+          route: '/settings',
+          purpose: '管理资料、游戏 ID、MOZA 设备、账号绑定和通知偏好。',
+          actions: ['编辑资料', '维护游戏 ID', '绑定账号', '保存偏好'],
+          ui: ['保存后必须有反馈', '游戏 ID 与报名资格联动'],
+        },
+        driver: {
+          order: 'P11',
+          type: 'page',
+          title: '车手档案',
+          route: '/driver/{id}',
+          purpose: '公开展示车手成绩、参赛历史、车队和设备。',
+          actions: ['看成绩', '看参赛历史', '点车队'],
+          ui: ['统计口径要可信', '设备展示遵守隐私设置'],
+        },
+        myEvents: {
+          order: 'P12',
+          type: 'page',
+          title: '我的赛事',
+          route: '/my-events',
+          purpose: '车手管理已报名和已完成赛事。',
+          actions: ['切 Tab', '展开锦标赛', '添加日历', '查看详情'],
+          ui: ['突出下一场比赛', '服务器/分组状态要清楚'],
+        },
+        protest: {
+          order: 'P13',
+          type: 'page',
+          title: '抗议提交',
+          route: '/events/{id}/protest/new',
+          purpose: '赛后窗口内提交针对另一车手的抗议。',
+          actions: ['选对象', '选类型', '填描述', '附证据'],
+          ui: ['展示赛事上下文和截止时间', '提交后给抗议编号'],
+        },
+        myProtests: {
+          order: 'P14',
+          type: 'page',
+          title: '我的抗议',
+          route: '/my-protests',
+          purpose: '查看提交/收到的抗议、裁决和处罚。',
+          actions: ['切提交/收到', '展开详情', '查看裁决'],
+          ui: ['状态标签清楚', '裁决理由和处罚信息突出'],
+        },
+        appeal: {
+          order: 'P15',
+          type: 'modal',
+          title: '申诉提交弹窗',
+          route: 'Appeal dialog',
+          purpose: '被处罚方在时限内提交申诉理由和补充证据。',
+          actions: ['填理由', '补证据', '提交'],
+          ui: ['明确 24 小时窗口', '提交后进入复审中'],
+        },
+        myTeam: {
+          order: 'P16',
+          type: 'page',
+          title: '车队管理',
+          route: '/my-team',
+          purpose: '创建和管理车队，处理邀请、移除、退出、转让、解散。',
+          actions: ['创建车队', '邀请成员', '移除成员', '查看公开页'],
+          ui: ['危险操作二次确认', '展示待接受/过期邀请'],
+        },
+        teamPublic: {
+          order: 'P17',
+          type: 'page',
+          title: '车队公开页',
+          route: '/team/{id}',
+          purpose: '公开展示车队成员、统计、参赛历史。',
+          actions: ['看成员', '点车手', '看历史赛事'],
+          ui: ['补参赛历史和荣誉', '公开页不展示管理操作'],
+        },
+        news: {
+          order: 'P18',
+          type: 'page',
+          title: '新闻列表',
+          route: '/news',
+          purpose: '展示平台公告、赛事新闻、回顾和更新。',
+          actions: ['浏览新闻', '打开文章'],
+          ui: ['新闻类型标签帮助识别', '列表信息密度适中'],
+        },
+        newsDetail: {
+          order: 'P19',
+          type: 'page',
+          title: '新闻详情',
+          route: '/news/{id}',
+          purpose: '阅读新闻正文，并跳转相关赛事或锦标赛。',
+          actions: ['读正文', '跳相关赛事'],
+          ui: ['正文排版舒适', '相关赛事放在阅读后自然位置'],
+        },
+        eligibility: {
+          order: 'M1',
+          type: 'modal',
+          title: '游戏 ID / 账号绑定校验',
+          route: 'Registration prerequisite',
+          purpose: '报名前检查 iRacing ID 或 Steam 绑定是否满足要求。',
+          actions: ['填 iRacing ID', '绑定 Steam', '取消返回'],
+          ui: ['说明缺少哪个 ID', '绑定失败不创建报名'],
+        },
+        rules: {
+          order: 'M2',
+          type: 'modal',
+          title: '报名前须知',
+          route: 'Rules dialog',
+          purpose: '展示准入条件、赛制规则和确认勾选框。',
+          actions: ['读规则', '勾选确认', '确认报名'],
+          ui: ['准入条件在上', '规则区域可滚动', '确认按钮随勾选状态变化'],
+        },
+        success: {
+          order: 'M3',
+          type: 'modal',
+          title: '报名成功反馈',
+          route: 'Success dialog',
+          purpose: '确认报名成功，并引导添加日历和查看我的赛事。',
+          actions: ['添加日历', '查看我的赛事', '返回详情'],
+          ui: ['成功反馈要明确', '给出下一步行动'],
+        },
+        teamAction: {
+          order: 'M5',
+          type: 'modal',
+          title: '车队操作弹窗',
+          route: 'Create / Invite / Disband',
+          purpose: '处理创建、邀请、移除、退出、转让和解散。',
+          actions: ['填车队信息', '搜成员', '确认危险操作'],
+          ui: ['创建表单校验唯一性', '危险操作说明影响范围'],
+        },
+      }
+      
+      const lanes = [
+        {
+          id: 'onboarding',
+          flow: 'onboarding',
+          title: '01 登录注册动线',
+          desc: '新用户从登录到资料补全，再进入平台首页。',
+          y: 80,
+          screens: ['login', 'register', 'home'],
+          transitions: ['授权成功：新账号', '完成必填信息'],
+        },
+        {
+          id: 'registration',
+          flow: 'registration',
+          title: '02 独立赛事报名动线',
+          desc: '设计重点是报名前校验、规则确认、成功反馈和我的赛事回流。',
+          y: 320,
+          screens: ['home', 'events', 'eventDetail', 'eligibility', 'rules', 'success', 'myEvents'],
+          transitions: ['查看全部赛事', '点击独立赛事', '立即报名', '校验通过', '确认报名', '查看我的赛事'],
+        },
+        {
+          id: 'championship',
+          flow: 'championship',
+          title: '03 锦标赛子赛事参赛动线',
+          desc: '子赛事不做独立详情页，全部在锦标赛详情内定位。',
+          y: 560,
+          screens: ['events', 'championship', 'champSchedule', 'rules', 'success', 'myEvents', 'champResults'],
+          transitions: ['点击锦标赛卡片', '切赛程 / 定位子赛事', '报名子赛事', '确认报名', '查看我的赛事', '赛后看成绩'],
+        },
+        {
+          id: 'calendar',
+          flow: 'calendar',
+          title: '04 日历发现动线',
+          desc: '从日历视图进入具体赛事；锦标赛子赛事需带 query 定位。',
+          y: 800,
+          screens: ['calendar', 'eventDetail', 'champSchedule', 'myEvents'],
+          transitions: ['点击独立赛事', '或定位锦标赛子赛事', '报名后回到我的赛事'],
+        },
+        {
+          id: 'content',
+          flow: 'content',
+          title: '05 新闻内容动线',
+          desc: '新闻是赛事内容入口，最终应能回到相关赛事或锦标赛。',
+          y: 1040,
+          screens: ['home', 'news', 'newsDetail', 'eventDetail', 'championship'],
+          transitions: ['新闻模块', '打开文章', '相关独立赛事', '相关锦标赛'],
+        },
+        {
+          id: 'spectator',
+          flow: 'spectator',
+          title: '06 观赛 / 排行榜动线',
+          desc: '观众或车手查看成绩名次，进入车手和车队公开页面。',
+          y: 1280,
+          screens: ['home', 'leaderboard', 'driver', 'teamPublic'],
+          transitions: ['排行榜速览', '点击车手', '所属车队'],
+        },
+        {
+          id: 'personal',
+          flow: 'personal',
+          title: '07 登录用户任务中心动线',
+          desc: '通知、我的赛事和账号设置是登录后最常用的任务入口。',
+          y: 1520,
+          screens: ['notifications', 'myEvents', 'settings'],
+          transitions: ['赛事/候补/处罚通知', '资料或游戏 ID 维护'],
+        },
+        {
+          id: 'team',
+          flow: 'team',
+          title: '08 车队管理动线',
+          desc: '车队创建、邀请、成员通知和公开页展示。',
+          y: 1760,
+          screens: ['myTeam', 'teamAction', 'notifications', 'teamPublic', 'driver'],
+          transitions: ['创建/邀请/解散', '通知成员', '查看公开页', '点击成员'],
+        },
+        {
+          id: 'protest',
+          flow: 'protest',
+          title: '09 赛后抗议 / 申诉动线',
+          desc: '从成绩页进入抗议，随后在我的抗议里追踪裁决和申诉。',
+          y: 2000,
+          screens: ['champResults', 'protest', 'myProtests', 'appeal'],
+          transitions: ['提交抗议', '提交成功', '对处罚申诉'],
+        },
+      ]
+      
+      function getEdgeLabelMeasureContext() {
+        if (edgeLabelMeasureContext) return edgeLabelMeasureContext
+        if (typeof document.createElement !== 'function') return null
+      
+        const canvas = document.createElement('canvas')
+        edgeLabelMeasureContext = canvas.getContext('2d')
+        if (edgeLabelMeasureContext) {
+          edgeLabelMeasureContext.font = '700 12px Inter, "PingFang SC", "Microsoft YaHei", sans-serif'
+        }
+        return edgeLabelMeasureContext
+      }
+      
+      function estimateEdgeLabelWidth(label) {
+        const context = getEdgeLabelMeasureContext()
+        if (context) return context.measureText(label).width
+      
+        return Array.from(label).reduce((width, char) => {
+          if (/[\u4e00-\u9fff]/.test(char)) return width + 13
+          if (/[A-Z0-9]/.test(char)) return width + 7.5
+          if (char === ' ') return width + 4
+          return width + 6
+        }, 0)
+      }
+      
+      function getEdgeGap(label) {
+        return Math.max(MIN_EDGE_GAP, Math.ceil(estimateEdgeLabelWidth(label) + EDGE_LABEL_PADDING))
+      }
+      
+      function layoutLaneNodes(lane) {
+        let x = NODE_START_X
+      
+        return lane.screens.map((screenId, index) => {
+          const screen = screenLibrary[screenId]
+          const node = {
+            ...screen,
+            id: `${lane.id}-${screenId}`,
+            sourceId: screenId,
+            laneId: lane.id,
+            flow: lane.flow,
+            x,
+            y: lane.y + NODE_Y_OFFSET,
+            entry: index === 0 ? ['本动线起点'] : [lane.transitions[index - 1]],
+            exit: index < lane.screens.length - 1 ? [lane.transitions[index]] : ['本动线终点'],
+            flows: [lane.flow],
+          }
+      
+          const transition = lane.transitions[index]
+          if (transition) x += NODE_W + getEdgeGap(transition)
+          return node
+        })
+      }
+      
+      const nodes = lanes.flatMap(layoutLaneNodes)
+      
+      const groups = lanes.map(lane => {
+        const laneNodes = nodes.filter(node => node.laneId === lane.id)
+        const maxNodeX = Math.max(...laneNodes.map(node => node.x + NODE_W))
+        return {
+          id: lane.id,
+          title: lane.title,
+          desc: lane.desc,
+          x: LANE_X,
+          y: lane.y,
+          w: Math.max(MIN_LANE_W, maxNodeX - LANE_X + 150),
+          h: LANE_H,
+        }
+      })
+      
+      const boardSize = {
+        width: Math.max(MIN_BOARD_W, Math.max(...groups.map(group => group.x + group.w)) + BOARD_PADDING_X),
+        height: Math.max(MIN_BOARD_H, Math.max(...groups.map(group => group.y + group.h)) + BOARD_PADDING_Y),
+      }
+      
+      const edges = lanes.flatMap(lane => lane.screens.slice(0, -1).map((screenId, index) => ({
+        from: `${lane.id}-${screenId}`,
+        to: `${lane.id}-${lane.screens[index + 1]}`,
+        label: lane.transitions[index],
+        flow: lane.flow,
+        style: 'primary',
+      })))
+      
+      let selectedFlow = 'all'
+      let searchTerm = ''
+      let transform = { scale: 0.72 }
+      
+      function nodeById(id) {
+        return nodes.find(node => node.id === id)
+      }
+      
+      function renderGroups() {
+        groupsLayer.innerHTML = groups.map(group => `
+          <section class="group-box" style="left:${group.x}px; top:${group.y}px; width:${group.w}px; height:${group.h}px">
+            <h3>${group.title}</h3>
+            <p>${group.desc}</p>
+          </section>
+        `).join('')
+      }
+      
+      function renderNodes() {
+        nodesLayer.innerHTML = nodes.map(node => `
+          <article
+            class="flow-node ${node.type}"
+            data-id="${node.id}"
+            style="left:${node.x}px; top:${node.y}px; width:${NODE_W}px"
+            aria-label="${node.title}"
+          >
+            <div class="node-top">
+              <span class="node-number">${node.order}</span>
+              <span class="node-type">${node.type}</span>
+            </div>
+            <div>
+              <h4>${node.title}</h4>
+              <div class="route">${node.route}</div>
+            </div>
+            <p class="node-purpose">${node.purpose}</p>
+            <div class="node-actions">${node.actions.map(action => `<span>${action}</span>`).join('')}</div>
+          </article>
+        `).join('')
+      
+      }
+      
+      function renderEdges() {
+        const defs = `
+          <defs>
+            <marker id="arrowPrimary" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+              <path d="M2,2 L10,6 L2,10 Z" fill="#ff8b3d"></path>
+            </marker>
+          </defs>
+        `
+      
+        const edgeMarkup = edges.map((edge, index) => {
+          const from = nodeById(edge.from)
+          const to = nodeById(edge.to)
+          if (!from || !to) return ''
+          const sx = from.x + NODE_W
+          const sy = from.y + NODE_H / 2
+          const tx = to.x
+          const ty = to.y + NODE_H / 2
+          const distance = Math.max(80, Math.abs(tx - sx) * 0.5)
+          const path = `M ${sx} ${sy} C ${sx + distance} ${sy}, ${tx - distance} ${ty}, ${tx} ${ty}`
+          const mx = (sx + tx) / 2
+          const my = sy - 12
+          return `
+            <path data-edge-index="${index}" class="edge-path primary" d="${path}" marker-end="url(#arrowPrimary)"></path>
+            <text data-edge-index="${index}" class="edge-label" x="${mx}" y="${my}" text-anchor="middle">${edge.label}</text>
+          `
+        }).join('')
+      
+        edgesLayer.setAttribute('viewBox', `0 0 ${boardSize.width} ${boardSize.height}`)
+        edgesLayer.innerHTML = defs + edgeMarkup
+      }
+      
+      function renderFilters() {
+        if (!flowFilters) return
+      
+        flowFilters.innerHTML = flows.map(flow => `
+          <button type="button" class="${flow.id === selectedFlow ? 'active' : ''}" data-flow="${flow.id}">
+            ${flow.label}
+          </button>
+        `).join('')
+      
+        flowFilters.querySelectorAll('button').forEach(button => {
+          button.addEventListener('click', () => {
+            selectedFlow = button.dataset.flow
+            renderFilters()
+            updateVisibility()
+          })
+        })
+      }
+      
+      function matchesSearch(node) {
+        if (!searchTerm) return true
+        const haystack = [
+          node.order,
+          node.title,
+          node.route,
+          node.purpose,
+          ...node.actions,
+          ...node.entry,
+          ...node.exit,
+          ...node.ui,
+        ].join(' ').toLowerCase()
+        return haystack.includes(searchTerm)
+      }
+      
+      function isNodeInFlow(node) {
+        return selectedFlow === 'all' || node.flows.includes(selectedFlow)
+      }
+      
+      function isEdgeInFlow(edge) {
+        return selectedFlow === 'all' || edge.flow === selectedFlow
+      }
+      
+      function updateVisibility() {
+        document.querySelectorAll('.flow-node').forEach(element => {
+          const node = nodeById(element.dataset.id)
+          element.classList.toggle('dimmed', !isNodeInFlow(node))
+          element.classList.toggle('hidden-by-search', !matchesSearch(node))
+        })
+      
+        edges.forEach((edge, index) => {
+          const flowMatches = isEdgeInFlow(edge)
+          const searchMatches = matchesSearch(nodeById(edge.from)) || matchesSearch(nodeById(edge.to)) || edge.label.toLowerCase().includes(searchTerm)
+          const dimmed = !flowMatches || !searchMatches
+          document.querySelectorAll(`[data-edge-index="${index}"]`).forEach(element => {
+            element.classList.toggle('dimmed', dimmed)
+          })
+        })
+      }
+      
+      function setTransform(next = transform) {
+        transform = { scale: next.scale }
+        board.style.transform = ''
+        board.style.zoom = transform.scale
+        boardScaler.style.width = `${boardSize.width * transform.scale}px`
+        boardScaler.style.height = `${boardSize.height * transform.scale}px`
+        zoomLabel.textContent = `${Math.round(transform.scale * 100)}%`
+      }
+      
+      function zoomAt(clientX, clientY, nextScale) {
+        const rect = viewport.getBoundingClientRect()
+        const clampedScale = Math.min(1.8, Math.max(0.28, nextScale))
+        const offsetX = clientX - rect.left
+        const offsetY = clientY - rect.top
+        const worldX = (viewport.scrollLeft + offsetX) / transform.scale
+        const worldY = (viewport.scrollTop + offsetY) / transform.scale
+        setTransform({ scale: clampedScale })
+        viewport.scrollLeft = worldX * clampedScale - offsetX
+        viewport.scrollTop = worldY * clampedScale - offsetY
+      }
+      
+      function fitView() {
+        const rect = viewport.getBoundingClientRect()
+        const bounds = nodes.reduce((acc, node) => ({
+          minX: Math.min(acc.minX, node.x),
+          minY: Math.min(acc.minY, node.y),
+          maxX: Math.max(acc.maxX, node.x + NODE_W),
+          maxY: Math.max(acc.maxY, node.y + NODE_H),
+        }), { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity })
+      
+        const padding = 140
+        const width = bounds.maxX - bounds.minX + padding * 2
+        const height = bounds.maxY - bounds.minY + padding * 2
+        const nextScale = Math.min(1.05, Math.max(0.28, Math.min(rect.width / width, rect.height / height)))
+        setTransform({ scale: nextScale })
+        viewport.scrollLeft = Math.max(0, bounds.minX * nextScale - padding * nextScale)
+        viewport.scrollTop = Math.max(0, bounds.minY * nextScale - padding * nextScale)
+      }
+      
+      function initializeInteractions() {
+        viewport.addEventListener('wheel', event => {
+          if (!event.ctrlKey && !event.metaKey) return
+          event.preventDefault()
+          const normalizedDelta = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY
+          const rawFactor = Math.exp(-normalizedDelta * 0.0028)
+          const factor = Math.min(1.16, Math.max(0.862, rawFactor))
+          zoomAt(event.clientX, event.clientY, transform.scale * factor)
+        }, { passive: false })
+      
+        document.getElementById('zoomIn').addEventListener('click', () => {
+          const rect = viewport.getBoundingClientRect()
+          zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, transform.scale * 1.07)
+        })
+      
+        document.getElementById('zoomOut').addEventListener('click', () => {
+          const rect = viewport.getBoundingClientRect()
+          zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, transform.scale * 0.935)
+        })
+      
+        document.getElementById('resetView').addEventListener('click', () => {
+          setTransform({ scale: 0.72 })
+          viewport.scrollLeft = 0
+          viewport.scrollTop = 0
+        })
+      
+        document.getElementById('fitView').addEventListener('click', fitView)
+      
+        searchInput?.addEventListener('input', event => {
+          searchTerm = event.target.value.trim().toLowerCase()
+          updateVisibility()
+        })
+      
+        window.addEventListener('keydown', event => {
+          if (event.target === searchInput) return
+          const rect = viewport.getBoundingClientRect()
+          if (event.key === '+') zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, transform.scale * 1.055)
+          if (event.key === '-') zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, transform.scale * 0.948)
+          if (event.key === '0') fitView()
+        })
+      }
+      
+      function initialize() {
+        boardScaler.style.width = `${boardSize.width * transform.scale}px`
+        boardScaler.style.height = `${boardSize.height * transform.scale}px`
+        board.style.width = `${boardSize.width}px`
+        board.style.height = `${boardSize.height}px`
+        renderGroups()
+        renderNodes()
+        renderEdges()
+        renderFilters()
+        initializeInteractions()
+        setTransform(transform)
+        requestAnimationFrame(fitView)
+      }
+      
+      initialize()
+      
+    </script>
+  </body>
+</html>

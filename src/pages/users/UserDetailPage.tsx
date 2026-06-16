@@ -92,21 +92,6 @@ export function UserDetailPage() {
             </div>
           </div>
         </Card>
-
-        <Card>
-          <h3 className="text-sm font-medium text-gray-700 mb-3 pb-2 border-b">MOZA Devices</h3>
-          {driver.mozaDevices.length === 0 ? (
-            <p className="text-sm text-gray-400">No devices</p>
-          ) : (
-            <div className="space-y-1">
-              {driver.mozaDevices.map((dev, i) => (
-                <div key={i} className="text-sm text-gray-700 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-blue-400 rounded-full" />{dev}
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
       </div>
 
       <Card>
