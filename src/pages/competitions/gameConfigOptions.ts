@@ -47,6 +47,39 @@ export const START_RULE_OPTIONS = [
   { value: '2', label: 'Standing' },
 ]
 
+export const SIMRACER_WEATHER_OPTIONS = [
+  { value: '0', label: 'Real' },
+  { value: '1', label: 'Fixed (1x)' },
+  { value: '2', label: 'Fixed (custom)' },
+]
+
+export const QUALIFY_STANDING_OPTIONS = [
+  { value: '1', label: 'Fastest Lap' },
+  { value: '2', label: 'Average Lap' },
+  { value: '3', label: 'Total Time' },
+]
+
+export const IS_OPEN_OPTIONS = [
+  { value: '0', label: 'No' },
+  { value: '1', label: 'Yes' },
+  { value: '2', label: 'Yes + Rejoins' },
+]
+
+export const LAN_DISCOVERY_OPTIONS = [
+  { value: '0', label: 'No' },
+  { value: '1', label: 'Yes' },
+]
+
+export const BLACKLIST_MODE_OPTIONS = [
+  { value: '0', label: 'Off' },
+  { value: '1', label: 'On' },
+]
+
+export const YES_NO_INT = [
+  { value: '0', label: 'No' },
+  { value: '1', label: 'Yes' },
+]
+
 export const SESSION_TYPE_OPTIONS_T = (t: (k: string) => string) => [
   { value: 'practice', label: t('competition.sessionTypePractice') },
   { value: 'qualifying', label: t('competition.sessionTypeQualifying') },

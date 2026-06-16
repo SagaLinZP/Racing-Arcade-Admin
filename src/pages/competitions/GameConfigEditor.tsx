@@ -12,6 +12,8 @@ import {
   TRACK_MEDALS,
   TC_ABS_OPTIONS,
   START_RULE_OPTIONS,
+  SIMRACER_WEATHER_OPTIONS,
+  QUALIFY_STANDING_OPTIONS,
 } from './gameConfigOptions'
 
 type GCTabKey = 'trackWeather' | 'raceRules' | 'assists'
@@ -86,6 +88,7 @@ export function GameConfigEditor({
                 <Input label={t('gameConfig.trackTemp')} type="number" value={String(gc.trackTemp ?? 30)} onChange={(e) => onChange('trackTemp', Number(e.target.value))} />
                 <Input label={t('gameConfig.timeMultiplier')} type="number" step="0.1" min="0" value={String(gc.timeMultiplier ?? 1)} onChange={(e) => onChange('timeMultiplier', Number(e.target.value))} />
                 <Select label={t('gameConfig.fixedConditionQualification')} options={YES_NO} value={String(gc.isFixedConditionQualification ?? false)} onChange={(e) => onChange('isFixedConditionQualification', e.target.value === 'true')} />
+                <Select label={t('gameConfig.simracerWeatherConditions')} options={SIMRACER_WEATHER_OPTIONS} value={String(gc.simracerWeatherConditions ?? 0)} onChange={(e) => onChange('simracerWeatherConditions', Number(e.target.value))} />
               </div>
             </div>
           )}
@@ -138,6 +141,7 @@ export function GameConfigEditor({
                   <Input label={t('gameConfig.pitWindowLengthSec')} type="number" value={String(gc.pitWindowLengthSec ?? -1)} onChange={(e) => onChange('pitWindowLengthSec', Number(e.target.value))} />
                   <Input label={t('gameConfig.driverStintTimeSec')} type="number" value={String(gc.driverStintTimeSec ?? 0)} onChange={(e) => onChange('driverStintTimeSec', Number(e.target.value))} />
                   <Input label={t('gameConfig.maxDriversCount')} type="number" min="1" value={String(gc.maxDriversCount ?? 1)} onChange={(e) => onChange('maxDriversCount', Number(e.target.value))} />
+                  <Input label={t('gameConfig.maxTotalDrivingTime')} type="number" value={String(gc.maxTotalDrivingTime ?? -1)} onChange={(e) => onChange('maxTotalDrivingTime', Number(e.target.value))} />
                   <Input label={t('gameConfig.tyreSetCount')} type="number" min="0" value={String(gc.tyreSetCount ?? 0)} onChange={(e) => onChange('tyreSetCount', Number(e.target.value))} />
                 </div>
               </div>
@@ -145,6 +149,7 @@ export function GameConfigEditor({
                 <h4 className="text-sm font-semibold text-gray-700 mb-3">{t('gameConfig.refuellingAndStops')}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <Select label={t('gameConfig.refuellingAllowed')} options={YES_NO} value={String(gc.isRefuellingAllowedInRace ?? true)} onChange={(e) => onChange('isRefuellingAllowedInRace', e.target.value === 'true')} />
+                  <Select label={t('gameConfig.refuellingTimeFixed')} options={YES_NO} value={String(gc.isRefuellingTimeFixed ?? false)} onChange={(e) => onChange('isRefuellingTimeFixed', e.target.value === 'true')} />
                   <Select label={t('gameConfig.mandatoryPitRefuelling')} options={YES_NO} value={String(gc.isMandatoryPitstopRefuellingRequired ?? false)} onChange={(e) => onChange('isMandatoryPitstopRefuellingRequired', e.target.value === 'true')} />
                   <Select label={t('gameConfig.mandatoryPitTyreChange')} options={YES_NO} value={String(gc.isMandatoryPitstopTyreChangeRequired ?? false)} onChange={(e) => onChange('isMandatoryPitstopTyreChangeRequired', e.target.value === 'true')} />
                   <Select label={t('gameConfig.mandatoryPitSwapDriver')} options={YES_NO} value={String(gc.isMandatoryPitstopSwapDriverRequired ?? false)} onChange={(e) => onChange('isMandatoryPitstopSwapDriverRequired', e.target.value === 'true')} />
@@ -162,6 +167,7 @@ export function GameConfigEditor({
               <div>
                 <h4 className="text-sm font-semibold text-gray-700 mb-3">{t('gameConfig.formation')}</h4>
                 <Select label={t('gameConfig.formationLapType')} options={FORMATION_LAP_TYPES} value={String(gc.formationLapType ?? 1)} onChange={(e) => onChange('formationLapType', Number(e.target.value))} />
+                <Select label={t('gameConfig.qualifyStandingType')} options={QUALIFY_STANDING_OPTIONS} value={String(gc.qualifyStandingType ?? 1)} onChange={(e) => onChange('qualifyStandingType', Number(e.target.value))} />
               </div>
             </>
           )}
@@ -192,6 +198,8 @@ export function GameConfigEditor({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <Select label={t('gameConfig.raceExtraLap')} options={YES_NO} value={String(gc.raceExtraLap ?? false)} onChange={(e) => onChange('raceExtraLap', e.target.value === 'true')} />
                   <Select label={t('gameConfig.tyreBlanketsAllowed')} options={YES_NO} value={String(gc.tyreBlanketsAllowed ?? true)} onChange={(e) => onChange('tyreBlanketsAllowed', e.target.value === 'true')} />
+                  <Input label={t('gameConfig.raceOverTime')} type="number" value={String(gc.raceOverTime ?? 180)} onChange={(e) => onChange('raceOverTime', Number(e.target.value))} />
+                  <Input label={t('gameConfig.allowedTyresOut')} type="number" value={String(gc.allowedTyresOut ?? -1)} onChange={(e) => onChange('allowedTyresOut', Number(e.target.value))} />
                 </div>
               </div>
             </>

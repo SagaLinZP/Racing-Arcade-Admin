@@ -12,7 +12,7 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Badge } from '@/components/ui/Badge'
-import { ArrowLeft, Save, Plus, ChevronDown, ChevronRight, Trash2, Settings } from 'lucide-react'
+import { ArrowLeft, Save, Plus, ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
 import { cn, getCompetitionStatus, getRoundStatus } from '@/lib/utils'
 import { ImageUpload } from '@/components/ui/ImageUpload'
 import { SessionEditModal } from './SessionEditModal'
@@ -595,10 +595,18 @@ function StageAccordion({
 
             <div className="space-y-2">
               {sessions.map((session, sessionIdx) => (
-                <div key={session.id} className="flex items-center gap-2 rounded-md bg-gray-50 border border-gray-200 px-3 py-2">
+                <div
+                  key={session.id}
+                  onClick={() => setEditingSessionId(session.id)}
+                  className="flex items-center gap-2 rounded-md bg-gray-50 border border-gray-200 px-3 py-2 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-colors"
+                >
                   <span className="text-xs font-medium text-gray-400">{sessionIdx + 1}</span>
                   <span className="text-sm font-medium text-gray-900">{getName(session)}</span>
-                  <Badge variant="info" className="ml-1">{t(`competition.sessionType${session.type.charAt(0).toUpperCase() + session.type.slice(1)}`)}</Badge>
+                  {session.gameSessions.map(gs => (
+                    <Badge key={gs.id} variant="info" className="ml-1">
+                      {t(`competition.sessionType${gs.type.charAt(0).toUpperCase() + gs.type.slice(1)}`)}
+                    </Badge>
+                  ))}
                   {session.gameConfig && (
                     <Badge variant="default" className="ml-1">{game}</Badge>
                   )}
@@ -606,10 +614,11 @@ function StageAccordion({
                     {session.splits.length} {t('competition.splits').toLowerCase()}
                   </span>
                   <div className="flex-1" />
-                  <Button variant="ghost" size="sm" onClick={() => setEditingSessionId(session.id)}>
-                    <Settings className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDeleteSession(session.id)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => { e.stopPropagation(); handleDeleteSession(session.id) }}
+                  >
                     <Trash2 className="w-3.5 h-3.5 text-red-500" />
                   </Button>
                 </div>

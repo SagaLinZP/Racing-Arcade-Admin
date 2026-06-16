@@ -28,6 +28,8 @@ export interface SessionTemplate {
   game: GamePlatform
   sessionType: SessionType
   gameConfig: SessionGameConfig
+  gameSessions?: GameSessionEntry[]
+  splitConfig?: Partial<Split>
   createdAt: string
   updatedAt: string
 }
@@ -59,12 +61,15 @@ export interface SessionGameConfig {
   postQualySeconds?: number
   postRaceSeconds?: number
   isFixedConditionQualification?: boolean
+  simracerWeatherConditions?: number
   pitWindowLengthSec?: number
   driverStintTimeSec?: number
   mandatoryPitstopCount?: number
   maxDriversCount?: number
+  maxTotalDrivingTime?: number
   tyreSetCount?: number
   isRefuellingAllowedInRace?: boolean
+  isRefuellingTimeFixed?: boolean
   isMandatoryPitstopRefuellingRequired?: boolean
   isMandatoryPitstopTyreChangeRequired?: boolean
   isMandatoryPitstopSwapDriverRequired?: boolean
@@ -93,6 +98,9 @@ export interface SessionGameConfig {
   raceExtraLap?: boolean
   tyreBlanketsAllowed?: boolean
   loopMode?: boolean
+  qualifyStandingType?: number
+  raceOverTime?: number
+  allowedTyresOut?: number
   trackMedalsRequirement?: number
   safetyRatingRequirement?: number
   racecraftRatingRequirement?: number
@@ -122,26 +130,60 @@ export interface Split {
   splitNumber: number
   serverName?: string
   serverPassword?: string
-  serverJoinLink?: string
   adminPassword?: string
   spectatorPassword?: string
   maxConnections?: number
   registerToLobby?: boolean
+  udpPort?: number
+  tcpPort?: number
+  httpPort?: number
+  lanDiscovery?: number
+  maxCarSlots?: number
+  isRaceLocked?: number
+  isLockedPrepPhase?: number
+  shortFormationLap?: number
+  dumpLeaderboards?: number
+  dumpEntryList?: number
+  randomizeTrackWhenEmpty?: number
+  allowAutoDQ?: number
+  ignorePrematureDisconnects?: number
+  pickupModeEnabled?: number
+  lockedEntryList?: number
+  votingQuorum?: number
+  voteDuration?: number
+  blacklistMode?: number
+  clientSendIntervalHz?: number
+  qualifyMaxWaitPerc?: number
+  maxBallastKg?: number
+  raceGasPenaltyDisabled?: number
+  resultScreenTime?: number
+  welcomeMessage?: string
   results?: SessionResult[]
   resultsPublishedAt?: string
+}
+
+export interface GameSessionEntry {
+  id: string
+  type: SessionType
+  name_zh: string
+  name_en: string
+  durationMinutes?: number
+  raceDuration?: number
+  raceDurationType?: 'time' | 'laps'
+  dayOfWeekend?: number
+  hourOfDay?: number
+  timeMultiplier?: number
+  waitTime?: number
+  isOpen?: number
 }
 
 export interface Session {
   id: string
   stageId: string
-  type: SessionType
   name_zh: string
   name_en: string
   startsAt: string
   endsAt: string
-  durationMinutes?: number
-  raceDuration?: number
-  raceDurationType?: 'time' | 'laps'
   gameSessionRestartPolicy?: RestartPolicy
   gameSessionRestartIntervalMinutes?: number
   gameSessionResultMergeRule?: MergeRule
@@ -149,6 +191,7 @@ export interface Session {
   vodUrl?: string
   resultType: 'classification' | 'leaderboard'
   gameConfig?: SessionGameConfig
+  gameSessions: GameSessionEntry[]
   splits: Split[]
 }
 
@@ -272,15 +315,20 @@ export function createDefaultGameConfig(game: GamePlatform): SessionGameConfig {
       sessionOverTimeSeconds: 120,
       postQualySeconds: 600,
       postRaceSeconds: 600,
+      isFixedConditionQualification: false,
+      simracerWeatherConditions: 0,
       mandatoryPitstopCount: 0,
       pitWindowLengthSec: -1,
       driverStintTimeSec: 0,
       maxDriversCount: 1,
+      maxTotalDrivingTime: -1,
       tyreSetCount: 0,
       isRefuellingAllowedInRace: true,
+      isRefuellingTimeFixed: false,
       isMandatoryPitstopRefuellingRequired: false,
       isMandatoryPitstopTyreChangeRequired: false,
       isMandatoryPitstopSwapDriverRequired: false,
+      qualifyStandingType: 1,
       stabilityControlLevelMax: 0,
       disableIdealLine: false,
       disableAutosteer: false,
@@ -325,6 +373,8 @@ export function createDefaultGameConfig(game: GamePlatform): SessionGameConfig {
     raceExtraLap: false,
     tyreBlanketsAllowed: true,
     loopMode: false,
+    raceOverTime: 180,
+    allowedTyresOut: -1,
     trackGripSessionStart: 96,
     trackGripRandomness: 1,
     trackGripLapGain: 120,
@@ -344,6 +394,65 @@ export function createDefaultSplit(sessionId: string, splitNumber: number): Spli
     spectatorPassword: '',
     maxConnections: 30,
     registerToLobby: true,
+    udpPort: 9600,
+    tcpPort: 9600,
+    httpPort: 8081,
+    lanDiscovery: 1,
+    maxCarSlots: 30,
+    isRaceLocked: 1,
+    isLockedPrepPhase: 0,
+    shortFormationLap: 1,
+    dumpLeaderboards: 1,
+    dumpEntryList: 1,
+    randomizeTrackWhenEmpty: 0,
+    allowAutoDQ: 1,
+    ignorePrematureDisconnects: 1,
+    pickupModeEnabled: 1,
+    lockedEntryList: 0,
+    votingQuorum: 75,
+    voteDuration: 20,
+    blacklistMode: 0,
+    clientSendIntervalHz: 15,
+    qualifyMaxWaitPerc: 120,
+    maxBallastKg: 0,
+    raceGasPenaltyDisabled: 0,
+    resultScreenTime: 60,
+  }
+}
+
+export function createDefaultGameSession(type?: SessionType): GameSessionEntry {
+  const sessionType = type || 'practice'
+  const id = `gs_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+  const base = {
+    id,
+    type: sessionType,
+    dayOfWeekend: 1,
+    hourOfDay: 14,
+    timeMultiplier: 1,
+  }
+  if (sessionType === 'race') {
+    return {
+      ...base,
+      name_zh: '正赛',
+      name_en: 'Race',
+      raceDuration: 60,
+      raceDurationType: 'time',
+      waitTime: 120,
+      isOpen: 2,
+    }
+  }
+  const names: Record<string, { zh: string; en: string }> = {
+    practice: { zh: '练习赛', en: 'Practice' },
+    qualifying: { zh: '排位赛', en: 'Qualifying' },
+    timeTrial: { zh: '计时赛', en: 'Time Trial' },
+  }
+  return {
+    ...base,
+    name_zh: names[sessionType]?.zh ?? '练习赛',
+    name_en: names[sessionType]?.en ?? 'Practice',
+    durationMinutes: sessionType === 'qualifying' ? 15 : 30,
+    waitTime: 60,
+    isOpen: 1,
   }
 }
 
@@ -352,19 +461,22 @@ export function createDefaultSession(stageId: string, game: GamePlatform, sessio
   return {
     id: sessionId,
     stageId,
-    type: 'practice',
     name_zh: `新场次 ${sessionCount + 1}`,
     name_en: `New Session ${sessionCount + 1}`,
     startsAt: new Date().toISOString().slice(0, 16),
     endsAt: new Date().toISOString().slice(0, 16),
-    durationMinutes: 30,
     resultType: 'classification',
     gameConfig: createDefaultGameConfig(game),
+    gameSessions: [
+      createDefaultGameSession('practice'),
+      createDefaultGameSession('qualifying'),
+      createDefaultGameSession('race'),
+    ],
     splits: [createDefaultSplit(sessionId, 1)],
   }
 }
 
-export const competitions: Competition[] = [
+const _rawCompetitions = [
   {
     id: 'c1',
     name_zh: 'MOZA GT3 挑战赛 2026',
@@ -1067,6 +1179,11 @@ export function createDefaultTemplate(game: GamePlatform): SessionTemplate {
     game,
     sessionType: 'race',
     gameConfig: createDefaultGameConfig(game),
+    gameSessions: [
+      createDefaultGameSession('practice'),
+      createDefaultGameSession('qualifying'),
+      createDefaultGameSession('race'),
+    ],
     createdAt: now,
     updatedAt: now,
   }
@@ -1098,6 +1215,21 @@ export const sessionTemplates: SessionTemplate[] = [
       trackMedalsRequirement: -1,
       safetyRatingRequirement: -1,
       racecraftRatingRequirement: -1,
+    },
+    gameSessions: [
+      { id: 'tpl_gs1_sprint', type: 'practice', name_zh: '练习赛', name_en: 'Practice', durationMinutes: 30, dayOfWeekend: 1, hourOfDay: 14, timeMultiplier: 1 },
+      { id: 'tpl_gs2_sprint', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', durationMinutes: 15, dayOfWeekend: 1, hourOfDay: 15, timeMultiplier: 1 },
+      { id: 'tpl_gs3_sprint', type: 'race', name_zh: '正赛', name_en: 'Race', raceDuration: 60, raceDurationType: 'time', dayOfWeekend: 1, hourOfDay: 16, timeMultiplier: 1 },
+    ],
+    splitConfig: {
+      maxConnections: 30,
+      maxCarSlots: 30,
+      isRaceLocked: 1,
+      shortFormationLap: 1,
+      dumpLeaderboards: 1,
+      dumpEntryList: 1,
+      allowAutoDQ: 1,
+      lanDiscovery: 1,
     },
     createdAt: '2026-01-15T10:00:00Z',
     updatedAt: '2026-01-15T10:00:00Z',
@@ -1132,6 +1264,21 @@ export const sessionTemplates: SessionTemplate[] = [
       safetyRatingRequirement: 50,
       racecraftRatingRequirement: 50,
     },
+    gameSessions: [
+      { id: 'tpl_gs1_endu', type: 'practice', name_zh: '练习赛', name_en: 'Practice', durationMinutes: 30, dayOfWeekend: 1, hourOfDay: 13, timeMultiplier: 1 },
+      { id: 'tpl_gs2_endu', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', durationMinutes: 20, dayOfWeekend: 1, hourOfDay: 14, timeMultiplier: 1 },
+      { id: 'tpl_gs3_endu', type: 'race', name_zh: '正赛', name_en: 'Race', raceDuration: 120, raceDurationType: 'time', dayOfWeekend: 1, hourOfDay: 15, timeMultiplier: 1 },
+    ],
+    splitConfig: {
+      maxConnections: 40,
+      maxCarSlots: 40,
+      isRaceLocked: 1,
+      shortFormationLap: 1,
+      dumpLeaderboards: 1,
+      dumpEntryList: 1,
+      allowAutoDQ: 1,
+      lanDiscovery: 1,
+    },
     createdAt: '2026-02-01T10:00:00Z',
     updatedAt: '2026-03-10T14:00:00Z',
   },
@@ -1161,6 +1308,21 @@ export const sessionTemplates: SessionTemplate[] = [
       safetyRatingRequirement: -1,
       racecraftRatingRequirement: -1,
     },
+    gameSessions: [
+      { id: 'tpl_gs1_gt4', type: 'practice', name_zh: '练习赛', name_en: 'Practice', durationMinutes: 30, dayOfWeekend: 1, hourOfDay: 14, timeMultiplier: 1 },
+      { id: 'tpl_gs2_gt4', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', durationMinutes: 15, dayOfWeekend: 1, hourOfDay: 15, timeMultiplier: 1 },
+      { id: 'tpl_gs3_gt4', type: 'race', name_zh: '正赛', name_en: 'Race', raceDuration: 30, raceDurationType: 'time', dayOfWeekend: 1, hourOfDay: 16, timeMultiplier: 1 },
+    ],
+    splitConfig: {
+      maxConnections: 24,
+      maxCarSlots: 24,
+      isRaceLocked: 1,
+      shortFormationLap: 1,
+      dumpLeaderboards: 1,
+      dumpEntryList: 1,
+      allowAutoDQ: 1,
+      lanDiscovery: 1,
+    },
     createdAt: '2026-02-20T10:00:00Z',
     updatedAt: '2026-02-20T10:00:00Z',
   },
@@ -1183,7 +1345,121 @@ export const sessionTemplates: SessionTemplate[] = [
       autoclutchAllowed: true,
       forceVirtualMirror: true,
     },
+    gameSessions: [
+      { id: 'tpl_gs1_ac', type: 'practice', name_zh: '自由练习', name_en: 'Free Practice', durationMinutes: 60, waitTime: 60, isOpen: 1 },
+    ],
+    splitConfig: {
+      maxConnections: 20,
+      udpPort: 9600,
+      tcpPort: 9600,
+      httpPort: 8081,
+      pickupModeEnabled: 1,
+      lockedEntryList: 0,
+      votingQuorum: 75,
+      voteDuration: 20,
+      blacklistMode: 0,
+      clientSendIntervalHz: 15,
+    },
     createdAt: '2026-03-05T10:00:00Z',
     updatedAt: '2026-03-05T10:00:00Z',
   },
 ]
+
+type RawSession = {
+  id: string
+  stageId: string
+  type: SessionType
+  name_zh: string
+  name_en: string
+  startsAt: string
+  endsAt: string
+  durationMinutes?: number
+  raceDuration?: number
+  raceDurationType?: 'time' | 'laps'
+  gameSessionRestartPolicy?: RestartPolicy
+  gameSessionRestartIntervalMinutes?: number
+  gameSessionResultMergeRule?: MergeRule
+  streamUrl?: string
+  vodUrl?: string
+  resultType: 'classification' | 'leaderboard'
+  gameConfig?: SessionGameConfig
+  splits: Split[]
+}
+
+function migrateSessions(rawSessions: RawSession[]): Session[] {
+  if (rawSessions.length === 0) return []
+
+  const toGameSession = (s: RawSession): GameSessionEntry => ({
+    id: `${s.id}_gs`,
+    type: s.type,
+    name_zh: s.name_zh,
+    name_en: s.name_en,
+    durationMinutes: s.durationMinutes,
+    raceDuration: s.raceDuration,
+    raceDurationType: s.raceDurationType,
+  })
+
+  if (rawSessions.length === 1) {
+    const s = rawSessions[0]
+    return [{
+      id: s.id,
+      stageId: s.stageId,
+      name_zh: s.name_zh,
+      name_en: s.name_en,
+      startsAt: s.startsAt,
+      endsAt: s.endsAt,
+      gameSessionRestartPolicy: s.gameSessionRestartPolicy,
+      gameSessionRestartIntervalMinutes: s.gameSessionRestartIntervalMinutes,
+      gameSessionResultMergeRule: s.gameSessionResultMergeRule,
+      streamUrl: s.streamUrl,
+      vodUrl: s.vodUrl,
+      resultType: s.resultType,
+      gameConfig: s.gameConfig,
+      gameSessions: [toGameSession(s)],
+      splits: s.splits,
+    }]
+  }
+
+  const race = rawSessions.find(s => s.type === 'race') ?? rawSessions[rawSessions.length - 1]
+  const all = rawSessions[0]
+  const last = rawSessions[rawSessions.length - 1]
+
+  return [{
+    id: `${race.stageId}_se_merged`,
+    stageId: race.stageId,
+    name_zh: all.name_zh.replace(/练习赛|排位赛|正赛|练习|排位|正赛/g, '比赛日') || '比赛日',
+    name_en: 'Race Day',
+    startsAt: all.startsAt,
+    endsAt: last.endsAt,
+    streamUrl: rawSessions.find(s => s.streamUrl)?.streamUrl,
+    vodUrl: race.vodUrl,
+    resultType: race.resultType,
+    gameConfig: race.gameConfig,
+    gameSessions: rawSessions.map(toGameSession),
+    splits: race.splits,
+  }]
+}
+
+function migrateCompetitions(raw: Record<string, unknown>[]): Competition[] {
+  return raw.map(comp => {
+    const c = comp as Record<string, unknown>
+    return {
+      ...(c as object),
+      rounds: (c.rounds as Record<string, unknown>[]).map(round => {
+        const r = round as Record<string, unknown>
+        return {
+          ...(r as object),
+          stages: (r.stages as Record<string, unknown>[]).map(stage => {
+            const st = stage as Record<string, unknown>
+            return {
+              ...(st as object),
+              sessions: migrateSessions(st.sessions as unknown as RawSession[]),
+            }
+          }),
+        }
+      }),
+    } as Competition
+  })
+}
+
+export const competitions: Competition[] = migrateCompetitions(_rawCompetitions)
