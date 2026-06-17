@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '@/hooks/useAppStore'
-import { competitions as initialCompetitions, totalCapacity, totalRegistrations } from '@/data/competitions'
+import { competitions as initialCompetitions } from '@/data/competitions'
 import type { Competition } from '@/data/competitions'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -76,19 +76,6 @@ export function CompetitionListPage() {
       render: (c: Competition) => (
         <span className="text-sm text-gray-600">{c.rounds.length}</span>
       ),
-    },
-    {
-      key: 'registrations',
-      header: t('competition.registrations'),
-      render: (c: Competition) => {
-        const regs = totalRegistrations(c)
-        const cap = totalCapacity(c)
-        return (
-          <span className="text-sm text-gray-600">
-            {regs}{cap ? ` / ${cap}` : ''}
-          </span>
-        )
-      },
     },
     {
       key: 'status',

@@ -3,16 +3,16 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '@/hooks/useAppStore'
 import { useManagedOptions } from '@/hooks/useManagedOptions'
-import { competitions, totalRegistrations, totalCapacity } from '@/data/competitions'
+import { competitions } from '@/data/competitions'
 import type { Round, Stage, GamePlatform } from '@/data/competitions'
 import { drivers } from '@/data/drivers'
+import { teams } from '@/data/teams'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { Badge } from '@/components/ui/Badge'
 import { ArrowLeft, Save, Plus, ChevronDown, ChevronRight, Trash2, Settings } from 'lucide-react'
 import { cn, getCompetitionStatus, getRoundStatus } from '@/lib/utils'
 import { ImageUpload } from '@/components/ui/ImageUpload'
@@ -257,13 +257,6 @@ export function CompetitionEditPage() {
               {t('competition.addRound')}
             </Button>
           )}
-
-          <div className="flex items-center justify-between pt-4 border-t">
-            <div className="text-sm text-gray-500">
-              {t('competition.registrations')}: {totalRegistrations(comp)}
-              {totalCapacity(comp) && ` / ${totalCapacity(comp)}`}
-            </div>
-          </div>
         </div>
       )}
     </>
@@ -416,7 +409,14 @@ function StageAccordion({
 
   const registeredDrivers = registeredDriverIds
     .map(id => drivers.find(d => d.id === id))
-    .filter(Boolean)
+    .filter((d): d is NonNullable<typeof d> => d !== undefined)
+    .map(d => ({
+      id: d.id,
+      nickname: d.nickname,
+      country: d.country,
+      teamId: d.teamId,
+      teamName: d.teamId ? teams.find(t => t.id === d.teamId)?.name : undefined,
+    }))
 
   const toggleDriver = (id: string) => {
     setSelectedDrivers(prev => {
@@ -438,9 +438,6 @@ function StageAccordion({
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium text-gray-900">{getName(stage)}</span>
         </div>
-        {localStage.gameConfig?.track && (
-          <Badge variant="default" className="text-xs">{localStage.gameConfig.track}</Badge>
-        )}
         <span className="text-xs text-gray-400">{localStage.gameSessions.length} {t('competition.sessions')}</span>
         <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
           <Trash2 className="w-3.5 h-3.5 text-red-500" />
@@ -552,14 +549,6 @@ function StageAccordion({
               <div className="flex items-center gap-2">
                 <Settings className="w-4 h-4 text-gray-500" />
                 <span className="text-sm font-medium text-gray-700">{t('serverConfig.title')}</span>
-                {localStage.gameConfig?.track && (
-                  <Badge variant="default" className="text-xs">{localStage.gameConfig.track}</Badge>
-                )}
-                <span className="text-xs text-gray-400">
-                  {localStage.gameSessions.length} {t('competition.sessions').toLowerCase()}
-                  {' · '}
-                  {localStage.splits.length} {t('result.split').toLowerCase()}(s)
-                </span>
               </div>
               <span className="text-xs text-blue-600 hover:text-blue-700">{t('common.edit')}</span>
             </button>
@@ -576,6 +565,7 @@ function StageAccordion({
           editLang={editLang}
           game={game}
           splitCount={splitCount}
+          registeredDrivers={registeredDrivers}
         />
       )}
     </div>
