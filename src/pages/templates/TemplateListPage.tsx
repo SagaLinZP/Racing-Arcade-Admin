@@ -59,11 +59,6 @@ export function TemplateListPage() {
       render: (tpl: SessionTemplate) => <Badge variant="default">{tpl.game}</Badge>,
     },
     {
-      key: 'sessionType',
-      header: t('competition.sessionType'),
-      render: (tpl: SessionTemplate) => t(`competition.sessionType${tpl.sessionType.charAt(0).toUpperCase() + tpl.sessionType.slice(1)}`),
-    },
-    {
       key: 'track',
       header: t('gameConfig.track'),
       render: (tpl: SessionTemplate) => getTrackLabel(tpl),

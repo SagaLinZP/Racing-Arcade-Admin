@@ -11,13 +11,13 @@ import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { cn } from '@/lib/utils'
 import {
-  getSessionResultStatus,
+  getStageResultStatus,
   calculateCompetitionStandings,
   calculateRoundStandings,
   getName,
 } from '@/lib/results'
 import type { DriverStanding } from '@/lib/results'
-import { ChevronDown, ChevronRight, Trophy, Pencil, ClipboardList } from 'lucide-react'
+import { ChevronDown, ChevronRight, Trophy, Pencil, ClipboardList, Settings } from 'lucide-react'
 
 export function ResultListPage() {
   const { t } = useTranslation()
@@ -131,57 +131,58 @@ export function ResultListPage() {
 
                           {roundExpanded && (
                             <div className="pb-2">
-                              {round.stages.map(stage => (
-                                <div key={stage.id} className="border-l-2 border-gray-200 ml-4 px-4 py-2">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="text-xs font-medium text-gray-500 uppercase">{stage.type}</span>
-                                    <span className="text-xs text-gray-500">{getName(stage, lang)}</span>
-                                  </div>
-                                  {stage.sessions.map(session => {
-                                    const status = getSessionResultStatus(session)
-                                    const hasResults = session.splits.some(s => s.results && s.results.length > 0)
-                                    const totalResults = session.splits.reduce(
-                                      (sum, s) => sum + (s.results?.length ?? 0), 0,
-                                    )
-                                    return (
-                                      <div
-                                        key={session.id}
-                                        className={cn(
-                                          'flex items-center gap-2 rounded-md px-3 py-2 cursor-pointer hover:bg-blue-50/50 transition-colors',
-                                          status === 'pending' ? 'bg-white' : 'bg-green-50/30',
-                                        )}
-                                        onClick={() => navigate(`/results/${session.id}`)}
-                                      >
-                                        <span className="text-sm text-gray-900">{getName(session, lang)}</span>
-                                        {session.gameSessions.map(gs => (
-                                          <Badge key={gs.id} variant="info" className="text-xs">
-                                            {t(`competition.sessionType${gs.type.charAt(0).toUpperCase() + gs.type.slice(1)}`)}
-                                          </Badge>
-                                        ))}
+                              {round.stages.map(stage => {
+                                const status = getStageResultStatus(stage)
+                                const hasResults = stage.splits.some(s => s.results && s.results.length > 0)
+                                const totalResults = stage.splits.reduce(
+                                  (sum, s) => sum + (s.results?.length ?? 0), 0,
+                                )
+                                return (
+                                  <div
+                                    key={stage.id}
+                                    className="border-l-2 border-gray-200 ml-4"
+                                  >
+                                    <div className="flex items-center gap-2 mb-1 px-4 pt-2">
+                                      <span className="text-xs font-medium text-gray-500 uppercase">{stage.type}</span>
+                                      <span className="text-xs text-gray-500">{getName(stage, lang)}</span>
+                                    </div>
+                                    <div
+                                      className={cn(
+                                        'flex items-center gap-2 rounded-md mx-4 px-3 py-2 cursor-pointer hover:bg-blue-50/50 transition-colors',
+                                        status === 'pending' ? 'bg-white' : 'bg-green-50/30',
+                                      )}
+                                      onClick={() => navigate(`/results/${stage.id}`)}
+                                    >
+                                      <Settings className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                      {stage.gameConfig?.track && (
+                                        <Badge variant="default" className="text-xs">{stage.gameConfig.track}</Badge>
+                                      )}
+                                      <span className="text-xs text-gray-400">
+                                        {stage.gameSessions.length} {t('competition.sessions').toLowerCase()}
+                                      </span>
+                                      <span className="text-xs text-gray-400">
+                                        {stage.splits.length} {t('result.split').toLowerCase()}(s)
+                                      </span>
+                                      {totalResults > 0 && (
                                         <span className="text-xs text-gray-400">
-                                          {session.splits.length} {t('result.split').toLowerCase()}(s)
+                                          {totalResults} {t('result.entries').toLowerCase()}
                                         </span>
-                                        {totalResults > 0 && (
-                                          <span className="text-xs text-gray-400">
-                                            {totalResults} {t('result.entries').toLowerCase()}
-                                          </span>
-                                        )}
-                                        <div className="flex-1" />
-                                        {statusBadge(status)}
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={(e) => { e.stopPropagation(); navigate(`/results/${session.id}`) }}
-                                        >
-                                          {hasResults
-                                            ? <Pencil className="w-3.5 h-3.5" />
-                                            : <ClipboardList className="w-3.5 h-3.5" />}
-                                        </Button>
-                                      </div>
-                                    )
-                                  })}
-                                </div>
-                              ))}
+                                      )}
+                                      <div className="flex-1" />
+                                      {statusBadge(status)}
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={(e) => { e.stopPropagation(); navigate(`/results/${stage.id}`) }}
+                                      >
+                                        {hasResults
+                                          ? <Pencil className="w-3.5 h-3.5" />
+                                          : <ClipboardList className="w-3.5 h-3.5" />}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )
+                              })}
                             </div>
                           )}
                         </div>

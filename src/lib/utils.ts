@@ -67,16 +67,16 @@ export function getRoundStatus(round: Round): RoundStatus {
 
   if (round.cancelledReason_zh || round.cancelledReason_en) return 'Cancelled'
 
-  const allSessions = round.stages.flatMap(s => s.sessions)
-  const firstStart = allSessions.length > 0 ? Math.min(...allSessions.map(s => new Date(s.startsAt).getTime())) : Infinity
-  const lastEnd = allSessions.length > 0 ? Math.max(...allSessions.map(s => new Date(s.endsAt).getTime())) : -Infinity
-  const anyLive = allSessions.some(s => {
+  const allStages = round.stages
+  const firstStart = allStages.length > 0 ? Math.min(...allStages.map(s => new Date(s.startsAt).getTime())) : Infinity
+  const lastEnd = allStages.length > 0 ? Math.max(...allStages.map(s => new Date(s.endsAt).getTime())) : -Infinity
+  const anyLive = allStages.some(s => {
     const st = new Date(s.startsAt).getTime()
     const en = new Date(s.endsAt).getTime()
     return now >= st && now < en
   })
 
-  const allSplits = round.stages.flatMap(s => s.sessions).flatMap(se => se.splits)
+  const allSplits = round.stages.flatMap(s => s.splits)
   const hasPublishedResults = allSplits.some(sp => sp.resultsPublishedAt)
   const hasUnpublishedResults = allSplits.some(sp =>
     sp.results && sp.results.length > 0 && !sp.resultsPublishedAt

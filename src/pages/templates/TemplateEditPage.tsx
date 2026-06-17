@@ -7,9 +7,8 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { sessionTemplates, createDefaultTemplate, createDefaultGameConfig } from '@/data/competitions'
-import type { SessionTemplate, SessionGameConfig, GamePlatform, SessionType } from '@/data/competitions'
+import type { SessionTemplate, SessionGameConfig, GamePlatform } from '@/data/competitions'
 import { GameConfigEditor } from '@/pages/competitions/GameConfigEditor'
-import { SESSION_TYPE_OPTIONS_T } from '@/pages/competitions/gameConfigOptions'
 
 export function TemplateEditPage() {
   const { t } = useTranslation()
@@ -105,12 +104,6 @@ export function TemplateEditPage() {
                 onChange={(e) => handleGameChange(e.target.value as GamePlatform)}
               />
             )}
-            <Select
-              label={t('competition.sessionType')}
-              options={SESSION_TYPE_OPTIONS_T(t)}
-              value={form.sessionType}
-              onChange={(e) => setMeta('sessionType', e.target.value as SessionType)}
-            />
           </div>
         </Card>
 

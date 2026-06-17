@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Badge } from '@/components/ui/Badge'
-import { findSessionById, getPointsForPosition, getName } from '@/lib/results'
+import { findStageById, getPointsForPosition, getName } from '@/lib/results'
 import type { SessionResult, ResultStatus } from '@/data/competitions'
 import type { ScoringTableEntry } from '@/lib/utils'
 import { ArrowLeft, Save, Upload, Trophy, Plus, Trash2, CheckCircle } from 'lucide-react'
@@ -38,13 +38,13 @@ export function ResultEntryPage() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
 
-  const ctx = useMemo(() => (id ? findSessionById(id) : null), [id])
+  const ctx = useMemo(() => (id ? findStageById(id) : null), [id])
 
   const scoringTable: ScoringTableEntry[] | undefined = ctx?.competition.defaultRuleset.scoringTable
 
   const [splitStates, setSplitStates] = useState<SplitResultState[]>(() => {
     if (!ctx) return []
-    return ctx.session.splits.map(split => ({
+    return ctx.stage.splits.map(split => ({
       splitId: split.id,
       splitNumber: split.splitNumber,
       results: split.results ? split.results.map(r => ({ ...r })) : [],
@@ -67,7 +67,7 @@ export function ResultEntryPage() {
     )
   }
 
-  const { competition, round, stage, session } = ctx
+  const { competition, round, stage } = ctx
   const registeredDrivers = round.registeredDriverIds
   const current = splitStates[activeSplit]
   const isPublished = !!current?.publishedAt
@@ -117,7 +117,7 @@ export function ResultEntryPage() {
 
   const handleSave = () => {
     if (!ctx) return
-    ctx.session.splits.forEach(split => {
+    ctx.stage.splits.forEach(split => {
       const state = splitStates.find(ss => ss.splitId === split.id)
       if (state) {
         split.results = state.results
@@ -132,7 +132,7 @@ export function ResultEntryPage() {
       return { ...ss, publishedAt: ss.publishedAt ?? new Date().toISOString() }
     }))
     if (ctx) {
-      const split = ctx.session.splits.find(s => s.id === current.splitId)
+      const split = ctx.stage.splits.find(s => s.id === current.splitId)
       if (split && !split.resultsPublishedAt) {
         split.resultsPublishedAt = new Date().toISOString()
       }
@@ -145,7 +145,7 @@ export function ResultEntryPage() {
       return { ...ss, publishedAt: undefined }
     }))
     if (ctx) {
-      const split = ctx.session.splits.find(s => s.id === current.splitId)
+      const split = ctx.stage.splits.find(s => s.id === current.splitId)
       if (split) split.resultsPublishedAt = undefined
     }
   }
@@ -171,10 +171,8 @@ export function ResultEntryPage() {
               <span>{getName(competition, lang)}</span>
               <span>/</span>
               <span>{getName(round, lang)}</span>
-              <span>/</span>
-              <span>{getName(stage, lang)}</span>
             </div>
-            <h1 className="text-xl font-bold text-gray-900">{getName(session, lang)}</h1>
+            <h1 className="text-xl font-bold text-gray-900">{getName(stage, lang)}</h1>
           </div>
         </div>
         <div className="flex gap-2">
@@ -199,28 +197,26 @@ export function ResultEntryPage() {
         </div>
       </div>
 
-      {/* Session info */}
+      {/* Stage info */}
       <Card>
         <div className="flex items-center gap-6 text-sm">
           <div>
             <span className="text-gray-500">{t('event.game')}: </span>
             <span className="font-medium">{competition.game}</span>
           </div>
-          {session.gameConfig?.track && (
+          {stage.gameConfig?.track && (
             <div>
               <span className="text-gray-500">{t('gameConfig.track')}: </span>
-              <span className="font-medium">{session.gameConfig.track}</span>
+              <span className="font-medium">{stage.gameConfig.track}</span>
             </div>
           )}
           <div>
             <span className="text-gray-500">{t('common.date')}: </span>
-            <span className="font-medium">{new Date(session.startsAt).toLocaleDateString()}</span>
+            <span className="font-medium">{new Date(stage.startsAt).toLocaleDateString()}</span>
           </div>
           <div>
-            <span className="text-gray-500">{t('result.resultType')}: </span>
-            <span className="font-medium">
-              {session.resultType === 'classification' ? t('competition.resultTypeClassification') : t('competition.resultTypeLeaderboard')}
-            </span>
+            <span className="text-gray-500">{t('competition.sessions')}: </span>
+            <span className="font-medium">{stage.gameSessions.length}</span>
           </div>
           {scoringTable && scoringTable.length > 0 && (
             <div className="ml-auto">

@@ -1,22 +1,19 @@
 import { competitions } from '@/data/competitions'
-import type { Competition, Round, Stage, Session } from '@/data/competitions'
+import type { Competition, Round, Stage } from '@/data/competitions'
 import type { ScoringTableEntry } from './utils'
 
-export interface SessionContext {
+export interface StageContext {
   competition: Competition
   round: Round
   stage: Stage
-  session: Session
 }
 
-export function findSessionById(sessionId: string): SessionContext | null {
+export function findStageById(stageId: string): StageContext | null {
   for (const competition of competitions) {
     for (const round of competition.rounds) {
       for (const stage of round.stages) {
-        for (const session of stage.sessions) {
-          if (session.id === sessionId) {
-            return { competition, round, stage, session }
-          }
+        if (stage.id === stageId) {
+          return { competition, round, stage }
         }
       }
     }
@@ -33,10 +30,10 @@ export function getPointsForPosition(
   return entry?.points ?? 0
 }
 
-export type SessionResultStatus = 'pending' | 'entered' | 'partial' | 'published'
+export type StageResultStatus = 'pending' | 'entered' | 'partial' | 'published'
 
-export function getSessionResultStatus(session: Session): SessionResultStatus {
-  const splits = session.splits
+export function getStageResultStatus(stage: Stage): StageResultStatus {
+  const splits = stage.splits
   if (splits.length === 0) return 'pending'
   const hasAnyResults = splits.some(s => s.results && s.results.length > 0)
   if (!hasAnyResults) return 'pending'
@@ -55,13 +52,13 @@ export interface DriverStanding {
   podiums: number
   entries: number
   bestPosition: number
-  results: { sessionId: string; position: number; points: number }[]
+  results: { stageId: string; position: number; points: number }[]
 }
 
-function collectResultsFromSessions(sessions: Session[]): DriverStanding[] {
+function collectResultsFromStages(stages: Stage[]): DriverStanding[] {
   const map = new Map<string, DriverStanding>()
-  for (const session of sessions) {
-    for (const split of session.splits) {
+  for (const stage of stages) {
+    for (const split of stage.splits) {
       if (!split.results) continue
       for (const r of split.results) {
         if (!map.has(r.driverId)) {
@@ -82,7 +79,7 @@ function collectResultsFromSessions(sessions: Session[]): DriverStanding[] {
         if (r.position <= 3) s.podiums++
         s.entries++
         s.bestPosition = Math.min(s.bestPosition, r.position)
-        s.results.push({ sessionId: session.id, position: r.position, points: r.points ?? 0 })
+        s.results.push({ stageId: stage.id, position: r.position, points: r.points ?? 0 })
       }
     }
   }
@@ -92,25 +89,19 @@ function collectResultsFromSessions(sessions: Session[]): DriverStanding[] {
 }
 
 export function calculateCompetitionStandings(competition: Competition): DriverStanding[] {
-  const sessions: Session[] = []
+  const stages: Stage[] = []
   for (const round of competition.rounds) {
-    for (const stage of round.stages) {
-      sessions.push(...stage.sessions)
-    }
+    stages.push(...round.stages)
   }
-  return collectResultsFromSessions(sessions)
+  return collectResultsFromStages(stages)
 }
 
 export function calculateRoundStandings(round: Round): DriverStanding[] {
-  const sessions: Session[] = []
-  for (const stage of round.stages) {
-    sessions.push(...stage.sessions)
-  }
-  return collectResultsFromSessions(sessions)
+  return collectResultsFromStages(round.stages)
 }
 
 export function calculateStageStandings(stage: Stage): DriverStanding[] {
-  return collectResultsFromSessions(stage.sessions)
+  return collectResultsFromStages([stage])
 }
 
 export function getName(obj: { name_zh: string; name_en: string }, lang: string): string {

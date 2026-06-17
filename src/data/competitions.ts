@@ -26,9 +26,7 @@ export interface SessionTemplate {
   description_zh?: string
   description_en?: string
   game: GamePlatform
-  sessionType: SessionType
   gameConfig: SessionGameConfig
-  gameSessions?: GameSessionEntry[]
   splitConfig?: Partial<Split>
   createdAt: string
   updatedAt: string
@@ -158,8 +156,16 @@ export interface Split {
   raceGasPenaltyDisabled?: number
   resultScreenTime?: number
   welcomeMessage?: string
+  centralEntryListPath?: string
+  forceEntryList?: number
   results?: SessionResult[]
   resultsPublishedAt?: string
+}
+
+export interface BopEntry {
+  track: string
+  carModel: number
+  ballastKg: number
 }
 
 export interface GameSessionEntry {
@@ -175,24 +181,6 @@ export interface GameSessionEntry {
   timeMultiplier?: number
   waitTime?: number
   isOpen?: number
-}
-
-export interface Session {
-  id: string
-  stageId: string
-  name_zh: string
-  name_en: string
-  startsAt: string
-  endsAt: string
-  gameSessionRestartPolicy?: RestartPolicy
-  gameSessionRestartIntervalMinutes?: number
-  gameSessionResultMergeRule?: MergeRule
-  streamUrl?: string
-  vodUrl?: string
-  resultType: 'classification' | 'leaderboard'
-  gameConfig?: SessionGameConfig
-  gameSessions: GameSessionEntry[]
-  splits: Split[]
 }
 
 export interface AdvancementRule {
@@ -214,7 +202,10 @@ export interface Stage {
   description_en?: string
   startsAt: string
   endsAt: string
-  sessions: Session[]
+  gameConfig?: SessionGameConfig
+  gameSessions: GameSessionEntry[]
+  splits: Split[]
+  bopEntries?: BopEntry[]
   eligibilitySource?: 'roundRegistration' | 'previousStageResult' | 'manualInvite'
   advancementRule?: AdvancementRule
   maxEntriesPerSplit?: number
@@ -417,63 +408,36 @@ export function createDefaultSplit(sessionId: string, splitNumber: number): Spli
     maxBallastKg: 0,
     raceGasPenaltyDisabled: 0,
     resultScreenTime: 60,
+    centralEntryListPath: '',
+    forceEntryList: 0,
   }
 }
 
 export function createDefaultGameSession(type?: SessionType): GameSessionEntry {
   const sessionType = type || 'practice'
   const id = `gs_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
-  const base = {
+  const names: Record<string, { zh: string; en: string }> = {
+    practice: { zh: '练习赛', en: 'Practice' },
+    qualifying: { zh: '排位赛', en: 'Qualifying' },
+    race: { zh: '正赛', en: 'Race' },
+    timeTrial: { zh: '计时赛', en: 'Time Trial' },
+  }
+  const base: GameSessionEntry = {
     id,
     type: sessionType,
+    name_zh: names[sessionType]?.zh ?? '练习赛',
+    name_en: names[sessionType]?.en ?? 'Practice',
     dayOfWeekend: 1,
     hourOfDay: 14,
     timeMultiplier: 1,
   }
   if (sessionType === 'race') {
-    return {
-      ...base,
-      name_zh: '正赛',
-      name_en: 'Race',
-      raceDuration: 60,
-      raceDurationType: 'time',
-      waitTime: 120,
-      isOpen: 2,
-    }
+    base.raceDuration = 60
+    base.raceDurationType = 'time'
+  } else {
+    base.durationMinutes = sessionType === 'qualifying' ? 15 : 30
   }
-  const names: Record<string, { zh: string; en: string }> = {
-    practice: { zh: '练习赛', en: 'Practice' },
-    qualifying: { zh: '排位赛', en: 'Qualifying' },
-    timeTrial: { zh: '计时赛', en: 'Time Trial' },
-  }
-  return {
-    ...base,
-    name_zh: names[sessionType]?.zh ?? '练习赛',
-    name_en: names[sessionType]?.en ?? 'Practice',
-    durationMinutes: sessionType === 'qualifying' ? 15 : 30,
-    waitTime: 60,
-    isOpen: 1,
-  }
-}
-
-export function createDefaultSession(stageId: string, game: GamePlatform, sessionCount: number): Session {
-  const sessionId = `new_session_${Date.now()}`
-  return {
-    id: sessionId,
-    stageId,
-    name_zh: `新场次 ${sessionCount + 1}`,
-    name_en: `New Session ${sessionCount + 1}`,
-    startsAt: new Date().toISOString().slice(0, 16),
-    endsAt: new Date().toISOString().slice(0, 16),
-    resultType: 'classification',
-    gameConfig: createDefaultGameConfig(game),
-    gameSessions: [
-      createDefaultGameSession('practice'),
-      createDefaultGameSession('qualifying'),
-      createDefaultGameSession('race'),
-    ],
-    splits: [createDefaultSplit(sessionId, 1)],
-  }
+  return base
 }
 
 const _rawCompetitions = [
@@ -1177,13 +1141,7 @@ export function createDefaultTemplate(game: GamePlatform): SessionTemplate {
     description_zh: '',
     description_en: '',
     game,
-    sessionType: 'race',
     gameConfig: createDefaultGameConfig(game),
-    gameSessions: [
-      createDefaultGameSession('practice'),
-      createDefaultGameSession('qualifying'),
-      createDefaultGameSession('race'),
-    ],
     createdAt: now,
     updatedAt: now,
   }
@@ -1197,7 +1155,6 @@ export const sessionTemplates: SessionTemplate[] = [
     description_zh: '标准 GT3 冲刺赛配置，Monza 赛道，60 分钟',
     description_en: 'Standard GT3 sprint config, Monza, 60 minutes',
     game: 'ACC',
-    sessionType: 'race',
     gameConfig: {
       ...createDefaultGameConfig('ACC'),
       track: 'monza',
@@ -1216,11 +1173,6 @@ export const sessionTemplates: SessionTemplate[] = [
       safetyRatingRequirement: -1,
       racecraftRatingRequirement: -1,
     },
-    gameSessions: [
-      { id: 'tpl_gs1_sprint', type: 'practice', name_zh: '练习赛', name_en: 'Practice', durationMinutes: 30, dayOfWeekend: 1, hourOfDay: 14, timeMultiplier: 1 },
-      { id: 'tpl_gs2_sprint', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', durationMinutes: 15, dayOfWeekend: 1, hourOfDay: 15, timeMultiplier: 1 },
-      { id: 'tpl_gs3_sprint', type: 'race', name_zh: '正赛', name_en: 'Race', raceDuration: 60, raceDurationType: 'time', dayOfWeekend: 1, hourOfDay: 16, timeMultiplier: 1 },
-    ],
     splitConfig: {
       maxConnections: 30,
       maxCarSlots: 30,
@@ -1241,7 +1193,6 @@ export const sessionTemplates: SessionTemplate[] = [
     description_zh: '长距离耐力赛，Spa 赛道，强制进站',
     description_en: 'Long endurance race, Spa, mandatory pit stop',
     game: 'ACC',
-    sessionType: 'race',
     gameConfig: {
       ...createDefaultGameConfig('ACC'),
       track: 'spa_24h',
@@ -1264,11 +1215,6 @@ export const sessionTemplates: SessionTemplate[] = [
       safetyRatingRequirement: 50,
       racecraftRatingRequirement: 50,
     },
-    gameSessions: [
-      { id: 'tpl_gs1_endu', type: 'practice', name_zh: '练习赛', name_en: 'Practice', durationMinutes: 30, dayOfWeekend: 1, hourOfDay: 13, timeMultiplier: 1 },
-      { id: 'tpl_gs2_endu', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', durationMinutes: 20, dayOfWeekend: 1, hourOfDay: 14, timeMultiplier: 1 },
-      { id: 'tpl_gs3_endu', type: 'race', name_zh: '正赛', name_en: 'Race', raceDuration: 120, raceDurationType: 'time', dayOfWeekend: 1, hourOfDay: 15, timeMultiplier: 1 },
-    ],
     splitConfig: {
       maxConnections: 40,
       maxCarSlots: 40,
@@ -1289,7 +1235,6 @@ export const sessionTemplates: SessionTemplate[] = [
     description_zh: '入门级 GT4 短赛，Silverstone 赛道',
     description_en: 'Entry-level GT4 short race, Silverstone',
     game: 'ACC',
-    sessionType: 'race',
     gameConfig: {
       ...createDefaultGameConfig('ACC'),
       track: 'silverstone',
@@ -1308,11 +1253,6 @@ export const sessionTemplates: SessionTemplate[] = [
       safetyRatingRequirement: -1,
       racecraftRatingRequirement: -1,
     },
-    gameSessions: [
-      { id: 'tpl_gs1_gt4', type: 'practice', name_zh: '练习赛', name_en: 'Practice', durationMinutes: 30, dayOfWeekend: 1, hourOfDay: 14, timeMultiplier: 1 },
-      { id: 'tpl_gs2_gt4', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', durationMinutes: 15, dayOfWeekend: 1, hourOfDay: 15, timeMultiplier: 1 },
-      { id: 'tpl_gs3_gt4', type: 'race', name_zh: '正赛', name_en: 'Race', raceDuration: 30, raceDurationType: 'time', dayOfWeekend: 1, hourOfDay: 16, timeMultiplier: 1 },
-    ],
     splitConfig: {
       maxConnections: 24,
       maxCarSlots: 24,
@@ -1333,7 +1273,6 @@ export const sessionTemplates: SessionTemplate[] = [
     description_zh: 'Assetto Corsa 通用自由练习配置',
     description_en: 'Assetto Corsa general free practice config',
     game: 'AC',
-    sessionType: 'practice',
     gameConfig: {
       ...createDefaultGameConfig('AC'),
       damageMultiplier: 0,
@@ -1345,9 +1284,6 @@ export const sessionTemplates: SessionTemplate[] = [
       autoclutchAllowed: true,
       forceVirtualMirror: true,
     },
-    gameSessions: [
-      { id: 'tpl_gs1_ac', type: 'practice', name_zh: '自由练习', name_en: 'Free Practice', durationMinutes: 60, waitTime: 60, isOpen: 1 },
-    ],
     splitConfig: {
       maxConnections: 20,
       udpPort: 9600,
@@ -1376,20 +1312,22 @@ type RawSession = {
   durationMinutes?: number
   raceDuration?: number
   raceDurationType?: 'time' | 'laps'
-  gameSessionRestartPolicy?: RestartPolicy
-  gameSessionRestartIntervalMinutes?: number
-  gameSessionResultMergeRule?: MergeRule
-  streamUrl?: string
-  vodUrl?: string
-  resultType: 'classification' | 'leaderboard'
   gameConfig?: SessionGameConfig
   splits: Split[]
 }
 
-function migrateSessions(rawSessions: RawSession[]): Session[] {
-  if (rawSessions.length === 0) return []
+function migrateStage(rawSessions: RawSession[]): {
+  gameSessions: GameSessionEntry[]
+  gameConfig?: SessionGameConfig
+  splits: Split[]
+} {
+  if (rawSessions.length === 0) {
+    return { gameSessions: [], splits: [] }
+  }
 
-  const toGameSession = (s: RawSession): GameSessionEntry => ({
+  const race = rawSessions.find(s => s.type === 'race') ?? rawSessions[rawSessions.length - 1]
+
+  const gameSessions: GameSessionEntry[] = rawSessions.map(s => ({
     id: `${s.id}_gs`,
     type: s.type,
     name_zh: s.name_zh,
@@ -1397,47 +1335,13 @@ function migrateSessions(rawSessions: RawSession[]): Session[] {
     durationMinutes: s.durationMinutes,
     raceDuration: s.raceDuration,
     raceDurationType: s.raceDurationType,
-  })
+  }))
 
-  if (rawSessions.length === 1) {
-    const s = rawSessions[0]
-    return [{
-      id: s.id,
-      stageId: s.stageId,
-      name_zh: s.name_zh,
-      name_en: s.name_en,
-      startsAt: s.startsAt,
-      endsAt: s.endsAt,
-      gameSessionRestartPolicy: s.gameSessionRestartPolicy,
-      gameSessionRestartIntervalMinutes: s.gameSessionRestartIntervalMinutes,
-      gameSessionResultMergeRule: s.gameSessionResultMergeRule,
-      streamUrl: s.streamUrl,
-      vodUrl: s.vodUrl,
-      resultType: s.resultType,
-      gameConfig: s.gameConfig,
-      gameSessions: [toGameSession(s)],
-      splits: s.splits,
-    }]
-  }
-
-  const race = rawSessions.find(s => s.type === 'race') ?? rawSessions[rawSessions.length - 1]
-  const all = rawSessions[0]
-  const last = rawSessions[rawSessions.length - 1]
-
-  return [{
-    id: `${race.stageId}_se_merged`,
-    stageId: race.stageId,
-    name_zh: all.name_zh.replace(/练习赛|排位赛|正赛|练习|排位|正赛/g, '比赛日') || '比赛日',
-    name_en: 'Race Day',
-    startsAt: all.startsAt,
-    endsAt: last.endsAt,
-    streamUrl: rawSessions.find(s => s.streamUrl)?.streamUrl,
-    vodUrl: race.vodUrl,
-    resultType: race.resultType,
+  return {
+    gameSessions,
     gameConfig: race.gameConfig,
-    gameSessions: rawSessions.map(toGameSession),
     splits: race.splits,
-  }]
+  }
 }
 
 function migrateCompetitions(raw: Record<string, unknown>[]): Competition[] {
@@ -1451,9 +1355,14 @@ function migrateCompetitions(raw: Record<string, unknown>[]): Competition[] {
           ...(r as object),
           stages: (r.stages as Record<string, unknown>[]).map(stage => {
             const st = stage as Record<string, unknown>
+            const migrated = migrateStage(st.sessions as unknown as RawSession[])
+            const stageFields = { ...st }
+            delete stageFields.sessions
             return {
-              ...(st as object),
-              sessions: migrateSessions(st.sessions as unknown as RawSession[]),
+              ...stageFields,
+              gameConfig: migrated.gameConfig,
+              gameSessions: migrated.gameSessions,
+              splits: migrated.splits,
             }
           }),
         }

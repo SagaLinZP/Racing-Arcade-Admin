@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '@/hooks/useAppStore'
 import { useManagedOptions } from '@/hooks/useManagedOptions'
-import { competitions, totalRegistrations, totalCapacity, createDefaultSession, createDefaultSplit } from '@/data/competitions'
+import { competitions, totalRegistrations, totalCapacity } from '@/data/competitions'
+import type { Round, Stage, GamePlatform } from '@/data/competitions'
 import { drivers } from '@/data/drivers'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -12,11 +13,10 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Badge } from '@/components/ui/Badge'
-import { ArrowLeft, Save, Plus, ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
+import { ArrowLeft, Save, Plus, ChevronDown, ChevronRight, Trash2, Settings } from 'lucide-react'
 import { cn, getCompetitionStatus, getRoundStatus } from '@/lib/utils'
 import { ImageUpload } from '@/components/ui/ImageUpload'
-import { SessionEditModal } from './SessionEditModal'
-import type { Round, Stage, Session, GamePlatform } from '@/data/competitions'
+import { ServerConfigModal } from './ServerConfigModal'
 
 const GAME_OPTIONS = [
   { value: 'ACC', label: 'ACC' },
@@ -398,61 +398,21 @@ function StageAccordion({
   const lang = useApp().state.language
   const getName = (e: { name_zh: string; name_en: string }) => lang === 'zh' ? e.name_zh : e.name_en
   const [eligibility, setEligibility] = useState(stage.eligibilitySource || 'roundRegistration')
-  const [selectedDrivers, setSelectedDrivers] = useState<Set<string>>(
-    new Set(stage.advancementRule?.sourceSessionId ? [] : [])
-  )
-  const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
-  const [sessions, setSessions] = useState<Session[]>(stage.sessions)
+  const [selectedDrivers, setSelectedDrivers] = useState<Set<string>>(new Set())
+  const [localStage, setLocalStage] = useState<Stage>(stage)
   const [enableMultiSplit, setEnableMultiSplit] = useState(stage.enableMultiSplit || false)
   const [maxSplits, setMaxSplits] = useState(stage.maxSplits || 2)
+  const [showServerConfig, setShowServerConfig] = useState(false)
 
   const splitCount = enableMultiSplit ? Math.max(1, maxSplits) : 1
 
-  const syncSplits = (sessList: Session[], count: number): Session[] =>
-    sessList.map(session => {
-      const current = session.splits
-      if (current.length === count) return session
-      let newSplits
-      if (current.length < count) {
-        const added = []
-        for (let i = current.length; i < count; i++) {
-          added.push(createDefaultSplit(session.id, i + 1))
-        }
-        newSplits = [...current, ...added]
-      } else {
-        newSplits = current.slice(0, count).map((s, i) => ({ ...s, splitNumber: i + 1 }))
-      }
-      return { ...session, splits: newSplits }
-    })
-
   const handleMultiSplitChange = (enabled: boolean) => {
     setEnableMultiSplit(enabled)
-    const newCount = enabled ? Math.max(1, maxSplits) : 1
-    setSessions(prev => syncSplits(prev, newCount))
   }
 
-  const handleMaxSplitsChange = (value: number) => {
-    const clamped = Math.max(1, value)
-    setMaxSplits(clamped)
-    if (enableMultiSplit) {
-      setSessions(prev => syncSplits(prev, clamped))
-    }
+  const handleSaveStage = (updated: Stage) => {
+    setLocalStage(updated)
   }
-
-  const handleAddSession = () => {
-    const newSession = createDefaultSession(stage.id, game, sessions.length)
-    setSessions(prev => [...prev, newSession])
-  }
-
-  const handleDeleteSession = (sessionId: string) => {
-    setSessions(prev => prev.filter(s => s.id !== sessionId))
-  }
-
-  const handleSaveSession = (updated: Session) => {
-    setSessions(prev => prev.map(s => s.id === updated.id ? updated : s))
-  }
-
-  const editingSession = editingSessionId ? sessions.find(s => s.id === editingSessionId) : null
 
   const registeredDrivers = registeredDriverIds
     .map(id => drivers.find(d => d.id === id))
@@ -478,7 +438,10 @@ function StageAccordion({
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium text-gray-900">{getName(stage)}</span>
         </div>
-        <span className="text-xs text-gray-400">{stage.sessions.length} {t('competition.sessions')}</span>
+        {localStage.gameConfig?.track && (
+          <Badge variant="default" className="text-xs">{localStage.gameConfig.track}</Badge>
+        )}
+        <span className="text-xs text-gray-400">{localStage.gameSessions.length} {t('competition.sessions')}</span>
         <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
           <Trash2 className="w-3.5 h-3.5 text-red-500" />
         </Button>
@@ -570,7 +533,7 @@ function StageAccordion({
             {enableMultiSplit && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Input label={t('event.maxEntriesPerSplit')} type="number" defaultValue={stage.maxEntriesPerSplit || ''} />
-                <Input label={t('event.maxSplits')} type="number" value={String(maxSplits)} onChange={(e) => handleMaxSplitsChange(Number(e.target.value))} />
+                <Input label={t('event.maxSplits')} type="number" value={String(maxSplits)} onChange={(e) => setMaxSplits(Math.max(1, Number(e.target.value)))} />
                 <Input label={t('event.minEntries')} type="number" defaultValue={stage.minEntries || ''} />
                 <Select label={t('event.splitAssignmentRule')} options={SPLIT_RULE_OPTIONS} defaultValue={stage.splitAssignmentRule || ''} />
               </div>
@@ -580,60 +543,36 @@ function StageAccordion({
             )}
           </div>
 
-          <div className="pt-2">
-            <div className="flex items-center justify-between mb-2">
-              <h5 className="text-xs font-medium text-gray-600">{t('competition.sessions')} ({sessions.length})</h5>
-              <Button variant="ghost" size="sm" onClick={handleAddSession}>
-                <Plus className="w-3.5 h-3.5 mr-1" />
-                {t('competition.addSession')}
-              </Button>
-            </div>
-
-            {sessions.length === 0 && (
-              <p className="text-xs text-gray-400 text-center py-3">{t('competition.noSessions')}</p>
-            )}
-
-            <div className="space-y-2">
-              {sessions.map((session, sessionIdx) => (
-                <div
-                  key={session.id}
-                  onClick={() => setEditingSessionId(session.id)}
-                  className="flex items-center gap-2 rounded-md bg-gray-50 border border-gray-200 px-3 py-2 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-colors"
-                >
-                  <span className="text-xs font-medium text-gray-400">{sessionIdx + 1}</span>
-                  <span className="text-sm font-medium text-gray-900">{getName(session)}</span>
-                  {session.gameSessions.map(gs => (
-                    <Badge key={gs.id} variant="info" className="ml-1">
-                      {t(`competition.sessionType${gs.type.charAt(0).toUpperCase() + gs.type.slice(1)}`)}
-                    </Badge>
-                  ))}
-                  {session.gameConfig && (
-                    <Badge variant="default" className="ml-1">{game}</Badge>
-                  )}
-                  <span className="text-xs text-gray-400 ml-1">
-                    {session.splits.length} {t('competition.splits').toLowerCase()}
-                  </span>
-                  <div className="flex-1" />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => { e.stopPropagation(); handleDeleteSession(session.id) }}
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                  </Button>
-                </div>
-              ))}
-            </div>
+          {/* Server Config button */}
+          <div className="rounded-md border border-gray-200 bg-white p-3">
+            <button
+              onClick={() => setShowServerConfig(true)}
+              className="flex items-center justify-between w-full"
+            >
+              <div className="flex items-center gap-2">
+                <Settings className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">{t('serverConfig.title')}</span>
+                {localStage.gameConfig?.track && (
+                  <Badge variant="default" className="text-xs">{localStage.gameConfig.track}</Badge>
+                )}
+                <span className="text-xs text-gray-400">
+                  {localStage.gameSessions.length} {t('competition.sessions').toLowerCase()}
+                  {' · '}
+                  {localStage.splits.length} {t('result.split').toLowerCase()}(s)
+                </span>
+              </div>
+              <span className="text-xs text-blue-600 hover:text-blue-700">{t('common.edit')}</span>
+            </button>
           </div>
         </div>
       )}
 
-      {editingSession && (
-        <SessionEditModal
+      {showServerConfig && (
+        <ServerConfigModal
           isOpen={true}
-          onClose={() => setEditingSessionId(null)}
-          onSave={handleSaveSession}
-          session={editingSession}
+          onClose={() => setShowServerConfig(false)}
+          onSave={handleSaveStage}
+          stage={localStage}
           editLang={editLang}
           game={game}
           splitCount={splitCount}
