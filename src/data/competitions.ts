@@ -199,8 +199,8 @@ export interface GameSessionEntry {
 
 export interface AdvancementRule {
   sourceSessionId?: string
-  metric: 'bestLap' | 'points' | 'position' | 'manual'
-  direction: 'asc' | 'desc'
+  metric: 'lapTime' | 'points' | 'position' | 'manual'
+  lapTimeMultiplier?: number
   limit?: number
   targetStageId?: string
   fallbackPolicy?: 'none' | 'fillNext'
@@ -254,6 +254,8 @@ export interface CompetitionRuleset {
   accessRequirements_zh?: string
   accessRequirements_en?: string
   scoringTable?: ScoringTableEntry[]
+  scoringNote_zh?: string
+  scoringNote_en?: string
   resources_zh?: string
   resources_en?: string
   streamUrl?: string
@@ -491,6 +493,8 @@ const _rawCompetitions = [
         { position: 9, points: 2 },
         { position: 10, points: 1 },
       ],
+      scoringNote_zh: '额外加分：最快圈 +1 分，杆位 +1 分。完赛但未进前 10 名不获得积分。',
+      scoringNote_en: 'Bonus points: fastest lap +1 pt, pole position +1 pt. Finishers outside top 10 receive no points.',
       resources_zh: 'ACC GT3 车辆包：https://example.com/gt3-pack\n安装说明：解压至 ACC 用户目录下的 Content/Cars 文件夹',
       resources_en: 'ACC GT3 Car Pack: https://example.com/gt3-pack\nInstall: Extract to Content/Cars folder in your ACC user directory',
       streamUrl: 'https://twitch.tv/mozaracing',
@@ -555,7 +559,7 @@ const _rawCompetitions = [
             startsAt: '2026-05-16T00:00:00Z',
             endsAt: '2026-05-22T00:00:00Z',
             eligibilitySource: 'roundRegistration',
-            advancementRule: { metric: 'bestLap', direction: 'asc', limit: 30, targetStageId: 'c1r2s1', fallbackPolicy: 'fillNext' },
+            advancementRule: { metric: 'lapTime', lapTimeMultiplier: 1.05, targetStageId: 'c1r2s1', fallbackPolicy: 'fillNext' },
             maxEntriesPerSplit: 60,
             enableMultiSplit: false,
             sessions: [
@@ -659,7 +663,7 @@ const _rawCompetitions = [
             startsAt: '2026-06-20T00:00:00Z',
             endsAt: '2026-06-26T00:00:00Z',
             eligibilitySource: 'roundRegistration',
-            advancementRule: { metric: 'bestLap', direction: 'asc', limit: 30, targetStageId: 'c1r3s1', fallbackPolicy: 'fillNext' },
+            advancementRule: { metric: 'lapTime', lapTimeMultiplier: 1.05, targetStageId: 'c1r3s1', fallbackPolicy: 'fillNext' },
             maxEntriesPerSplit: 60,
             enableMultiSplit: false,
             sessions: [
@@ -724,6 +728,8 @@ const _rawCompetitions = [
         { position: 4, points: 24 },
         { position: 5, points: 20 },
       ],
+      scoringNote_zh: '额外加分：最快圈 +1 分，杆位 +1 分。完赛但未进前 10 名不获得积分。',
+      scoringNote_en: 'Bonus points: fastest lap +1 pt, pole position +1 pt. Finishers outside top 10 receive no points.',
       resources_zh: '耐力赛准备指南：https://example.com/endurance-guide',
       resources_en: 'Endurance Prep Guide: https://example.com/endurance-guide',
       streamUrl: 'https://twitch.tv/mozaap',
@@ -807,7 +813,7 @@ const _rawCompetitions = [
             startsAt: '2026-06-12T00:00:00Z',
             endsAt: '2026-06-18T00:00:00Z',
             eligibilitySource: 'roundRegistration',
-            advancementRule: { metric: 'bestLap', direction: 'asc', limit: 60, targetStageId: 'c2r2s1', fallbackPolicy: 'fillNext' },
+            advancementRule: { metric: 'lapTime', lapTimeMultiplier: 1.05, targetStageId: 'c2r2s1', fallbackPolicy: 'fillNext' },
             maxEntriesPerSplit: 60,
             enableMultiSplit: false,
             sessions: [
@@ -870,7 +876,7 @@ const _rawCompetitions = [
             startsAt: '2026-07-15T00:00:00Z',
             endsAt: '2026-07-22T00:00:00Z',
             eligibilitySource: 'roundRegistration',
-            advancementRule: { metric: 'bestLap', direction: 'asc', limit: 60, targetStageId: 'c2r3s1', fallbackPolicy: 'fillNext' },
+            advancementRule: { metric: 'lapTime', lapTimeMultiplier: 1.05, targetStageId: 'c2r3s1', fallbackPolicy: 'fillNext' },
             maxEntriesPerSplit: 60,
             enableMultiSplit: false,
             sessions: [
@@ -1078,7 +1084,7 @@ const _rawCompetitions = [
             startsAt: '2026-07-18T00:00:00Z',
             endsAt: '2026-07-20T00:00:00Z',
             eligibilitySource: 'roundRegistration',
-            advancementRule: { metric: 'bestLap', direction: 'asc', limit: 30, targetStageId: 'c5r1s2', fallbackPolicy: 'fillNext' },
+            advancementRule: { metric: 'lapTime', lapTimeMultiplier: 1.05, targetStageId: 'c5r1s2', fallbackPolicy: 'fillNext' },
             maxEntriesPerSplit: 60,
             enableMultiSplit: false,
             sessions: [

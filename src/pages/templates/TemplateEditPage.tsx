@@ -9,11 +9,15 @@ import { Button } from '@/components/ui/Button'
 import { sessionTemplates, createDefaultTemplate, createDefaultGameConfig } from '@/data/competitions'
 import type { SessionTemplate, SessionGameConfig, GamePlatform } from '@/data/competitions'
 import { GameConfigEditor } from '@/pages/competitions/GameConfigEditor'
+import { useApp } from '@/hooks/useAppStore'
+import { useManagedOptions } from '@/hooks/useManagedOptions'
 
 export function TemplateEditPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
+  const { state } = useApp()
+  const gameOptions = useManagedOptions('game', state.language)
   const isEdit = !!id
 
   const existing = isEdit ? sessionTemplates.find(tpl => tpl.id === id) : undefined
@@ -99,7 +103,7 @@ export function TemplateEditPage() {
             ) : (
               <Select
                 label={t('event.game')}
-                options={[{ value: 'ACC', label: 'ACC' }, { value: 'AC', label: 'AC' }]}
+                options={gameOptions}
                 value={form.game}
                 onChange={(e) => handleGameChange(e.target.value as GamePlatform)}
               />

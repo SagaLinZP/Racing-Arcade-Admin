@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '@/hooks/useAppStore'
+import { useManagedOptions } from '@/hooks/useManagedOptions'
 import { news } from '@/data/news'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -10,17 +11,13 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { ArrowLeft, Save, Send } from 'lucide-react'
 
-const CATEGORY_OPTIONS = [
-  { value: 'event', label: 'Event Announcement' },
-  { value: 'platform', label: 'Platform Update' },
-  { value: 'review', label: 'Race Review' },
-  { value: 'other', label: 'Other' },
-]
-
 export function NewsEditPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { id } = useParams()
+  const { state } = useApp()
+  const lang = state.language
+  const categoryOptions = useManagedOptions('newsCategory', lang)
   const isNew = id === 'create'
   const [editLang, setEditLang] = useState<'en' | 'zh'>('en')
 
@@ -49,7 +46,7 @@ export function NewsEditPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input label={`Title (${editLang === 'en' ? 'EN' : 'Chinese'})`} defaultValue={article ? (editLang === 'en' ? article.title_en : article.title_zh) : ''} />
           <div className="flex gap-4">
-            <Select label="Category" options={CATEGORY_OPTIONS} value={article?.category || 'event'} />
+            <Select label={t('news.category')} options={categoryOptions} value={article?.category || 'event'} />
             <Input label="Author" defaultValue={article?.author || ''} />
           </div>
           <div className="md:col-span-2">

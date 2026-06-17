@@ -18,31 +18,6 @@ import { cn, getCompetitionStatus, getRoundStatus } from '@/lib/utils'
 import { ImageUpload } from '@/components/ui/ImageUpload'
 import { ServerConfigModal } from './ServerConfigModal'
 
-const GAME_OPTIONS = [
-  { value: 'ACC', label: 'ACC' },
-  { value: 'AC', label: 'AC' },
-]
-
-const REGION_OPTIONS = [
-  { value: 'CN', label: 'China (CN)' },
-  { value: 'AP', label: 'Asia Pacific (AP)' },
-  { value: 'AM', label: 'Americas (AM)' },
-  { value: 'EU', label: 'Europe & Africa (EU)' },
-]
-
-const SPLIT_RULE_OPTIONS = [
-  { value: 'First Come First Served', label: 'First Come First Served / 先到先得' },
-  { value: 'By Skill', label: 'By Skill / 按实力' },
-  { value: 'Manual', label: 'Manual / 手动' },
-  { value: 'Random', label: 'Random / 随机' },
-]
-
-const ELIGIBILITY_OPTIONS = [
-  { value: 'roundRegistration', label: 'Round Registration / 分站报名' },
-  { value: 'previousStageResult', label: 'Previous Stage Result / 上一阶段成绩' },
-  { value: 'manualInvite', label: 'Manual Invite / 手动邀请' },
-]
-
 type TabKey = 'info' | 'rounds'
 
 export function CompetitionEditPage() {
@@ -50,6 +25,8 @@ export function CompetitionEditPage() {
   const { state } = useApp()
   const lang = state.language
   const carClassOptions = useManagedOptions('carClass', lang)
+  const gameOptions = useManagedOptions('game', lang)
+  const regionOptions = useManagedOptions('region', lang)
   const navigate = useNavigate()
   const { id } = useParams()
   const [tab, setTab] = useState<TabKey>('info')
@@ -135,7 +112,7 @@ export function CompetitionEditPage() {
             <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionBasicInfo')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input label={`${t('competition.competitionName')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? comp.name_en : comp.name_zh} />
-              <Select label={t('event.game')} options={GAME_OPTIONS} defaultValue={comp.game} />
+              <Select label={t('event.game')} options={gameOptions} defaultValue={comp.game} />
               <Select label={t('event.carClass')} options={carClassOptions.length > 0 ? carClassOptions : [{ value: '', label: '' }]} defaultValue={comp.carClass} />
               <Input label={t('event.carList')} placeholder={t('event.carListPlaceholder')} defaultValue={comp.carList?.join(', ') || ''} />
               <Input label={t('event.streamUrl')} defaultValue={comp.defaultRuleset.streamUrl || ''} />
@@ -151,7 +128,7 @@ export function CompetitionEditPage() {
           <Card>
             <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('common.regions')}</h3>
             <div className="flex flex-wrap gap-6">
-              {REGION_OPTIONS.map(opt => (
+              {regionOptions.map(opt => (
                 <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -207,6 +184,13 @@ export function CompetitionEditPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+            <div className="mt-3">
+              <Textarea
+                label={`${t('event.scoringNote')} (${editLang === 'en' ? 'EN' : '中文'})`}
+                defaultValue={editLang === 'en' ? comp.defaultRuleset.scoringNote_en || '' : comp.defaultRuleset.scoringNote_zh || ''}
+                key={editLang}
+              />
             </div>
             <div className="mt-3">
               <Button variant="secondary" size="sm">
@@ -389,8 +373,11 @@ function StageAccordion({
 }) {
   const { t } = useTranslation()
   const lang = useApp().state.language
+  const splitRuleOptions = useManagedOptions('splitRule', lang)
+  const eligibilityOptions = useManagedOptions('eligibilitySource', lang)
   const getName = (e: { name_zh: string; name_en: string }) => lang === 'zh' ? e.name_zh : e.name_en
   const [eligibility, setEligibility] = useState(stage.eligibilitySource || 'roundRegistration')
+  const [advMetric, setAdvMetric] = useState(stage.advancementRule?.metric || 'lapTime')
   const [selectedDrivers, setSelectedDrivers] = useState<Set<string>>(new Set())
   const [localStage, setLocalStage] = useState<Stage>(stage)
   const [enableMultiSplit, setEnableMultiSplit] = useState(stage.enableMultiSplit || false)
@@ -457,31 +444,39 @@ function StageAccordion({
           <div className="space-y-3">
             <Select
               label={t('competition.eligibilitySource')}
-              options={ELIGIBILITY_OPTIONS}
+              options={eligibilityOptions}
               defaultValue={eligibility}
               onChange={(e) => setEligibility(e.target.value as typeof eligibility)}
             />
 
             {eligibility === 'previousStageResult' && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pl-1 border-l-2 border-blue-200 pl-3">
-                <Select
-                  label={t('competition.advancementMetric')}
-                  options={[
-                    { value: 'bestLap', label: 'Best Lap / 最快圈' },
-                    { value: 'points', label: 'Points / 积分' },
-                    { value: 'position', label: 'Position / 名次' },
-                  ]}
-                  defaultValue={stage.advancementRule?.metric || 'bestLap'}
-                />
-                <Select
-                  label={t('competition.advancementDirection')}
-                  options={[
-                    { value: 'asc', label: t('competition.advancementAscending') },
-                    { value: 'desc', label: t('competition.advancementDescending') },
-                  ]}
-                  defaultValue={stage.advancementRule?.direction || 'asc'}
-                />
-                <Input label={t('competition.advancementLimit')} type="number" defaultValue={stage.advancementRule?.limit || ''} />
+              <div className="space-y-3 pl-1 border-l-2 border-blue-200 pl-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Select
+                    label={t('competition.advancementMetric')}
+                    options={[
+                      { value: 'lapTime', label: t('competition.advancementMetricLapTime') },
+                      { value: 'points', label: t('competition.advancementMetricPoints') },
+                      { value: 'position', label: t('competition.advancementMetricPosition') },
+                    ]}
+                    value={advMetric}
+                    onChange={(e) => setAdvMetric(e.target.value as typeof advMetric)}
+                  />
+                  {advMetric === 'lapTime' ? (
+                    <Input
+                      label={t('competition.advancementLapTimeMultiplier')}
+                      type="number"
+                      step="0.01"
+                      min="1"
+                      defaultValue={String(stage.advancementRule?.lapTimeMultiplier ?? 1.05)}
+                    />
+                  ) : (
+                    <Input label={t('competition.advancementLimit')} type="number" defaultValue={stage.advancementRule?.limit || ''} />
+                  )}
+                </div>
+                {advMetric === 'lapTime' && (
+                  <p className="text-xs text-gray-500">{t('competition.advancementLapTimeMultiplierHint')}</p>
+                )}
               </div>
             )}
 
@@ -532,7 +527,7 @@ function StageAccordion({
                 <Input label={t('event.maxEntriesPerSplit')} type="number" defaultValue={stage.maxEntriesPerSplit || ''} />
                 <Input label={t('event.maxSplits')} type="number" value={String(maxSplits)} onChange={(e) => setMaxSplits(Math.max(1, Number(e.target.value)))} />
                 <Input label={t('event.minEntries')} type="number" defaultValue={stage.minEntries || ''} />
-                <Select label={t('event.splitAssignmentRule')} options={SPLIT_RULE_OPTIONS} defaultValue={stage.splitAssignmentRule || ''} />
+                <Select label={t('event.splitAssignmentRule')} options={splitRuleOptions} defaultValue={stage.splitAssignmentRule || ''} />
               </div>
             )}
             {!enableMultiSplit && (
@@ -541,10 +536,10 @@ function StageAccordion({
           </div>
 
           {/* Server Config button */}
-          <div className="rounded-md border border-gray-200 bg-white p-3">
+          <div className="rounded-md border border-gray-200 bg-white p-3 transition-colors hover:bg-gray-50 hover:border-gray-300">
             <button
               onClick={() => setShowServerConfig(true)}
-              className="flex items-center justify-between w-full"
+              className="flex items-center justify-between w-full cursor-pointer"
             >
               <div className="flex items-center gap-2">
                 <Settings className="w-4 h-4 text-gray-500" />

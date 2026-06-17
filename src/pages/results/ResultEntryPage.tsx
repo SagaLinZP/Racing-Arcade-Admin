@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '@/hooks/useAppStore'
+import { useManagedOptions } from '@/hooks/useManagedOptions'
 import { drivers } from '@/data/drivers'
 import { teams } from '@/data/teams'
 import { Card } from '@/components/ui/Card'
@@ -15,15 +16,6 @@ import type { ScoringTableEntry } from '@/lib/utils'
 import { ArrowLeft, Save, Upload, Trophy, Plus, Trash2, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const STATUS_OPTIONS: { value: ResultStatus; labelKey: string }[] = [
-  { value: 'Finished', labelKey: 'result.Finished' },
-  { value: 'DNF', labelKey: 'result.DNF' },
-  { value: 'DNS', labelKey: 'result.DNS' },
-  { value: 'DSQ', labelKey: 'result.DSQ' },
-  { value: 'Qualified', labelKey: 'result.Qualified' },
-  { value: 'Eliminated', labelKey: 'result.Eliminated' },
-]
-
 interface SplitResultState {
   splitId: string
   splitNumber: number
@@ -35,6 +27,7 @@ export function ResultEntryPage() {
   const { t } = useTranslation()
   const { state } = useApp()
   const lang = state.language
+  const statusOptions = useManagedOptions('resultStatus', lang)
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
 
@@ -352,7 +345,7 @@ export function ResultEntryPage() {
                       </td>
                       <td className="px-3 py-1.5">
                         <Select
-                          options={STATUS_OPTIONS.map(o => ({ value: o.value, label: t(o.labelKey) }))}
+                          options={statusOptions}
                           value={r.status}
                           onChange={(e) => updateResult(origIdx, { status: e.target.value as ResultStatus })}
                         />

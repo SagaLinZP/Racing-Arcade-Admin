@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '@/hooks/useAppStore'
+import { useManagedOptions } from '@/hooks/useManagedOptions'
 import { drivers } from '@/data/drivers'
 import { teams } from '@/data/teams'
 import { banRecords } from '@/data/admin'
@@ -12,17 +13,12 @@ import { Select } from '@/components/ui/Select'
 import { DataTable } from '@/components/ui/DataTable'
 import { Eye } from 'lucide-react'
 
-const REGION_OPTIONS = [
-  { value: '', label: 'All Regions' },
-  { value: 'CN', label: 'China' },
-  { value: 'AP', label: 'Asia Pacific' },
-  { value: 'AM', label: 'Americas' },
-  { value: 'EU', label: 'Europe & Africa' },
-]
-
 export function UserListPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { state } = useApp()
+  const lang = state.language
+  const regionOptions = useManagedOptions('region', lang, t('common.allRegions'))
   const [search, setSearch] = useState('')
   const [regionFilter, setRegionFilter] = useState('')
 
@@ -73,7 +69,7 @@ export function UserListPage() {
       <Card>
         <div className="flex flex-wrap gap-3 mb-4 pb-4 border-b">
           <div className="w-64"><Input placeholder={t('common.search')} value={search} onChange={(e) => setSearch(e.target.value)} /></div>
-          <div className="w-40"><Select options={REGION_OPTIONS} value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)} /></div>
+          <div className="w-40"><Select options={regionOptions} value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)} /></div>
           <div className="text-sm text-gray-500 flex items-center">{filtered.length} users</div>
         </div>
         <DataTable columns={columns} data={filtered} keyExtractor={(d) => d.id} />

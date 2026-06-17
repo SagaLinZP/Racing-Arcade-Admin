@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '@/hooks/useAppStore'
+import { useManagedOptions } from '@/hooks/useManagedOptions'
 import { competitions as initialCompetitions } from '@/data/competitions'
 import type { Competition } from '@/data/competitions'
 import { Card } from '@/components/ui/Card'
@@ -14,28 +15,22 @@ import { Modal } from '@/components/ui/Modal'
 import { Plus, Pencil, Ban, Trash2 } from 'lucide-react'
 import { getCompetitionStatus } from '@/lib/utils'
 
-const GAME_OPTIONS = [
-  { value: '', label: 'All Games' },
-  { value: 'ACC', label: 'ACC' },
-  { value: 'AC', label: 'AC' },
-]
-
-const STATUS_OPTIONS = [
-  { value: '', label: 'All Statuses' },
-  { value: 'Draft', label: 'Draft' },
-  { value: 'Upcoming', label: 'Upcoming' },
-  { value: 'RegistrationOpen', label: 'Registration Open' },
-  { value: 'RegistrationClosed', label: 'Registration Closed' },
-  { value: 'InProgress', label: 'In Progress' },
-  { value: 'Completed', label: 'Completed' },
-  { value: 'Cancelled', label: 'Cancelled' },
-]
-
 export function CompetitionListPage() {
   const { t } = useTranslation()
   const { state } = useApp()
   const lang = state.language
   const navigate = useNavigate()
+  const gameOptions = useManagedOptions('game', lang, t('common.allGames'))
+  const statusOptions = [
+    { value: '', label: t('common.allStatuses') },
+    { value: 'Draft', label: t('event.status.Draft') },
+    { value: 'Upcoming', label: t('event.status.Upcoming') },
+    { value: 'RegistrationOpen', label: t('event.status.RegistrationOpen') },
+    { value: 'RegistrationClosed', label: t('event.status.RegistrationClosed') },
+    { value: 'InProgress', label: t('event.status.InProgress') },
+    { value: 'Completed', label: t('event.status.Completed') },
+    { value: 'Cancelled', label: t('event.status.Cancelled') },
+  ]
   const [search, setSearch] = useState('')
   const [gameFilter, setGameFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -143,10 +138,10 @@ export function CompetitionListPage() {
             />
           </div>
           <div className="w-40">
-            <Select options={GAME_OPTIONS} value={gameFilter} onChange={(e) => setGameFilter(e.target.value)} />
+            <Select options={gameOptions} value={gameFilter} onChange={(e) => setGameFilter(e.target.value)} />
           </div>
           <div className="w-44">
-            <Select options={STATUS_OPTIONS} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} />
+            <Select options={statusOptions} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} />
           </div>
         </div>
 

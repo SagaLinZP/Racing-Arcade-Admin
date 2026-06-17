@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '@/hooks/useAppStore'
+import { useManagedOptions } from '@/hooks/useManagedOptions'
 import { protests } from '@/data/protests'
 import { events } from '@/data/events'
 import { drivers } from '@/data/drivers'
@@ -13,18 +14,11 @@ import { DataTable } from '@/components/ui/DataTable'
 import { Eye } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
-const STATUS_OPTIONS = [
-  { value: '', label: 'All Statuses' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'reviewing', label: 'Reviewing' },
-  { value: 'resolved', label: 'Resolved' },
-  { value: 'dismissed', label: 'Dismissed' },
-]
-
 export function ProtestListPage() {
   const { t } = useTranslation()
   const { state } = useApp()
   const lang = state.language
+  const statusOptions = useManagedOptions('protestStatus', lang, t('common.allStatuses'))
   const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState('')
 
@@ -72,7 +66,7 @@ export function ProtestListPage() {
       <Card>
         <div className="mb-4 pb-4 border-b">
           <div className="w-44">
-            <Select options={STATUS_OPTIONS} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} />
+            <Select options={statusOptions} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} />
           </div>
         </div>
         <DataTable columns={columns} data={filtered} keyExtractor={(p) => p.id} />

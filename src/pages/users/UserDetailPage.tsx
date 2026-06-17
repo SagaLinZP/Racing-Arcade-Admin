@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '@/hooks/useAppStore'
+import { useManagedOptions } from '@/hooks/useManagedOptions'
 import { drivers } from '@/data/drivers'
 import { teams } from '@/data/teams'
 import { events } from '@/data/events'
@@ -16,17 +17,11 @@ import { Modal } from '@/components/ui/Modal'
 import { ArrowLeft, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
-const BAN_TYPE_OPTIONS = [
-  { value: 'warning', label: 'Warning' },
-  { value: 'temporary', label: 'Temporary Ban' },
-  { value: 'permanent', label: 'Permanent Ban' },
-  { value: 'race', label: 'Race Ban' },
-]
-
 export function UserDetailPage() {
   const { t } = useTranslation()
   const { state } = useApp()
   const lang = state.language
+  const banTypeOptions = useManagedOptions('banType', lang)
   const navigate = useNavigate()
   const { id } = useParams()
   const [showBan, setShowBan] = useState(false)
@@ -136,7 +131,7 @@ export function UserDetailPage() {
       <Modal isOpen={showBan} onClose={() => setShowBan(false)} title={t('user.banUser')} size="md">
         <div className="space-y-4">
           <p className="text-sm text-gray-600">Ban user: <strong>{driver.nickname}</strong></p>
-          <Select label={t('user.banType')} options={BAN_TYPE_OPTIONS} />
+          <Select label={t('user.banType')} options={banTypeOptions} />
           <Input label={t('user.banDuration')} placeholder="e.g., 7 days, 2 races" />
           <Textarea label={`${t('user.banReason')} (English)`} placeholder="Reason for ban..." />
           <Textarea label={`${t('user.banReason')} (Chinese)`} placeholder="Reason for ban..." />

@@ -19,6 +19,7 @@ import { NewsEditPage } from './pages/news/NewsEditPage'
 import { TeamListPage } from './pages/teams/TeamListPage'
 import { TeamDetailPage } from './pages/teams/TeamDetailPage'
 import { NotificationPage } from './pages/notifications/NotificationPage'
+import { OptionsPage } from './pages/admin/OptionsPage'
 import './i18n'
 
 import { scrollToTop } from './lib/scrollContainer'
@@ -62,6 +63,7 @@ export default function App() {
               <Route path="/teams" element={<TeamListPage />} />
               <Route path="/teams/:id" element={<TeamDetailPage />} />
               <Route path="/notifications" element={<NotificationPage />} />
+              <Route path="/settings/options" element={<OptionsPage />} />
             </Route>
           )}
         </Routes>

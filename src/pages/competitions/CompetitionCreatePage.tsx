@@ -12,18 +12,6 @@ import { cn } from '@/lib/utils'
 import { useManagedOptions } from '@/hooks/useManagedOptions'
 import { useApp } from '@/hooks/useAppStore'
 
-const GAME_OPTIONS = [
-  { value: 'ACC', label: 'ACC' },
-  { value: 'AC', label: 'AC' },
-]
-
-const REGION_OPTIONS = [
-  { value: 'CN', label: 'China (CN)' },
-  { value: 'AP', label: 'Asia Pacific (AP)' },
-  { value: 'AM', label: 'Americas (AM)' },
-  { value: 'EU', label: 'Europe & Africa (EU)' },
-]
-
 interface FormState {
   name_en: string
   name_zh: string
@@ -37,6 +25,8 @@ interface FormState {
   accessRequirements_zh: string
   resources_en: string
   resources_zh: string
+  scoringNote_en: string
+  scoringNote_zh: string
   streamUrl: string
   coverImage: string
 }
@@ -48,6 +38,7 @@ const emptyForm = (): FormState => ({
   regions: ['CN'],
   accessRequirements_en: '', accessRequirements_zh: '',
   resources_en: '', resources_zh: '',
+  scoringNote_en: '', scoringNote_zh: '',
   streamUrl: '',
   coverImage: '',
 })
@@ -58,6 +49,8 @@ export function CompetitionCreatePage() {
   const { state } = useApp()
   const lang = state.language
   const carClassOptions = useManagedOptions('carClass', lang)
+  const gameOptions = useManagedOptions('game', lang)
+  const regionOptions = useManagedOptions('region', lang)
   const [editLang, setEditLang] = useState<'en' | 'zh'>('en')
   const [form, setForm] = useState<FormState>(emptyForm)
   const [scoringRows, setScoringRows] = useState([{ position: 1, points: 25, note_en: '', note_zh: '' }])
@@ -134,7 +127,7 @@ export function CompetitionCreatePage() {
               value={editLang === 'en' ? form.name_en : form.name_zh}
               onChange={(e) => update(editLang === 'en' ? 'name_en' : 'name_zh', e.target.value)}
             />
-            <Select label={t('event.game')} options={GAME_OPTIONS} value={form.game} onChange={(e) => update('game', e.target.value)} />
+            <Select label={t('event.game')} options={gameOptions} value={form.game} onChange={(e) => update('game', e.target.value)} />
             <Select label={t('event.carClass')} options={carClassOptions.length > 0 ? carClassOptions : [{ value: '', label: '' }]} value={form.carClass} onChange={(e) => update('carClass', e.target.value)} />
             <Input label={t('event.carList')} placeholder={t('event.carListPlaceholder')} value={form.carList} onChange={(e) => update('carList', e.target.value)} />
             <Input label={t('event.streamUrl')} value={form.streamUrl} onChange={(e) => update('streamUrl', e.target.value)} />
@@ -154,7 +147,7 @@ export function CompetitionCreatePage() {
         <Card>
           <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('common.regions')}</h3>
           <div className="flex flex-wrap gap-3">
-            {REGION_OPTIONS.map(opt => (
+            {regionOptions.map(opt => (
               <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -201,6 +194,13 @@ export function CompetitionCreatePage() {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="mt-3">
+            <Textarea
+              label={`${t('event.scoringNote')} (${editLang === 'en' ? 'EN' : '中文'})`}
+              value={editLang === 'en' ? form.scoringNote_en : form.scoringNote_zh}
+              onChange={(e) => update(editLang === 'en' ? 'scoringNote_en' : 'scoringNote_zh', e.target.value)}
+            />
           </div>
           <div className="mt-3">
             <Button variant="secondary" size="sm" onClick={addScoringRow}>

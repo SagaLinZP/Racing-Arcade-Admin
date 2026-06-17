@@ -13,6 +13,7 @@ import {
   FileText,
   Menu,
   ChevronLeft,
+  Settings,
   Globe,
   LogOut,
 } from 'lucide-react'
@@ -28,6 +29,7 @@ const navItems = [
   { path: '/news', icon: Newspaper, labelKey: 'admin.news' },
   { path: '/teams', icon: Shield, labelKey: 'admin.teams' },
   { path: '/notifications', icon: Bell, labelKey: 'admin.notifications' },
+  { path: '/settings/options', icon: Settings, labelKey: 'admin.optionsManagement' },
 ]
 
 export function AdminLayout() {

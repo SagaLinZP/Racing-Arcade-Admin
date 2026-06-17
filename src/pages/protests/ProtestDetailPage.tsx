@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '@/hooks/useAppStore'
+import { useManagedOptions } from '@/hooks/useManagedOptions'
 import { protests } from '@/data/protests'
 import { events } from '@/data/events'
 import { drivers } from '@/data/drivers'
@@ -13,20 +14,11 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ArrowLeft, Gavel, XCircle } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
-const PENALTY_OPTIONS = [
-  { value: 'warning', label: 'Warning' },
-  { value: 'timePenalty', label: 'Time Penalty' },
-  { value: 'positionDrop', label: 'Position Drop' },
-  { value: 'disqualifyRace', label: 'Disqualify from Race' },
-  { value: 'disqualifyChampionship', label: 'Disqualify from Championship' },
-  { value: 'raceBan', label: 'Race Ban' },
-  { value: 'timeBan', label: 'Time Ban' },
-]
-
 export function ProtestDetailPage() {
   const { t } = useTranslation()
   const { state } = useApp()
   const lang = state.language
+  const penaltyOptions = useManagedOptions('penaltyType', lang)
   const navigate = useNavigate()
   const { id } = useParams()
   const [penaltyType, setPenaltyType] = useState('timePenalty')
@@ -96,7 +88,7 @@ export function ProtestDetailPage() {
         <Card>
           <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('protest.ruling')}</h3>
           <div className="space-y-4">
-            <Select label={t('protest.penaltyType')} options={PENALTY_OPTIONS} value={penaltyType} onChange={(e) => setPenaltyType(e.target.value)} />
+            <Select label={t('protest.penaltyType')} options={penaltyOptions} value={penaltyType} onChange={(e) => setPenaltyType(e.target.value)} />
             <Textarea label={t('protest.rulingReason')} value={rulingReason} onChange={(e) => setRulingReason(e.target.value)} placeholder="Explain the ruling decision..." />
             <div className="flex gap-2">
               <Button><Gavel className="w-4 h-4 mr-1" />Confirm Violation</Button>

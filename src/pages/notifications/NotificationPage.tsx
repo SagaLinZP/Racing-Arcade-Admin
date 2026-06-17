@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '@/hooks/useAppStore'
+import { useManagedOptions } from '@/hooks/useManagedOptions'
 import { notifications } from '@/data/notifications'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -12,19 +13,13 @@ import { Modal } from '@/components/ui/Modal'
 import { Send, Plus } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
-const TYPE_OPTIONS = [
-  { value: '', label: 'All Types' },
-  { value: 'registration', label: 'Registration' },
-  { value: 'cancellation', label: 'Cancellation' },
-  { value: 'results', label: 'Results' },
-  { value: 'protest', label: 'Protest' },
-  { value: 'system', label: 'System' },
-]
-
 export function NotificationPage() {
   const { t } = useTranslation()
   const { state } = useApp()
   const lang = state.language
+  const typeOptions = useManagedOptions('notificationType', lang, t('common.allTypes'))
+  const recipientOptions = useManagedOptions('notificationRecipient', lang)
+  const channelOptions = useManagedOptions('notificationChannel', lang)
   const [typeFilter, setTypeFilter] = useState('')
   const [showSend, setShowSend] = useState(false)
 
@@ -48,7 +43,7 @@ export function NotificationPage() {
       <Card>
         <div className="mb-4 pb-4 border-b">
           <div className="w-44">
-            <Select options={TYPE_OPTIONS} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} />
+            <Select options={typeOptions} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} />
           </div>
         </div>
         <DataTable columns={columns} data={filtered} keyExtractor={(n) => n.id} />
@@ -56,16 +51,8 @@ export function NotificationPage() {
 
       <Modal isOpen={showSend} onClose={() => setShowSend(false)} title={t('notification.sendNotification')} size="lg">
         <div className="space-y-4">
-          <Select label={t('notification.recipients')} options={[
-            { value: 'all', label: 'All Users' },
-            { value: 'registered', label: 'Registered Drivers' },
-            { value: 'specific', label: 'Specific Users' },
-          ]} />
-          <Select label={t('notification.channel')} options={[
-            { value: 'inApp', label: 'In-App Only' },
-            { value: 'email', label: 'Email Only' },
-            { value: 'both', label: 'In-App + Email' },
-          ]} />
+          <Select label={t('notification.recipients')} options={recipientOptions} />
+          <Select label={t('notification.channel')} options={channelOptions} />
           <Input label="Title (English)" />
           <Input label="Title (Chinese)" />
           <Textarea label="Content (English)" rows={4} />
