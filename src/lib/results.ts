@@ -44,6 +44,38 @@ export function getStageResultStatus(stage: Stage): StageResultStatus {
   return 'entered'
 }
 
+export function getRaceSessionId(stage: Stage): string | undefined {
+  return stage.sessions.find(s => s.type === 'race')?.id
+}
+
+export function getSessionResultStatus(stage: Stage, sessionId: string): StageResultStatus {
+  const splits = stage.splits
+  if (splits.length === 0) return 'pending'
+  let hasAnyResults = false
+  let relevantSplits = 0
+  let publishedRelevant = 0
+  for (const sp of splits) {
+    const sessionResults = (sp.results ?? []).filter(r => r.sessionId === sessionId)
+    if (sessionResults.length > 0) {
+      hasAnyResults = true
+      relevantSplits++
+      if (sp.resultsPublishedAt) publishedRelevant++
+    }
+  }
+  if (!hasAnyResults) return 'pending'
+  if (relevantSplits > 0 && publishedRelevant === relevantSplits) return 'published'
+  if (publishedRelevant > 0) return 'partial'
+  return 'entered'
+}
+
+export function getSessionResultCount(stage: Stage, sessionId: string): number {
+  let count = 0
+  for (const sp of stage.splits) {
+    count += (sp.results ?? []).filter(r => r.sessionId === sessionId).length
+  }
+  return count
+}
+
 export interface DriverStanding {
   driverId: string
   teamId?: string
@@ -55,12 +87,14 @@ export interface DriverStanding {
   results: { stageId: string; position: number; points: number }[]
 }
 
-function collectResultsFromStages(stages: Stage[]): DriverStanding[] {
+function collectResultsFromStages(stages: Stage[], sessionId?: string): DriverStanding[] {
   const map = new Map<string, DriverStanding>()
   for (const stage of stages) {
+    const targetSessionId = sessionId ?? getRaceSessionId(stage)
     for (const split of stage.splits) {
       if (!split.results) continue
       for (const r of split.results) {
+        if (targetSessionId && r.sessionId !== targetSessionId) continue
         if (!map.has(r.driverId)) {
           map.set(r.driverId, {
             driverId: r.driverId,
@@ -88,20 +122,20 @@ function collectResultsFromStages(stages: Stage[]): DriverStanding[] {
   )
 }
 
-export function calculateCompetitionStandings(competition: Competition): DriverStanding[] {
+export function calculateCompetitionStandings(competition: Competition, sessionId?: string): DriverStanding[] {
   const stages: Stage[] = []
   for (const round of competition.rounds) {
     stages.push(...round.stages)
   }
-  return collectResultsFromStages(stages)
+  return collectResultsFromStages(stages, sessionId)
 }
 
-export function calculateRoundStandings(round: Round): DriverStanding[] {
-  return collectResultsFromStages(round.stages)
+export function calculateRoundStandings(round: Round, sessionId?: string): DriverStanding[] {
+  return collectResultsFromStages(round.stages, sessionId)
 }
 
-export function calculateStageStandings(stage: Stage): DriverStanding[] {
-  return collectResultsFromStages([stage])
+export function calculateStageStandings(stage: Stage, sessionId?: string): DriverStanding[] {
+  return collectResultsFromStages([stage], sessionId)
 }
 
 export function getName(obj: { name_zh: string; name_en: string }, lang: string): string {

@@ -55,7 +55,7 @@ src/
 │   └── zh.ts                  # 中文翻译（~711 行，必须与 en.ts 键完全一致）
 ├── lib/
 │   ├── utils.ts               # cn(), formatDate(), formatDateTime(), statusColor(), ScoringTableEntry, getCompetitionStatus(), getRoundStatus()
-│   ├── results.ts             # 成绩计算：findStageById(), getPointsForPosition(), getStageResultStatus(), calculate*Standings()
+│   ├── results.ts             # 成绩计算：findStageById(), getPointsForPosition(), getStageResultStatus()/getSessionResultStatus(), getRaceSessionId(), calculate*Standings()（均支持 sessionId 过滤）
 │   └── scrollContainer.ts     # 滚动容器引用，路由切换时 scrollToTop
 └── pages/
     ├── admin/
@@ -72,7 +72,7 @@ src/
     │   └── TemplateEditPage.tsx      # /templates/create 和 /templates/:id/edit（同一组件）
     ├── results/
     │   ├── ResultListPage.tsx        # /results — Competition→Round→Stage 三级展开树
-    │   └── ResultEntryPage.tsx       # /results/:stageId — 按 Split 录入成绩 + 自动积分 + 发布
+    │   └── ResultEntryPage.tsx       # /results/:stageId — 按 Session+Split 录入成绩（session 选择器）+ 自动积分 + 发布
     ├── protests/                     # ProtestListPage, ProtestDetailPage
     ├── users/                        # UserListPage, UserDetailPage（"用户"即 drivers）
     ├── news/                         # NewsListPage, NewsEditPage（create 与 edit 同组件）
@@ -112,12 +112,14 @@ src/
 Competition（赛事，如 MOZA GT3 Challenge）
   └─ Round[]（分站，如 Round 1 - Monza）
       └─ Stage[]（阶段：预选赛 qualifier / 正赛日 race_day / 决赛 final…）
-          ├─ sessions: Session[]   游戏内 P/Q/R 时序（时长、时段、时间倍率）
-          ├─ splits: Split[]                服务器实例（含 entryList + results）
-          └─ gameConfig?: SessionGameConfig 游戏引擎参数（赛道、天气、规则、辅助等，~70 字段）
+          ├─ sessions: Session[]   游戏内 P/Q/R 共享时序模板（时长、时段、时间倍率）
+          ├─ splits: Split[]       服务器实例（含 entryList + results；results 按 Session 归属）
+          └─ gameConfig?: SessionGameConfig 共享开赛参数（赛道、天气、规则、辅助等，~70 字段）
 ```
 
-> **重要**：Stage 的游戏时序字段名是 `sessions`（不是 `gameSessions`）。`sessions` 与 `splits` 是 Stage 下的平级数组——多 Split 时各服务器实例共享同一份 `gameConfig` 和 `sessions`。
+> **重要**：Stage 的游戏时序字段名是 `sessions`（不是 `gameSessions`）。`sessions` 与 `splits` 是 Stage 下的平级数组——多 Split 时各服务器实例共享同一份 `gameConfig` 和 `sessions` 时序。
+>
+> **成绩归属**：`Session` 是成绩归属的最小颗粒度。成绩记录（`SessionResult`）存放在 `Split.results` 上，但**每条记录带 `sessionId` 字段**指明所属的 Session（如 qualifying / race）。同一 Split 内不同 Session 的成绩各自独立，可分别查看；聚合时沿 Session → Split → Stage → Round → Competition 逐级汇总。
 
 ### Competition
 - 状态 `CompetitionStatus`：`Draft | Upcoming | RegistrationOpen | RegistrationClosed | InProgress | Completed | ResultsPublished | Cancelled`（由 `getCompetitionStatus()` 从 rounds 聚合推导，除非设了 `statusOverride: 'Draft' | 'Cancelled'`）
@@ -134,23 +136,25 @@ Competition（赛事，如 MOZA GT3 Challenge）
 
 ### Stage
 - `type: StageType`：`qualifier | race_day | final | consolation | practice | custom`
-- `sessions: Session[]`（Practice/Qualifying/Race 时序条目）
-- `splits: Split[]`（每个 Split = 一个并行服务器，含独立 `entryList`、`results`、服务器参数）
-- `gameConfig?: SessionGameConfig`（绑定到 Stage，AC/ACC 专用服务器配置）
+- `sessions: Session[]`（共享的 Practice/Qualifying/Race 时序模板，所有 Split 按此统一时序运行）
+- `splits: Split[]`（每个 Split = 一个并行服务器，含独立 `entryList`、`results`、服务器参数；`results` 按 `sessionId` 归属到具体 Session）
+- `gameConfig?: SessionGameConfig`（绑定到 Stage 的共享开赛参数，AC/ACC 专用服务器配置）
 - `eligibilitySource?`：`roundRegistration | previousStageResult | manualInvite`
 - `advancementRule?`：`{ metric: 'lapTime'|'points'|'position'|'manual', lapTimeMultiplier?, limit?, targetStageId?, fallbackPolicy? }`
 - `enableMultiSplit?`、`maxEntriesPerSplit?`、`maxSplits?`、`splitAssignmentRule?`、`minEntries?`
-- 状态由 `getRoundStatus()` / `getStageResultStatus()` 从时间与成绩推导
+- 状态由 `getRoundStatus()` / `getStageResultStatus()`（整体）/ `getSessionResultStatus()`（单 Session）从时间与成绩推导
+
+> **注意**：`Split` **没有** `sessionId` 字段（一个 Split 运行所有 Session，而非属于某个 Session）。`SessionResult` 才带 `sessionId?` 字段。成绩的 session 归属在 `SessionResult.sessionId` 上。
 
 ### 工厂函数（`src/data/competitions.ts`）
 - `createDefaultRound(competitionId)`、`createDefaultStage(roundId, type?)`
-- `createDefaultSession(type?)`、`createDefaultSplit(sessionId, splitNumber)`、`createDefaultEntryListEntry(raceNumber)`
+- `createDefaultSession(type?)`、`createDefaultSplit(stageId, splitNumber)`、`createDefaultEntryListEntry(raceNumber)`
 - `createDefaultGameConfig(game)`（按 AC/ACC 返回不同默认配置）
 - `createDefaultTemplate(game)`
 - `addCompetition(c)` / `updateCompetition(updated)`（直接 mutate 导入数组）
 
 ### 数据迁移说明
-mock 原始数据（`_rawCompetitions`）里 Stage 用扁平 `sessions[]`（每个 session 内嵌 `splits`/`gameConfig`），导出前由 `migrateCompetitions()` 转换：把 race session 的 `gameConfig` 和 `splits` 上提到 Stage 层级，session 列表映射为 `Session[]`。最终导出的 `competitions` 数组里 Stage 结构已是扁平的 `sessions` + `splits` + `gameConfig`。
+mock 原始数据（`_rawCompetitions`）里 Stage 用扁平 `sessions[]`（每个 session 内嵌 `splits`/`gameConfig`），导出前由 `migrateCompetitions()` 转换：把 race session 的 `gameConfig` 和 `splits` 上提到 Stage 层级，session 列表映射为 `Session[]`（id 加 `_gs` 后缀）。**成绩归属**：迁移时为每条 `SessionResult` 回填 `sessionId`（指向迁移后的 Session id）；若原始 result 已带 `sessionId`（如手工标注的 qualifying 成绩）则保留。迁移会清除 Split 上残留的 `sessionId` 字段（一个 Split 运行所有 Session，不再属于单个 Session）。最终导出的 `competitions` 数组里 Stage 结构是扁平的 `sessions` + `splits` + `gameConfig`，splits 上无 `sessionId`，results 上带 `sessionId`。
 
 ### ManagedOption / OptionGroup (`src/data/options.ts`)
 - 13 个选项组，按 6 个 `OptionCategory` 分类：`competition`（game/carClass/region/splitRule/eligibilitySource）、`result`（resultStatus）、`protest`（protestStatus/penaltyType）、`user`（banType）、`news`（newsCategory）、`notification`（notificationType/notificationRecipient/notificationChannel）
@@ -297,7 +301,7 @@ npm run lint       # eslint
 
 ### 必须遵守
 - **纯前端原型**：不引入任何后端调用，所有数据来自 `src/data/`
-- **数据字段命名**：Stage 的游戏时序字段是 `sessions`（`Session[]`），不要写成 `gameSessions`
+- **数据字段命名**：Stage 的游戏时序字段是 `sessions`（`Session[]`），不要写成 `gameSessions`；成绩归属字段是 `SessionResult.sessionId`（指向 `Stage.sessions[].id`），`Split` 不带 `sessionId`
 - **i18n 键完整**：新增 UI 文本必须同时在 `zh.ts` 和 `en.ts` 中添加对应键
 - **双语字段**：新增用户内容字段必须提供 `_zh` 和 `_en` 两个版本
 - **editLang 一致**：双语输入必须跟随 `editLang`，不能同时显示两个语言的输入框

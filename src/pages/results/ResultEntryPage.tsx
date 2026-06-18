@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Badge } from '@/components/ui/Badge'
-import { findStageById, getPointsForPosition, getName } from '@/lib/results'
+import { findStageById, getPointsForPosition, getName, getRaceSessionId } from '@/lib/results'
 import type { SessionResult, ResultStatus } from '@/data/competitions'
 import type { ScoringTableEntry } from '@/lib/utils'
 import { ArrowLeft, Save, Upload, Trophy, Plus, Trash2, CheckCircle } from 'lucide-react'
@@ -46,6 +46,9 @@ export function ResultEntryPage() {
   })
 
   const [activeSplit, setActiveSplit] = useState(0)
+  const [activeSessionId, setActiveSessionId] = useState<string | undefined>(
+    () => ctx?.stage ? (getRaceSessionId(ctx.stage) ?? ctx.stage.sessions[0]?.id) : undefined,
+  )
   const [autoPoints, setAutoPoints] = useState(true)
   const [showUpload, setShowUpload] = useState(false)
 
@@ -84,16 +87,16 @@ export function ResultEntryPage() {
   }
 
   const addDriver = (driverId: string) => {
-    if (!current) return
+    if (!current || !activeSessionId) return
     const driver = drivers.find(d => d.id === driverId)
-    const existingIdx = current.results.length
-    const newPosition = existingIdx + 1
+    const newPosition = sessionResults.length + 1
     setSplitStates(prev => prev.map(ss => {
       if (ss.splitId !== current.splitId) return ss
       const newResult: SessionResult = {
         position: newPosition,
         driverId,
         teamId: driver?.teamId,
+        sessionId: activeSessionId,
         status: 'Finished',
         points: autoPoints && scoringTable ? getPointsForPosition(scoringTable, newPosition) : 0,
       }
@@ -143,13 +146,14 @@ export function ResultEntryPage() {
     }
   }
 
-  const availableDrivers = registeredDrivers.filter(
-    did => !current?.results.some(r => r.driverId === did),
-  )
-
-  const sortedResults = current
-    ? [...current.results].map((r, origIdx) => ({ r, origIdx })).sort((a, b) => a.r.position - b.r.position)
+  const sessionResults = current
+    ? current.results.map((r, fullIdx) => ({ r, fullIdx })).filter(({ r }) => r.sessionId === activeSessionId)
     : []
+  const sortedResults = [...sessionResults].sort((a, b) => a.r.position - b.r.position)
+
+  const availableDrivers = registeredDrivers.filter(
+    did => !sessionResults.some(({ r }) => r.driverId === did),
+  )
 
   return (
     <div className="p-6 space-y-4">
@@ -234,6 +238,31 @@ export function ResultEntryPage() {
         </Card>
       )}
 
+      {/* Session selector */}
+      {stage.sessions.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-gray-500">{t('competition.sessions')}:</span>
+          {stage.sessions.map(s => {
+            const count = current?.results.filter(r => r.sessionId === s.id).length ?? 0
+            return (
+              <button
+                key={s.id}
+                onClick={() => setActiveSessionId(s.id)}
+                className={cn(
+                  'px-3 py-1.5 text-xs font-medium rounded-md border transition-colors',
+                  activeSessionId === s.id
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 text-gray-600 hover:bg-gray-50',
+                )}
+              >
+                {getName(s, lang)}
+                <span className="ml-1 text-gray-400">({count})</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       {/* Split tabs */}
       {splitStates.length > 1 && (
         <div className="flex gap-1 border-b border-gray-200">
@@ -294,7 +323,7 @@ export function ResultEntryPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {sortedResults.map(({ r, origIdx }) => {
+                {sortedResults.map(({ r, fullIdx }) => {
                   const driver = drivers.find(d => d.id === r.driverId)
                   const team = r.teamId ? teams.find(t => t.id === r.teamId) : undefined
                   return (
@@ -304,7 +333,7 @@ export function ResultEntryPage() {
                           type="number"
                           className="w-12 text-center"
                           value={String(r.position)}
-                          onChange={(e) => handlePositionChange(origIdx, Number(e.target.value))}
+                          onChange={(e) => handlePositionChange(fullIdx, Number(e.target.value))}
                         />
                       </td>
                       <td className="px-3 py-1.5 text-sm font-medium text-gray-900">
@@ -315,7 +344,7 @@ export function ResultEntryPage() {
                         <Input
                           className="w-24"
                           value={r.totalTime ?? ''}
-                          onChange={(e) => updateResult(origIdx, { totalTime: e.target.value })}
+                          onChange={(e) => updateResult(fullIdx, { totalTime: e.target.value })}
                           placeholder="0:00:00"
                         />
                       </td>
@@ -323,7 +352,7 @@ export function ResultEntryPage() {
                         <Input
                           className="w-24"
                           value={r.bestLap ?? ''}
-                          onChange={(e) => updateResult(origIdx, { bestLap: e.target.value })}
+                          onChange={(e) => updateResult(fullIdx, { bestLap: e.target.value })}
                           placeholder="0:00.0"
                         />
                       </td>
@@ -332,14 +361,14 @@ export function ResultEntryPage() {
                           type="number"
                           className="w-12"
                           value={String(r.lapsCompleted ?? 0)}
-                          onChange={(e) => updateResult(origIdx, { lapsCompleted: Number(e.target.value) })}
+                          onChange={(e) => updateResult(fullIdx, { lapsCompleted: Number(e.target.value) })}
                         />
                       </td>
                       <td className="px-3 py-1.5">
                         <Input
                           className="w-20"
                           value={r.gapToLeader ?? ''}
-                          onChange={(e) => updateResult(origIdx, { gapToLeader: e.target.value })}
+                          onChange={(e) => updateResult(fullIdx, { gapToLeader: e.target.value })}
                           placeholder="—"
                         />
                       </td>
@@ -347,14 +376,14 @@ export function ResultEntryPage() {
                         <Select
                           options={statusOptions}
                           value={r.status}
-                          onChange={(e) => updateResult(origIdx, { status: e.target.value as ResultStatus })}
+                          onChange={(e) => updateResult(fullIdx, { status: e.target.value as ResultStatus })}
                         />
                       </td>
                       <td className="px-3 py-1.5">
                         <Input
                           className="w-20"
                           value={r.penalty ?? ''}
-                          onChange={(e) => updateResult(origIdx, { penalty: e.target.value })}
+                          onChange={(e) => updateResult(fullIdx, { penalty: e.target.value })}
                           placeholder="—"
                         />
                       </td>
@@ -363,12 +392,12 @@ export function ResultEntryPage() {
                           type="number"
                           className="w-14 text-right"
                           value={String(r.points ?? 0)}
-                          onChange={(e) => updateResult(origIdx, { points: Number(e.target.value) })}
+                          onChange={(e) => updateResult(fullIdx, { points: Number(e.target.value) })}
                         />
                       </td>
                       <td className="px-3 py-1.5">
                         <button
-                          onClick={() => removeResult(origIdx)}
+                          onClick={() => removeResult(fullIdx)}
                           className="text-gray-300 hover:text-red-500"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

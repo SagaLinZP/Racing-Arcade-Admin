@@ -12,6 +12,7 @@ import { Modal } from '@/components/ui/Modal'
 import { cn } from '@/lib/utils'
 import {
   getStageResultStatus,
+  getSessionResultCount,
   calculateCompetitionStandings,
   calculateRoundStandings,
   getName,
@@ -134,9 +135,11 @@ export function ResultListPage() {
                               {round.stages.map(stage => {
                                 const status = getStageResultStatus(stage)
                                 const hasResults = stage.splits.some(s => s.results && s.results.length > 0)
-                                const totalResults = stage.splits.reduce(
-                                  (sum, s) => sum + (s.results?.length ?? 0), 0,
-                                )
+                                const sessionCounts = stage.sessions.map(s => ({
+                                  session: s,
+                                  count: getSessionResultCount(stage, s.id),
+                                }))
+                                const totalResults = sessionCounts.reduce((sum, sc) => sum + sc.count, 0)
                                 return (
                                   <div
                                     key={stage.id}
@@ -165,7 +168,9 @@ export function ResultListPage() {
                                       </span>
                                       {totalResults > 0 && (
                                         <span className="text-xs text-gray-400">
-                                          {totalResults} {t('result.entries').toLowerCase()}
+                                          {sessionCounts.filter(sc => sc.count > 0).map(sc =>
+                                            `${getName(sc.session, lang)}:${sc.count}`,
+                                          ).join(' / ')}
                                         </span>
                                       )}
                                       <div className="flex-1" />
