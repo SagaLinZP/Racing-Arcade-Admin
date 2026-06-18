@@ -459,7 +459,6 @@ export function ServerConfigModal({
               {splitCount > 1 && (
                 <div className="flex items-center gap-2">
                   <Badge variant="info">{t('gameConfig.split')} {split.splitNumber}</Badge>
-                  {split.resultsPublishedAt && <Badge variant="success">{t('gameConfig.resultsPublished')}</Badge>}
                 </div>
               )}
               <div>
@@ -535,6 +534,7 @@ export function ServerConfigModal({
                 game={game}
                 editLang={editLang}
                 t={t}
+                registeredDrivers={registeredDrivers}
                 onAutoGenerate={() => autoGenerateEntryList(split.id)}
                 onAddEntry={() => addEntryListEntry(split.id)}
                 onUpdateEntry={(entryId, patch) => updateEntryListEntry(split.id, entryId, patch)}
@@ -601,6 +601,7 @@ function EntryListEditor({
   split,
   game,
   t,
+  registeredDrivers,
   onAutoGenerate,
   onAddEntry,
   onUpdateEntry,
@@ -610,6 +611,7 @@ function EntryListEditor({
   game: GamePlatform
   editLang: 'en' | 'zh'
   t: (key: string, opts?: Record<string, unknown>) => string
+  registeredDrivers: Array<{ id: string; nickname: string; teamName?: string; teamId?: string }>
   onAutoGenerate: () => void
   onAddEntry: () => void
   onUpdateEntry: (entryId: string, patch: Partial<EntryListEntry>) => void
@@ -655,7 +657,7 @@ function EntryListEditor({
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('serverConfig.entryListRaceNumber')}</th>
-                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('serverConfig.entryListDriverName')}</th>
+                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('serverConfig.entryListDriver')}</th>
                     <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('serverConfig.entryListTeamName')}</th>
                     <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('serverConfig.entryListCarModel')}</th>
                     <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('serverConfig.entryListBallast')}</th>
@@ -676,11 +678,27 @@ function EntryListEditor({
                         />
                       </td>
                       <td className="px-2 py-1.5">
-                        <input
-                          className="block w-full min-w-[100px] rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          value={entry.driverName}
-                          onChange={(e) => onUpdateEntry(entry.id, { driverName: e.target.value })}
-                        />
+                        <select
+                          className="block w-full min-w-[120px] rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          value={entry.driverId || ''}
+                          onChange={(e) => {
+                            const driver = registeredDrivers.find(d => d.id === e.target.value)
+                            if (driver) {
+                              onUpdateEntry(entry.id, { driverId: driver.id, driverName: driver.nickname, teamName: driver.teamName })
+                            } else {
+                              onUpdateEntry(entry.id, { driverId: undefined, driverName: '' })
+                            }
+                          }}
+                        >
+                          <option value="">{t('serverConfig.entryListSelectDriver')}</option>
+                          {registeredDrivers
+                            .filter(d => d.id === entry.driverId || !entries.some(e => e.id !== entry.id && e.driverId === d.id))
+                            .map(d => (
+                              <option key={d.id} value={d.id}>
+                                {d.nickname}{d.teamName ? ` (${d.teamName})` : ''}
+                              </option>
+                            ))}
+                        </select>
                       </td>
                       <td className="px-2 py-1.5">
                         <input
