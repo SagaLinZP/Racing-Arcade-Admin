@@ -182,7 +182,7 @@ export interface BopEntry {
   ballastKg: number
 }
 
-export interface GameSessionEntry {
+export interface Session {
   id: string
   type: SessionType
   name_zh: string
@@ -217,7 +217,7 @@ export interface Stage {
   startsAt: string
   endsAt: string
   gameConfig?: SessionGameConfig
-  gameSessions: GameSessionEntry[]
+  sessions: Session[]
   splits: Split[]
   bopEntries?: BopEntry[]
   eligibilitySource?: 'roundRegistration' | 'previousStageResult' | 'manualInvite'
@@ -440,7 +440,7 @@ export function createDefaultEntryListEntry(raceNumber: number): EntryListEntry 
   }
 }
 
-export function createDefaultGameSession(type?: SessionType): GameSessionEntry {
+export function createDefaultSession(type?: SessionType): Session {
   const sessionType = type || 'practice'
   const id = `gs_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
   const names: Record<string, { zh: string; en: string }> = {
@@ -449,7 +449,7 @@ export function createDefaultGameSession(type?: SessionType): GameSessionEntry {
     race: { zh: '正赛', en: 'Race' },
     timeTrial: { zh: '计时赛', en: 'Time Trial' },
   }
-  const base: GameSessionEntry = {
+  const base: Session = {
     id,
     type: sessionType,
     name_zh: names[sessionType]?.zh ?? '练习赛',
@@ -465,6 +465,59 @@ export function createDefaultGameSession(type?: SessionType): GameSessionEntry {
     base.durationMinutes = sessionType === 'qualifying' ? 15 : 30
   }
   return base
+}
+
+export function createDefaultStage(roundId: string, type?: StageType): Stage {
+  const stageType = type || 'race_day'
+  const id = `stg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+  const names: Record<StageType, { zh: string; en: string }> = {
+    qualifier: { zh: '预选赛', en: 'Qualifying' },
+    race_day: { zh: '正赛日', en: 'Race Day' },
+    final: { zh: '决赛', en: 'Final' },
+    consolation: { zh: '复活赛', en: 'Consolation' },
+    practice: { zh: '练习', en: 'Practice' },
+    custom: { zh: '自定义', en: 'Custom' },
+  }
+  const now = new Date()
+  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+  return {
+    id,
+    roundId,
+    type: stageType,
+    name_zh: names[stageType]?.zh ?? '正赛日',
+    name_en: names[stageType]?.en ?? 'Race Day',
+    startsAt: tomorrow.toISOString(),
+    endsAt: new Date(tomorrow.getTime() + 3 * 60 * 60 * 1000).toISOString(),
+    gameConfig: undefined,
+    sessions: [
+      createDefaultSession('practice'),
+      createDefaultSession('qualifying'),
+      createDefaultSession('race'),
+    ],
+    splits: [createDefaultSplit(id, 1)],
+    eligibilitySource: 'roundRegistration',
+    enableMultiSplit: false,
+  }
+}
+
+export function createDefaultRound(competitionId: string): Round {
+  const id = `rnd_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+  const now = new Date()
+  const inSevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+  return {
+    id,
+    competitionId,
+    roundNumber: undefined,
+    name_zh: '新分站',
+    name_en: 'New Round',
+    track: '',
+    registrationOpenAt: now.toISOString(),
+    registrationCloseAt: inSevenDays.toISOString(),
+    cancelRegistrationDeadline: inSevenDays.toISOString(),
+    stages: [createDefaultStage(id, 'race_day')],
+    currentRegistrations: 0,
+    registeredDriverIds: [],
+  }
 }
 
 const _rawCompetitions = [
@@ -1370,17 +1423,17 @@ type RawSession = {
 }
 
 function migrateStage(rawSessions: RawSession[]): {
-  gameSessions: GameSessionEntry[]
+  sessions: Session[]
   gameConfig?: SessionGameConfig
   splits: Split[]
 } {
   if (rawSessions.length === 0) {
-    return { gameSessions: [], splits: [] }
+    return { sessions: [], splits: [] }
   }
 
   const race = rawSessions.find(s => s.type === 'race') ?? rawSessions[rawSessions.length - 1]
 
-  const gameSessions: GameSessionEntry[] = rawSessions.map(s => ({
+  const sessions: Session[] = rawSessions.map(s => ({
     id: `${s.id}_gs`,
     type: s.type,
     name_zh: s.name_zh,
@@ -1391,7 +1444,7 @@ function migrateStage(rawSessions: RawSession[]): {
   }))
 
   return {
-    gameSessions,
+    sessions,
     gameConfig: race.gameConfig,
     splits: race.splits,
   }
@@ -1414,7 +1467,7 @@ function migrateCompetitions(raw: Record<string, unknown>[]): Competition[] {
             return {
               ...stageFields,
               gameConfig: migrated.gameConfig,
-              gameSessions: migrated.gameSessions,
+              sessions: migrated.sessions,
               splits: migrated.splits,
             }
           }),
@@ -1425,3 +1478,12 @@ function migrateCompetitions(raw: Record<string, unknown>[]): Competition[] {
 }
 
 export const competitions: Competition[] = migrateCompetitions(_rawCompetitions)
+
+export function addCompetition(c: Competition) {
+  competitions.push(c)
+}
+
+export function updateCompetition(updated: Competition) {
+  const idx = competitions.findIndex(c => c.id === updated.id)
+  if (idx >= 0) competitions[idx] = updated
+}

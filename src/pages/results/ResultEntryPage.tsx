@@ -209,7 +209,7 @@ export function ResultEntryPage() {
           </div>
           <div>
             <span className="text-gray-500">{t('competition.sessions')}: </span>
-            <span className="font-medium">{stage.gameSessions.length}</span>
+            <span className="font-medium">{stage.sessions.length}</span>
           </div>
           {scoringTable && scoringTable.length > 0 && (
             <div className="ml-auto">

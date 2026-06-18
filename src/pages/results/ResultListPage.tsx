@@ -158,7 +158,7 @@ export function ResultListPage() {
                                         <Badge variant="default" className="text-xs">{stage.gameConfig.track}</Badge>
                                       )}
                                       <span className="text-xs text-gray-400">
-                                        {stage.gameSessions.length} {t('competition.sessions').toLowerCase()}
+                                        {stage.sessions.length} {t('competition.sessions').toLowerCase()}
                                       </span>
                                       <span className="text-xs text-gray-400">
                                         {stage.splits.length} {t('result.split').toLowerCase()}(s)

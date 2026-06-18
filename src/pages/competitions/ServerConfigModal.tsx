@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import {
   createDefaultGameConfig,
   createDefaultSplit,
-  createDefaultGameSession,
+  createDefaultSession,
   createDefaultEntryListEntry,
   sessionTemplates,
 } from '@/data/competitions'
@@ -19,7 +19,7 @@ import type {
   Split,
   GamePlatform,
   SessionType,
-  GameSessionEntry,
+  Session,
   SessionTemplate,
   BopEntry,
   EntryListEntry,
@@ -64,10 +64,10 @@ export function ServerConfigModal({
     const base: Stage = {
       ...stage,
       gameConfig: stage.gameConfig ?? createDefaultGameConfig(game),
-      gameSessions: stage.gameSessions?.length ? stage.gameSessions : [
-        createDefaultGameSession('practice'),
-        createDefaultGameSession('qualifying'),
-        createDefaultGameSession('race'),
+      sessions: stage.sessions?.length ? stage.sessions : [
+        createDefaultSession('practice'),
+        createDefaultSession('qualifying'),
+        createDefaultSession('race'),
       ],
     }
     const current = base.splits ?? []
@@ -100,16 +100,16 @@ export function ServerConfigModal({
       splits: prev.splits.map(s => s.id === splitId ? { ...s, [key]: value } : s),
     }))
 
-  const updateGameSession = (gsId: string, patch: Partial<GameSessionEntry>) =>
+  const updateSession = (gsId: string, patch: Partial<Session>) =>
     setLocal(prev => ({
       ...prev,
-      gameSessions: prev.gameSessions.map(gs => gs.id === gsId ? { ...gs, ...patch } : gs),
+      sessions: prev.sessions.map(gs => gs.id === gsId ? { ...gs, ...patch } : gs),
     }))
 
-  const handleGameSessionTypeChange = (gsId: string, newType: SessionType) => {
+  const handleSessionTypeChange = (gsId: string, newType: SessionType) => {
     setLocal(prev => ({
       ...prev,
-      gameSessions: prev.gameSessions.map(gs => {
+      sessions: prev.sessions.map(gs => {
         if (gs.id !== gsId) return gs
         if (newType === 'race') {
           return { ...gs, type: newType, durationMinutes: undefined, raceDuration: gs.raceDuration ?? 60, raceDurationType: gs.raceDurationType ?? 'time' }
@@ -119,22 +119,22 @@ export function ServerConfigModal({
     }))
   }
 
-  const addGameSession = () => {
-    const newGs = createDefaultGameSession('practice')
-    setLocal(prev => ({ ...prev, gameSessions: [...prev.gameSessions, newGs] }))
+  const addSession = () => {
+    const newGs = createDefaultSession('practice')
+    setLocal(prev => ({ ...prev, sessions: [...prev.sessions, newGs] }))
   }
 
-  const deleteGameSession = (gsId: string) => {
-    setLocal(prev => ({ ...prev, gameSessions: prev.gameSessions.filter(gs => gs.id !== gsId) }))
+  const deleteSession = (gsId: string) => {
+    setLocal(prev => ({ ...prev, sessions: prev.sessions.filter(gs => gs.id !== gsId) }))
   }
 
-  const moveGameSession = (idx: number, dir: -1 | 1) => {
+  const moveSession = (idx: number, dir: -1 | 1) => {
     setLocal(prev => {
-      const arr = [...prev.gameSessions]
+      const arr = [...prev.sessions]
       const target = idx + dir
       if (target < 0 || target >= arr.length) return prev
       ;[arr[idx], arr[target]] = [arr[target], arr[idx]]
-      return { ...prev, gameSessions: arr }
+      return { ...prev, sessions: arr }
     })
   }
 
@@ -234,7 +234,7 @@ export function ServerConfigModal({
 
   const validateServerStart = (): string[] => {
     const errors: string[] = []
-    if (local.gameSessions.length === 0) {
+    if (local.sessions.length === 0) {
       errors.push(t('gameConfig.errNoGameSessions'))
     }
     if (!gc.track) {
@@ -388,33 +388,33 @@ export function ServerConfigModal({
         <div className="space-y-3">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-sm font-semibold text-gray-700">{t('gameConfig.gameSessions')}</h4>
-            <Button variant="ghost" size="sm" onClick={addGameSession}>
+            <Button variant="ghost" size="sm" onClick={addSession}>
               <Plus className="w-3.5 h-3.5 mr-1" />{t('gameConfig.addGameSession')}
             </Button>
           </div>
           <div className="space-y-2">
-            {local.gameSessions.map((gs, idx) => (
+            {local.sessions.map((gs, idx) => (
               <div key={gs.id} className="flex items-start gap-2 rounded-md border border-gray-200 bg-gray-50 p-2.5">
                 <div className="flex flex-col items-center pt-5">
-                  <button onClick={() => moveGameSession(idx, -1)} disabled={idx === 0} className="text-gray-400 hover:text-gray-600 disabled:opacity-30">
+                  <button onClick={() => moveSession(idx, -1)} disabled={idx === 0} className="text-gray-400 hover:text-gray-600 disabled:opacity-30">
                     <ChevronUp className="w-3.5 h-3.5" />
                   </button>
                   <span className="text-xs text-gray-400 py-0.5">{idx + 1}</span>
-                  <button onClick={() => moveGameSession(idx, 1)} disabled={idx === local.gameSessions.length - 1} className="text-gray-400 hover:text-gray-600 disabled:opacity-30">
+                  <button onClick={() => moveSession(idx, 1)} disabled={idx === local.sessions.length - 1} className="text-gray-400 hover:text-gray-600 disabled:opacity-30">
                     <ChevronDown className="w-3.5 h-3.5" />
                   </button>
                 </div>
                 <div className="flex-1 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2">
-                  <Select label={t('competition.sessionType')} options={SESSION_TYPE_OPTIONS_T(t)} value={gs.type} onChange={(e) => handleGameSessionTypeChange(gs.id, e.target.value as SessionType)} />
-                  <Input label={`${t('common.name')} (${editLang === 'en' ? 'EN' : '中文'})`} value={editLang === 'en' ? gs.name_en : gs.name_zh} onChange={(e) => updateGameSession(gs.id, editLang === 'en' ? { name_en: e.target.value } : { name_zh: e.target.value })} />
+                  <Select label={t('competition.sessionType')} options={SESSION_TYPE_OPTIONS_T(t)} value={gs.type} onChange={(e) => handleSessionTypeChange(gs.id, e.target.value as SessionType)} />
+                  <Input label={`${t('common.name')} (${editLang === 'en' ? 'EN' : '中文'})`} value={editLang === 'en' ? gs.name_en : gs.name_zh} onChange={(e) => updateSession(gs.id, editLang === 'en' ? { name_en: e.target.value } : { name_zh: e.target.value })} />
                   {gs.type !== 'race' ? (
-                    <Input label={t('gameConfig.durationMinutes')} type="number" value={String(gs.durationMinutes ?? '')} onChange={(e) => updateGameSession(gs.id, { durationMinutes: Number(e.target.value) })} />
+                    <Input label={t('gameConfig.durationMinutes')} type="number" value={String(gs.durationMinutes ?? '')} onChange={(e) => updateSession(gs.id, { durationMinutes: Number(e.target.value) })} />
                   ) : (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">{t('gameConfig.raceDuration')}</label>
                       <div className="flex gap-1">
-                        <input type="number" className="block w-full min-w-0 rounded-md border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={String(gs.raceDuration ?? '')} onChange={(e) => updateGameSession(gs.id, { raceDuration: Number(e.target.value) })} />
-                        <select className="rounded-md border border-gray-300 px-1.5 py-2 text-sm" value={gs.raceDurationType || 'time'} onChange={(e) => updateGameSession(gs.id, { raceDurationType: e.target.value as 'time' | 'laps' })}>
+                        <input type="number" className="block w-full min-w-0 rounded-md border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" value={String(gs.raceDuration ?? '')} onChange={(e) => updateSession(gs.id, { raceDuration: Number(e.target.value) })} />
+                        <select className="rounded-md border border-gray-300 px-1.5 py-2 text-sm" value={gs.raceDurationType || 'time'} onChange={(e) => updateSession(gs.id, { raceDurationType: e.target.value as 'time' | 'laps' })}>
                           <option value="time">{t('gameConfig.timeBased')}</option>
                           <option value="laps">{t('gameConfig.lapsBased')}</option>
                         </select>
@@ -423,23 +423,23 @@ export function ServerConfigModal({
                   )}
                   {game === 'ACC' && (
                     <>
-                      <Input label={t('gameConfig.dayOfWeekend')} type="number" min="1" max="3" value={String(gs.dayOfWeekend ?? 1)} onChange={(e) => updateGameSession(gs.id, { dayOfWeekend: Number(e.target.value) })} />
-                      <Input label={t('gameConfig.hourOfDay')} type="number" min="0" max="23" value={String(gs.hourOfDay ?? 14)} onChange={(e) => updateGameSession(gs.id, { hourOfDay: Number(e.target.value) })} />
+                      <Input label={t('gameConfig.dayOfWeekend')} type="number" min="1" max="3" value={String(gs.dayOfWeekend ?? 1)} onChange={(e) => updateSession(gs.id, { dayOfWeekend: Number(e.target.value) })} />
+                      <Input label={t('gameConfig.hourOfDay')} type="number" min="0" max="23" value={String(gs.hourOfDay ?? 14)} onChange={(e) => updateSession(gs.id, { hourOfDay: Number(e.target.value) })} />
                     </>
                   )}
                   {game === 'AC' && (
                     <>
-                      <Input label={t('gameConfig.waitTime')} type="number" value={String(gs.waitTime ?? 60)} onChange={(e) => updateGameSession(gs.id, { waitTime: Number(e.target.value) })} />
-                      <Select label={t('gameConfig.isOpen')} options={IS_OPEN_OPTIONS} value={String(gs.isOpen ?? 1)} onChange={(e) => updateGameSession(gs.id, { isOpen: Number(e.target.value) })} />
+                      <Input label={t('gameConfig.waitTime')} type="number" value={String(gs.waitTime ?? 60)} onChange={(e) => updateSession(gs.id, { waitTime: Number(e.target.value) })} />
+                      <Select label={t('gameConfig.isOpen')} options={IS_OPEN_OPTIONS} value={String(gs.isOpen ?? 1)} onChange={(e) => updateSession(gs.id, { isOpen: Number(e.target.value) })} />
                     </>
                   )}
                 </div>
-                <button onClick={() => deleteGameSession(gs.id)} className="mt-6 text-gray-400 hover:text-red-500">
+                <button onClick={() => deleteSession(gs.id)} className="mt-6 text-gray-400 hover:text-red-500">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             ))}
-            {local.gameSessions.length === 0 && (
+            {local.sessions.length === 0 && (
               <p className="text-sm text-gray-400 text-center py-4">{t('gameConfig.noGameSessions')}</p>
             )}
           </div>

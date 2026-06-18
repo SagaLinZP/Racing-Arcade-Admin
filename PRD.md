@@ -1,7 +1,7 @@
 # Racing Arcade — 产品需求文档（PRD）
 
-> **文档版本**：v1.3
-> **最后更新**：2026-06-17
+> **文档版本**：v1.4
+> **最后更新**：2026-06-18
 > **文档状态**：Draft
 
 ---
@@ -440,15 +440,29 @@ flowchart TD
 
 > **双语字段标记说明**：标记为 `中/英` 的字段，至少填写一种语言即可发布。
 
-平台统一采用 `Competition → Round → Stage` 三层结构。赛事复杂度由 Round/Stage 的层级关系自然体现：只有 1 个 Round 即为单场赛，多个 Round 即为锦标赛或系列赛，无需额外的形态字段。
+平台统一采用 `Competition → Round → Stage → Session` 四层结构。赛事复杂度由 Round/Stage 的层级关系自然体现：只有 1 个 Round 即为单场赛，多个 Round 即为锦标赛或系列赛，无需额外的形态字段。
 
 | 层级 | 中文含义 | 解决的问题 | 示例 |
 |------|----------|------------|------|
 | Competition | 整项赛事 / 锦标赛 / 年度赛事项目 | 承载品牌、规则、区域、积分、车型等公共信息 | MOZA GT3 年度锦标赛 2026 |
 | Round | 一站 / 一场分站 | 承载赛道、时间窗口、报名入口、分站状态 | 第 12 站 - 铃鹿 |
-| Stage | 分站内阶段 | 承载预选、正赛日、决赛、复活赛等流程阶段，**以及完整的开服配置和成绩归属** | 长时间开放预选赛、正赛日 |
+| Stage | 分站内阶段 | 承载预选、正赛日、决赛等流程阶段；**设定并行服务器（Split）数量与共享开赛参数** | 长时间开放预选赛、正赛日 |
+| Session | 游戏内时段 / **成绩归属的最小颗粒度** | Practice / Qualifying / Race 等游戏内时序；成绩在此层归属，可分别查看 | 正赛日内的 Qualifying 成绩、Race 成绩 |
 
-> **Session 的定位**：Session 不再作为独立实体存在，而是作为 Stage 内部的轻量条目（`GameSessionEntry`），用于编排游戏内 Practice / Qualifying / Race 的时序参数（时长、时段、时间倍率等）。服务器配置、参赛名单和成绩都绑定在 Stage 层级——一个 Stage 对应一份服务器配置，Stage 下的多个 Split 对应多个并行服务器实例。
+**Stage、Split、Session 三者的关系**：
+
+- **Split 是 Stage 的横向并行维度**：一个 Stage 可拆分为多个 Split（并行服务器实例）以容纳更多车手。Split 数量在 Stage 层级设定（`max_splits`）；未启用多 Split 时仅 1 个 Split。
+- **一份开赛参数（`game_config`）共享给 Stage 下所有 Split**：该参数含赛道、天气、规则、辅助等游戏引擎配置，**Session 的时序信息（P/Q/R 时长、时段、时间倍率）也定义在这份开赛参数中**，因此同一 Stage 内各 Split 运行的 Session 时序完全一致。
+- **Session 归属于 Split**：每个 Split（服务器）各自按统一的时序运行这些 Session，并产出独立成绩。Session 是成绩归属的最小颗粒度——例如在同一个"正赛日" Stage 中，车手既能查看 Qualifying Session 的排位成绩，也能查看 Race Session 的正赛成绩，两者互不覆盖。
+- **各 Split 仅在服务器实例层面不同**：服务器名称、密码、端口、车位、Entry List（参赛名单）按 Split 独立配置；开赛参数与 Session 时序由 Stage 统一掌控。
+- **成绩汇总方向**：Session（单场时段成绩）→ Split（服务器成绩）→ Stage（阶段成绩）→ Round（分站成绩）→ Competition（总积分）。晋级名单、分站成绩和年度积分均沿此链路聚合。
+
+**创建服务器的流程顺序**（管理员视角）：
+
+1. 在 Stage 层级设定最多几个 Split（`max_splits`、`max_entries_per_split`）
+2. 配置一套开赛参数（`game_config`：赛道、天气、规则、辅助，以及 Session 时序 P/Q/R）
+3. 将这套开赛参数分发给各个服务器（Split）；各 Split 仅补充自己的服务器参数与 Entry List
+4. 每个 Split 按开赛参数中的 Session 时序依次运行 Practice / Qualifying / Race，产出各 Session 的成绩
 
 **建模原则**：
 
@@ -456,9 +470,8 @@ flowchart TD
 - 多个 Round 的 Competition = 多站赛事（锦标赛 / 系列赛）
 - 每个 Round 可只含"正赛日"阶段，也可含"预选赛"+"正赛日"等多个 Stage
 - "Stage"只表示 Round 内部流程，不表示整届赛事的大阶段
-- **一个 Stage = 一份服务器配置**：Stage 内统一管理游戏 Sessions（P/Q/R 时序）、多 Split 服务器实例、游戏引擎参数和参赛名单（Entry List）
 - 车手报名默认以 Round 为目标
-- 成绩绑定到 `Stage.splits[].results`（每个 Split 即一个服务器实例的成绩），再由 Stage/Round/Competition 聚合出晋级名单、分站成绩和总积分
+- 多 Split 仅用于扩容：同一 Stage 的各 Split 共享开赛参数与 Session 时序，仅在服务器实例和参赛名单上独立
 
 ### 4.1.4 Competition 数据模型
 
@@ -519,7 +532,7 @@ Round 是用户实际报名和参赛的主要单位，对应"一站"或"一场�
 
 ### 4.1.6 Stage 数据模型
 
-Stage 是 Round 内部的流程阶段，用来表达"预选赛 → 正赛日 → 决赛"这类同一站内的推进关系。**一个 Stage 对应一份完整的服务器配置**——Stage 内统一管理游戏 Sessions（P/Q/R 时序）、多 Split 服务器实例、游戏引擎参数和参赛名单。
+Stage 是 Round 内部的流程阶段，用来表达"预选赛 → 正赛日 → 决赛"这类同一站内的推进关系。**一个 Stage 对应一份共享开赛参数**——Stage 统一管理游戏引擎参数（`game_config`）、Session 时序模板（`sessions`，即 P/Q/R 的时长与时段，共享给所有 Split）、Split 数量与分组规则；各 Split（并行服务器）按这套统一的时序运行 Session 并各自产出成绩，仅在服务器参数与参赛名单上独立。详见 4.1.3 的层级关系。
 
 | 字段名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
@@ -530,9 +543,9 @@ Stage 是 Round 内部的流程阶段，用来表达"预选赛 → 正赛日 →
 | description_zh / description_en | RichText | 否 | 阶段说明（始终可编辑） |
 | starts_at | DateTime | 是 | 阶段开始时间 |
 | ends_at | DateTime | 是 | 阶段结束时间 |
-| game_config | SessionGameConfig | 否 | 游戏引擎配置参数（赛道、天气、规则、辅助限制等），按 AC/ACC 配置文件组织，详见 4.1.8 |
-| game_sessions | GameSessionEntry[] | 是 | 游戏内 Session 时序条目（Practice/Qualifying/Race 的时长、时段、时间倍率等），详见 4.1.7 |
-| splits | Split[] | 是 | 服务器实例列表；每个 Split 对应一个并行服务器，含独立的服务器参数、参赛名单（Entry List）和成绩。未启用多 Split 时仅有 1 个 Split |
+| game_config | SessionGameConfig | 否 | 共享开赛参数（赛道、天气、规则、辅助限制等），按 AC/ACC 配置文件组织，详见 4.1.8；分发给该 Stage 下所有 Split |
+| sessions | Session[] | 是 | **共享的 Session 时序模板**（Practice/Qualifying/Race 的时长、时段、时间倍率等），定义在开赛参数中，所有 Split 按此统一时序运行；详见 4.1.7 |
+| splits | Split[] | 是 | 服务器实例列表；每个 Split 对应一个并行服务器，按统一的 Session 时序运行，含独立的服务器参数、参赛名单（Entry List）。**各 Session 的成绩按 Session 归属**（同一 Split 内 qualify 与 race 成绩各自独立），未启用多 Split 时仅有 1 个 Split |
 | bop_entries | BopEntry[] | 否 | 性能平衡（BoP）条目，每项含 `track`、`carModel`、`ballastKg` |
 | eligibility_source | Enum | 否 | `roundRegistration` / `previousStageResult` / `manualInvite`，各选项的子字段见下方 |
 | advancement_rule | AdvancementRule | 否 | 晋级规则，见下方 |
@@ -541,7 +554,7 @@ Stage 是 Round 内部的流程阶段，用来表达"预选赛 → 正赛日 →
 | max_splits | Integer | 否 | 最大 Split 数。总报名容量 = max_splits × max_entries_per_split |
 | split_assignment_rule | Enum | 否 | 分组规则（按实力 / 随机 / 手动 / 先到先得） |
 | min_entries | Integer | 否 | 最低开赛人数阈值 |
-| status | Enum | 自动 | 从时间与 Split 成绩聚合 |
+| status | Enum | 自动 | 从时间与 Session 成绩聚合（沿 Session → Split → Stage 链路） |
 
 **Split 数据结构**：
 
@@ -556,7 +569,7 @@ Stage 是 Round 内部的流程阶段，用来表达"预选赛 → 正赛日 →
 | register_to_lobby | Boolean | 否 | 是否注册到大厅 |
 | udp_port / tcp_port / http_port | Integer | 否 | 网络端口 |
 | entry_list | EntryListEntry[] | 否 | 参赛名单，可从 Round 报名自动生成或手动编辑 |
-| results | SessionResult[] | 自动 | 本 Split 的成绩列表 |
+| results | SessionResult[] | 自动 | 本 Split 产出的成绩，**按 Session 归属**（每条记录指明属于哪个 Session，如 qualifying 或 race）；同一 Split 内不同 Session 的成绩各自独立。详见 4.1.7 |
 | results_published_at | DateTime | 自动 | 成绩发布时间 |
 
 > Split 还包含各游戏引擎专用的服务器参数字段（AC 的 `pickup_mode_enabled`、`locked_entry_list`、`max_ballast_kg` 等；ACC 的 `is_race_locked`、`short_formation_lap`、`dump_leaderboards` 等），完整字段参见 4.1.8 配置文件参考表。
@@ -595,13 +608,16 @@ Stage 是 Round 内部的流程阶段，用来表达"预选赛 → 正赛日 →
 | `previousStageResult` | advancement_rule（metric、lap_time_multiplier / limit） | 按上一 Stage 成绩排序晋级；metric 为 `lapTime` 时按圈速倍率筛选，为 `points`/`position` 时按名额取前 N 名 |
 | `manualInvite` | selected_driver_ids (UUID[]) | 管理员从已报名车手中多选勾选参赛名单 |
 
-### 4.1.7 GameSessionEntry 数据模型
+### 4.1.7 Session 数据模型
 
-Session 不再作为独立实体存在，而是作为 Stage 内部的轻量条目（`GameSessionEntry`），用于编排游戏内 Practice / Qualifying / Race 的时序参数。服务器配置、参赛名单和成绩都已上移到 Stage 层级（`Stage.game_config`、`Stage.splits[]`）。
+Session 是四层结构的最底层，也是**成绩归属的最小颗粒度**。它在两个层面发挥作用：
+
+- **时序定义（共享）**：Session 的时序参数（Practice/Qualifying/Race 的时长、时段、时间倍率）作为模板定义在 Stage 的开赛参数中（`Stage.sessions`），共享给该 Stage 下所有 Split——同一 Stage 内各服务器运行的 Session 时序完全一致。
+- **成绩归属（按 Split 独立）**：每个 Split 按统一时序运行这些 Session 后**各自产出独立成绩**，成绩归属于具体的（Split, Session）。例如同一个"正赛日" Stage 中，qualifying Session 的排位成绩与 race Session 的正赛成绩分别存放、互不覆盖，车手可分别查看。
 
 | 字段名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| id | UUID | 自动 | 条目唯一标识 |
+| id | UUID | 自动 | Session 唯一标识 |
 | type | Enum | 是 | `practice` / `qualifying` / `race` / `timeTrial` |
 | name_zh / name_en | String | 是（至少一种） | Session 名称 |
 | duration_minutes | Integer | 否 | 固定时长（分钟） |
@@ -613,14 +629,16 @@ Session 不再作为独立实体存在，而是作为 Stage 内部的轻量条�
 | wait_time | Integer | 否 | AC 等待时间（秒） |
 | is_open | Integer | 否 | AC 是否开放（1/0） |
 
-> **已移除的字段**：`starts_at`/`ends_at`（使用 Stage 时间窗口）、`server_info`/`server_password`/`server_join_link`（移至 Split）、`stream_url`/`vod_url`（移至 Round/Competition 默认直播）、`result_type`/`results`（成绩归属于 `Stage.splits[].results`）、`game_session_restart_policy`/`restart_interval`/`result_merge_rule`（服务器重启策略由 Stage/Split 级配置控制）。
+> **成绩归属**：成绩记录（`SessionResult`）存放在 Split 上（`Stage.splits[].results`），**每条记录指明所属的 Session**（如 qualifying / race）。聚合时沿 Session → Split → Stage → Round → Competition 逐级汇总：先按 Session 在 Split 间合并，再聚合到 Stage，由此可分别得到排位榜、正赛成绩、分站成绩和年度积分。
+
+> **已移除的字段**：`starts_at`/`ends_at`（使用 Stage 时间窗口）、`server_info`/`server_password`/`server_join_link`（移至 Split）、`stream_url`/`vod_url`（移至 Round/Competition 默认直播）、`game_session_restart_policy`/`restart_interval`/`result_merge_rule`（服务器重启策略由 Stage/Split 级配置控制）。
 
 **长时间开放预选赛示例**：
 
 - Stage：预选赛，开放时间由管理员配置（`starts_at` / `ends_at`），可持续数小时、数天或更长
-- GameSessionEntry：`type = practice`，配置时长和开放参数
+- Session：`type = practice`，配置时长和开放参数
 - 服务器实例（Split）：按管理员设定的间隔自动重启游戏内 Session，避免单个房间长期运行不稳定
-- 结果导入：每次游戏内 Session 结束后导入圈速结果到 `Stage.splits[].results`
+- 结果导入：每次游戏内 Session 结束后导入圈速结果到对应 Split 的该 Session 成绩
 - 合并规则：每位车手只取所有游戏内 Session 中最快的一次有效圈速
 - 晋级规则：按合并后的 Stage 榜单排序，使用 `advancement_rule`（`metric = lapTime`，配 `lap_time_multiplier`）筛选晋级车手进入正赛日 Stage
 
@@ -630,10 +648,10 @@ MVP 阶段赛事只面向 AC 与 ACC。后台创建赛事时，管理员不是�
 
 **配置归属原则**：
 
-- **一个 Stage = 一份服务器配置**：自动开服配置绑定到 Stage（`Stage.game_config`），而非独立 Session
-- Stage 下的每个 Split 对应一个并行服务器实例，Split 内含独立的服务器参数（名称、密码、端口、车位等）和参赛名单（Entry List）
+- **一个 Stage = 一份共享开赛参数**：自动开服配置（`Stage.game_config`）与 Session 时序模板（`Stage.sessions`）绑定在 Stage 层级，统一分发给该 Stage 下所有 Split
+- Stage 下的每个 Split 对应一个并行服务器实例，Split 内含独立的服务器参数（名称、密码、端口、车位等）和参赛名单（Entry List）；各 Split 按统一的 Session 时序运行，并**各自产出按 Session 归属的成绩**（qualifying / race 等独立）
 - Competition / Round 提供默认赛道、车型、规则、天气等模板，Stage 可覆盖具体参数
-- 游戏内 Session 时序（Practice/Qualifying/Race 的时长、时段、时间倍率）通过 `Stage.game_sessions`（GameSessionEntry[]）编排
+- 游戏内 Session 时序（Practice/Qualifying/Race 的时长、时段、时间倍率）通过 `Stage.sessions`（Session[]）编排，作为模板共享给所有 Split
 - 基础设施字段（端口、容器路径、管理员密码、插件地址）由系统生成或运维配置，不要求普通赛事管理员手填
 - 隐私和安全字段（管理员密码、Steam GUID、内部端口、插件地址）不得在前台展示
 - 前台"服务器信息"卡片只展示服务器名称、加入密码、直连链接/加入方式、当前 Session 时间、赛道、车辆和必要规则摘要
@@ -645,8 +663,8 @@ MVP 阶段赛事只面向 AC 与 ACC。后台创建赛事时，管理员不是�
 | Stage 字段 | 对应配置内容 | 说明 |
 |------------|-------------|------|
 | `game_config` | 游戏引擎参数 | 赛道、天气、规则、辅助限制等，按 AC/ACC 配置文件组织（event.json、eventRules.json、assistRules.json、settings.json / server_cfg.ini） |
-| `game_sessions` | 游戏内 Session 时序 | Practice/Qualifying/Race 的时长、时段、时间倍率 |
-| `splits[]` | 服务器实例 | 每个 Split 含独立的服务器参数和 Entry List；多 Split 时各实例共享 `game_config` 和 `game_sessions` |
+| `sessions` | 游戏内 Session 时序 | Practice/Qualifying/Race 的时长、时段、时间倍率 |
+| `splits[]` | 服务器实例 | 每个 Split 含独立的服务器参数和 Entry List；多 Split 时各实例共享 `game_config` 和 `sessions` 时序，各自产出按 Session 归属的成绩 |
 | `bop_entries` | 性能平衡 | BoP 表，对应 ACC `bop.json` 或 AC `entry_list.ini [CAR_N].BALLAST` |
 
 **Entry List 管理**：
@@ -666,8 +684,8 @@ flowchart TD
     D --> E[生成配置文件]
     E --> F[投放到服务器配置目录]
     F --> G[启动或重启 Dedicated Server]
-    G --> H[采集服务器状态与结果文件]
-    H --> I[导入并合并 Stage Split 成绩]
+    G -->     H[采集服务器状态与结果文件]
+    H --> I[导入并按 Session 归属合并各 Split 成绩]
 ```
 
 **前台可复用字段**：
@@ -718,10 +736,10 @@ flowchart TD
 |------|----------|------|
 | Registration | Round | 用户报名某一站，获得该站预选资格 |
 | Split Assignment | Stage（通过 `Stage.splits`） | 每个 Stage 可配置多 Split（多服务器实例），正赛可根据预选榜单重新分组 |
-| Result | Stage.splits[].results | 所有成绩先落到 Stage 的各 Split，再聚合到 Stage/Round/Competition |
+| Result | Session（`Stage.splits[].results`，按 Session 归属） | 成绩归属的最小颗粒度为 Session：每条成绩记录指明所属 Split 与 Session（qualifying / race 等），先在 Split 间按 Session 合并，再聚合到 Stage/Round/Competition |
 | Entry List | Split | 每个 Split 维护独立的参赛名单，可从 Round 报名自动生成或手动编辑 |
 | Protest | Stage | 抗议针对具体 Stage 的具体成绩或事故 |
-| Advancement | Stage | 晋级名单由 Stage 的 `advancement_rule` 配置生成，可由管理员复核 |
+| Advancement | Stage | 晋级名单由 Stage 的 `advancement_rule` 配置生成，可参考某一 Session 的成绩（如 qualifying 榜单），可由管理员复核 |
 
 ### 4.1.10 积分表数据结构（ScoringTableEntry）
 
@@ -849,7 +867,7 @@ flowchart TD
      - `manualInvite`：从已报名车手中勾选参赛名单
    - 配置 Stage 级多 Split 参数（如需）
 5. 在 Stage 的**"会话与服务器配置"弹窗**中统一配置（一个 Stage = 一份服务器配置）：
-   - **Sessions 标签页**：编排游戏内 Practice/Qualifying/Race 的时长、时段、时间倍率（`GameSessionEntry`）
+   - **Sessions 标签页**：编排游戏内 Practice/Qualifying/Race 的时长、时段、时间倍率（`Session`）
    - **Servers (Splits) 标签页**：配置每个服务器实例的名称、密码、端口、车位等；可从开服模板快速填充
    - **Game Settings 标签页**：按 AC/ACC 配置文件（event.json、eventRules.json、assistRules.json、settings.json / server_cfg.ini）填写赛道、天气、规则、辅助限制等参数
    - **Entry List**：为每个 Split 管理参赛名单——可从 Round 报名自动生成，或手动添加/编辑条目
@@ -862,8 +880,8 @@ flowchart TD
 
 ### 4.2.4 模板与复制
 
-- 单场赛模板：生成 1 个 Round，默认包含 Practice / Qualifying / Race 的 `game_sessions`
-- 多站赛事模板：批量生成多个 Round，每个 Round 复用相同 Stage 结构（含 `game_config` 和 `game_sessions`）
+- 单场赛模板：生成 1 个 Round，默认包含 Practice / Qualifying / Race 的 `sessions`
+- 多站赛事模板：批量生成多个 Round，每个 Round 复用相同 Stage 结构（含 `game_config` 和 `sessions`）
 - 含预选赛分站模板：每个 Round 默认包含"预选赛"Stage（长时间开放 practice）和"正赛日"Stage（Practice / Qualifying / Race）
 - 复制 Competition 时，可选择仅复制公共规则、复制 Round 结构、复制 Stage 结构（含服务器配置）；所有时间必须重新确认
 
@@ -911,7 +929,7 @@ stateDiagram-v2
 ### 4.4.1 模板功能
 
 - 管理员可将任意已创建的赛事保存为模板
-- 模板保存全部配置（除时间和赛事名称外的所有字段），包括 `game_config`（游戏引擎参数）和 `game_sessions`（游戏内 Session 时序）
+- 模板保存全部配置（除时间和赛事名称外的所有字段），包括 `game_config`（游戏引擎参数）和 `sessions`（游戏内 Session 时序）
 - 创建新赛事时可从模板列表中选择，自动填充配置；在 Stage 的"会话与服务器配置"弹窗中可从开服模板快速加载参数
 - 模板支持编辑和删除
 
@@ -1079,7 +1097,7 @@ flowchart TD
 |---------|---------|------|
 | 基础信息 | 服务器名称、加入密码、公开/私密、最大车位 | 前台可复用服务器名称、加入密码、容量 |
 | 赛道与车辆 | 赛道、布局、车型组/车辆列表、涂装/车号 | 前台可复用赛道、车辆和车型组 |
-| Session 编排 | Practice / Qualifying / Race 的顺序、时长、圈数、是否允许中途加入 | 映射到 `Stage.game_sessions` 时间线 |
+| Session 编排 | Practice / Qualifying / Race 的顺序、时长、圈数、是否允许中途加入 | 映射到 `Stage.sessions` 时间线 |
 | 天气与环境 | 天气、气温、路温、时间倍率、动态路面 | 前台可展示为规则摘要 |
 | 赛事规则 | 进站、油耗、胎耗、损伤、辅助限制、发车/编队规则 | 前台展示可读规则，不展示原始字段名 |
 | Entry List / Split | 报名车手、Steam ID、车队、车号、配重、限流 | Steam ID 不前台展示 |
@@ -2103,7 +2121,7 @@ Pit House 是 MOZA 设备调节软件，用户在赛车过程中通常保持开�
 > - **Stage 精简**：`type` 不再在编辑器中可选择（由模板预设）；`description` 始终可编辑；`eligibility_source` 新增条件子字段（roundRegistration 无额外字段 / previousStageResult 含 metric+direction+limit / manualInvite 含车手勾选列表）；原 `AdvancementRule` 子模型由条件子字段替代
 
 > **v3.3 变更摘要**（Stage 统一服务器配置 + Session 弱化）：
-> - **Session 不再独立**：Session 从独立实体降级为 Stage 内部的轻量条目（`GameSessionEntry`），仅保留游戏内 Practice/Qualifying/Race 的时序参数（时长、时段、时间倍率）。服务器配置、参赛名单和成绩全部上移到 Stage 层级
+> - **Session 不再独立**：Session 从独立实体降级为 Stage 内部的轻量条目（`Session`），仅保留游戏内 Practice/Qualifying/Race 的时序参数（时长、时段、时间倍率）。服务器配置、参赛名单和成绩全部上移到 Stage 层级
 > - **一个 Stage = 一份服务器配置**：新增 `Stage.game_config`（SessionGameConfig，按 AC/ACC 配置文件组织）、`Stage.splits[]`（服务器实例列表，含独立参数和 Entry List）、`Stage.bop_entries[]`（性能平衡）。原 `SessionServerProvisioningConfig` 模型移除
 > - **成绩归属变更**：成绩从绑定 Session 改为绑定 `Stage.splits[].results`，聚合路径变为 Split → Stage → Round → Competition
 > - **Entry List**：每个 Split 维护独立的 `entry_list`（EntryListEntry[]），支持从 Round 报名自动生成 + 手动编辑
@@ -2111,5 +2129,12 @@ Pit House 是 MOZA 设备调节软件，用户在赛车过程中通常保持开�
 > - **晋级规则重构**：`AdvancementRule.direction` 字段移除（方向由 metric 自动推断）；metric `bestLap` 更名为 `lapTime`；新增 `lap_time_multiplier` 字段（metric 为 lapTime 时用圈速倍率筛选代替固定名额）
 > - **CompetitionRuleset**：新增 `scoring_note_zh / scoring_note_en`（积分表总计备注）
 > - **统一配置弹窗**：Stage 编辑通过"会话与服务器配置"弹窗一站式管理 Sessions（P/Q/R 时序）、Servers（多 Split）、Game Settings（游戏引擎参数）、Entry List 和 BoP
+
+> **v3.4 变更摘要**（Session 重新提升为成绩归属颗粒度）：
+> - **四层结构确立**：赛事核心结构明确为 `Competition → Round → Stage → Session` 四层（原 v3.0 表述的"成绩归属为 Session"在此正式落地）。Session 重新从"Stage 内部轻量条目"提升为独立层级。
+> - **Session = 成绩归属的最小颗粒度**：成绩不再笼统绑定到 `Stage.splits[].results`，而是归属于具体的（Split, Session）。同一个"正赛日" Stage 中，qualifying Session 的排位成绩与 race Session 的正赛成绩各自独立、可分别查看。
+> - **Split 是 Stage 的横向并行维度**：Split 数量在 Stage 层级设定（`max_splits`）；一份共享开赛参数（`game_config`）+ Session 时序模板（`Stage.sessions`）分发给该 Stage 下所有 Split，各 Split 仅在服务器参数与 Entry List 上独立。
+> - **成绩聚合链路**：Session → Split → Stage → Round → Competition。先按 Session 在 Split 间合并，再聚合到 Stage，由此可分别得到排位榜、正赛成绩、分站成绩与年度积分。
+> - **涉及调整**：4.1.3（分层模型重写）、4.1.6（Stage/splits 字段说明）、4.1.7（Session 重写为成绩颗粒度）、4.1.8（配置归属）、4.1.9（成绩归属表）。注：v3.3 中"Session 不再独立""成绩绑定 Stage.splits[].results"的结论被本版本修正。
 
 > **文档结束**

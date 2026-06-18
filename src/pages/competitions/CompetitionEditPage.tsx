@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '@/hooks/useAppStore'
 import { useManagedOptions } from '@/hooks/useManagedOptions'
-import { competitions } from '@/data/competitions'
-import type { Round, Stage, GamePlatform } from '@/data/competitions'
+import { competitions, updateCompetition, createDefaultRound, createDefaultStage } from '@/data/competitions'
+import type { Round, Stage, GamePlatform, Competition } from '@/data/competitions'
 import { drivers } from '@/data/drivers'
 import { teams } from '@/data/teams'
 import { Card } from '@/components/ui/Card'
@@ -34,9 +34,50 @@ export function CompetitionEditPage() {
   const [expandedRoundId, setExpandedRoundId] = useState<string | null>(null)
   const [expandedStageId, setExpandedStageId] = useState<string | null>(null)
 
-  const comp = useMemo(() => competitions.find(c => c.id === id), [id])
+  const foundComp = useMemo(() => competitions.find(c => c.id === id), [id])
+  const [localComp, setLocalComp] = useState<Competition | null>(null)
 
-  if (!comp) return <div className="text-center py-12 text-gray-500">Competition not found</div>
+  if (!foundComp) return <div className="text-center py-12 text-gray-500">Competition not found</div>
+  const comp = localComp ?? foundComp
+
+  const setLocal = (updater: (prev: Competition) => Competition) => {
+    setLocalComp(prev => updater(prev ?? foundComp))
+  }
+
+  const addRound = () => {
+    const round = createDefaultRound(comp.id)
+    setLocal(prev => ({ ...prev, rounds: [...prev.rounds, round] }))
+    setExpandedRoundId(round.id)
+  }
+
+  const updateRound = (roundId: string, patch: Partial<Round>) => {
+    setLocal(prev => ({ ...prev, rounds: prev.rounds.map(r => r.id === roundId ? { ...r, ...patch } : r) }))
+  }
+
+  const deleteRound = (roundId: string) => {
+    setLocal(prev => ({ ...prev, rounds: prev.rounds.filter(r => r.id !== roundId) }))
+  }
+
+  const addStage = (roundId: string) => {
+    const stage = createDefaultStage(roundId)
+    setLocal(prev => ({ ...prev, rounds: prev.rounds.map(r => r.id === roundId ? { ...r, stages: [...r.stages, stage] } : r) }))
+    setExpandedStageId(stage.id)
+  }
+
+  const updateStage = (roundId: string, stageId: string, updated: Stage) => {
+    setLocal(prev => ({ ...prev, rounds: prev.rounds.map(r => r.id === roundId ? { ...r, stages: r.stages.map(s => s.id === stageId ? updated : s) } : r) }))
+  }
+
+  const deleteStage = (roundId: string, stageId: string) => {
+    setLocal(prev => ({ ...prev, rounds: prev.rounds.map(r => r.id === roundId ? { ...r, stages: r.stages.filter(s => s.id !== stageId) } : r) }))
+  }
+
+  const handleSave = () => {
+    if (localComp) {
+      updateCompetition({ ...localComp, updatedAt: new Date().toISOString() })
+    }
+    navigate('/competitions')
+  }
 
   const status = getCompetitionStatus(comp)
   const getName = (e: { name_zh: string; name_en: string }) => lang === 'zh' ? e.name_zh : e.name_en
@@ -76,7 +117,7 @@ export function CompetitionEditPage() {
                 >中文</button>
               </div>
               <div className="w-px h-6 bg-gray-200" />
-              <Button variant="secondary" onClick={() => navigate('/competitions')}>
+              <Button variant="secondary" onClick={handleSave}>
                 <Save className="w-4 h-4 mr-1" />{t('common.save')}
               </Button>
             </div>
@@ -213,7 +254,7 @@ export function CompetitionEditPage() {
             <Card>
               <div className="text-center py-8">
                 <p className="text-sm text-gray-400 mb-3">{t('competition.noRounds')}</p>
-                <Button variant="secondary" size="sm">
+                <Button variant="secondary" size="sm" onClick={addRound}>
                   <Plus className="w-4 h-4 mr-1" />
                   {t('competition.addRound')}
                 </Button>
@@ -232,11 +273,16 @@ export function CompetitionEditPage() {
               onToggleStage={(stageId) => setExpandedStageId(expandedStageId === stageId ? null : stageId)}
               editLang={editLang}
               game={comp.game}
+              onUpdate={(patch) => updateRound(round.id, patch)}
+              onDelete={() => deleteRound(round.id)}
+              onAddStage={() => addStage(round.id)}
+              onDeleteStage={(stageId) => deleteStage(round.id, stageId)}
+              onUpdateStage={(stageId, updated) => updateStage(round.id, stageId, updated)}
             />
           ))}
 
           {comp.rounds.length > 0 && (
-            <Button variant="secondary" size="sm">
+            <Button variant="secondary" size="sm" onClick={addRound}>
               <Plus className="w-4 h-4 mr-1" />
               {t('competition.addRound')}
             </Button>
@@ -256,6 +302,11 @@ function RoundAccordion({
   onToggleStage,
   editLang,
   game,
+  onUpdate,
+  onDelete,
+  onAddStage,
+  onDeleteStage,
+  onUpdateStage,
 }: {
   round: Round
   roundIdx: number
@@ -265,6 +316,11 @@ function RoundAccordion({
   onToggleStage: (stageId: string) => void
   editLang: 'en' | 'zh'
   game: GamePlatform
+  onUpdate: (patch: Partial<Round>) => void
+  onDelete: () => void
+  onAddStage: () => void
+  onDeleteStage: (stageId: string) => void
+  onUpdateStage: (stageId: string, updated: Stage) => void
 }) {
   const { t } = useTranslation()
   const lang = useApp().state.language
@@ -293,7 +349,7 @@ function RoundAccordion({
             {round.currentRegistrations} {t('competition.registrations')}
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onDelete() }}>
           <Trash2 className="w-4 h-4 text-red-500" />
         </Button>
       </div>
@@ -301,18 +357,18 @@ function RoundAccordion({
       {isExpanded && (
         <div className="px-6 pb-4 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4" key={editLang}>
-            <Input label={`${t('competition.roundName')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? round.name_en : round.name_zh} />
-            <Input label={t('event.track')} defaultValue={round.track || ''} />
-            <Input label={t('event.registrationOpenAt')} type="datetime-local" defaultValue={round.registrationOpenAt.slice(0, 16)} />
-            <Input label={t('event.registrationCloseAt')} type="datetime-local" defaultValue={round.registrationCloseAt.slice(0, 16)} />
-            <Input label={t('event.cancelRegistrationDeadline')} type="datetime-local" defaultValue={round.cancelRegistrationDeadline?.slice(0, 16) || ''} />
+            <Input label={`${t('competition.roundName')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? round.name_en : round.name_zh} onChange={(e) => onUpdate(editLang === 'en' ? { name_en: e.target.value } : { name_zh: e.target.value })} />
+            <Input label={t('event.track')} defaultValue={round.track || ''} onChange={(e) => onUpdate({ track: e.target.value })} />
+            <Input label={t('event.registrationOpenAt')} type="datetime-local" defaultValue={round.registrationOpenAt.slice(0, 16)} onChange={(e) => onUpdate({ registrationOpenAt: e.target.value ? new Date(e.target.value).toISOString() : round.registrationOpenAt })} />
+            <Input label={t('event.registrationCloseAt')} type="datetime-local" defaultValue={round.registrationCloseAt.slice(0, 16)} onChange={(e) => onUpdate({ registrationCloseAt: e.target.value ? new Date(e.target.value).toISOString() : round.registrationCloseAt })} />
+            <Input label={t('event.cancelRegistrationDeadline')} type="datetime-local" defaultValue={round.cancelRegistrationDeadline?.slice(0, 16) || ''} onChange={(e) => onUpdate({ cancelRegistrationDeadline: e.target.value ? new Date(e.target.value).toISOString() : undefined })} />
           </div>
 
           <div className="max-w-sm">
-            <ImageUpload label={t('event.coverImage')} defaultValue={round.coverImage || ''} aspectRatio="video" />
+            <ImageUpload label={t('event.coverImage')} defaultValue={round.coverImage || ''} aspectRatio="video" onChange={(v) => onUpdate({ coverImage: v })} />
           </div>
 
-          <Textarea label={`${t('common.description')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? round.description_en || '' : round.description_zh || ''} />
+          <Textarea label={`${t('common.description')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? round.description_en || '' : round.description_zh || ''} onChange={(e) => onUpdate(editLang === 'en' ? { description_en: e.target.value } : { description_zh: e.target.value })} />
 
           {round.cancelledReason_zh && (
             <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
@@ -323,7 +379,7 @@ function RoundAccordion({
           <div className="pt-2">
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-sm font-medium text-gray-700">{t('competition.stages')} ({round.stages.length})</h4>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={onAddStage}>
                 <Plus className="w-4 h-4 mr-1" />
                 {t('competition.addStage')}
               </Button>
@@ -344,6 +400,8 @@ function RoundAccordion({
                   editLang={editLang}
                   registeredDriverIds={round.registeredDriverIds}
                   game={game}
+                  onUpdate={(updated) => onUpdateStage(stage.id, updated)}
+                  onDelete={() => onDeleteStage(stage.id)}
                 />
               ))}
             </div>
@@ -362,6 +420,8 @@ function StageAccordion({
   editLang,
   registeredDriverIds,
   game,
+  onUpdate,
+  onDelete,
 }: {
   stage: Stage
   stageIdx: number
@@ -370,6 +430,8 @@ function StageAccordion({
   editLang: 'en' | 'zh'
   registeredDriverIds: string[]
   game: GamePlatform
+  onUpdate: (updated: Stage) => void
+  onDelete: () => void
 }) {
   const { t } = useTranslation()
   const lang = useApp().state.language
@@ -392,6 +454,7 @@ function StageAccordion({
 
   const handleSaveStage = (updated: Stage) => {
     setLocalStage(updated)
+    onUpdate(updated)
   }
 
   const registeredDrivers = registeredDriverIds
@@ -425,8 +488,8 @@ function StageAccordion({
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium text-gray-900">{getName(stage)}</span>
         </div>
-        <span className="text-xs text-gray-400">{localStage.gameSessions.length} {t('competition.sessions')}</span>
-        <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+        <span className="text-xs text-gray-400">{localStage.sessions.length} {t('competition.sessions')}</span>
+        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onDelete() }}>
           <Trash2 className="w-3.5 h-3.5 text-red-500" />
         </Button>
       </div>
