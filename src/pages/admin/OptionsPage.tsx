@@ -19,7 +19,6 @@ export function OptionsPage() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [newOption, setNewOption] = useState<ManagedOption>({ value: '', label_en: '', label_zh: '' })
   const [showNewRow, setShowNewRow] = useState(false)
-  const [tipIdx, setTipIdx] = useState<number | null>(null)
 
   const draftGroup = draft.find(g => g.key === selectedKey)
   const isDirty = JSON.stringify(groups) !== JSON.stringify(draft)
@@ -127,25 +126,9 @@ export function OptionsPage() {
                         <input className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm" value={opt.label_zh} onChange={(e) => updateOption(idx, 'label_zh', e.target.value)} />
                       </td>
                       <td className="px-4 py-2">
-                        {locked ? (
-                          <div className="relative inline-block">
-                            <button
-                              onClick={() => { setTipIdx(idx); setTimeout(() => setTipIdx(null), 2500) }}
-                              className="text-gray-300 hover:text-gray-400"
-                            >
-                              <Lock className="w-3.5 h-3.5" />
-                            </button>
-                            {tipIdx === idx && (
-                              <span className="absolute right-0 top-7 z-10 whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white shadow-lg">
-                                {t('admin.optionDeleteLocked')}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <button onClick={() => deleteOption(idx)} className="text-gray-400 hover:text-red-500">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
+                        <button onClick={() => deleteOption(idx)} className="text-gray-400 hover:text-red-500">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   )

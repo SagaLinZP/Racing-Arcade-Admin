@@ -13,7 +13,6 @@ export const en = {
     notifications: 'Notifications',
     templates: 'Templates',
     optionsManagement: 'Options Management',
-    optionDeleteLocked: 'Saved options cannot be deleted',
     optionCatCompetition: 'Competition',
     optionCatResult: 'Results',
     optionCatProtest: 'Protests',

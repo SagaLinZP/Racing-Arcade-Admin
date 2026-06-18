@@ -13,7 +13,6 @@ export const zh = {
     notifications: '通知管理',
     templates: '模板管理',
     optionsManagement: '字典选项管理',
-    optionDeleteLocked: '已保存的选项不可删除',
     optionCatCompetition: '赛事管理',
     optionCatResult: '成绩管理',
     optionCatProtest: '抗议管理',
