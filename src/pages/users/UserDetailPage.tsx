@@ -25,6 +25,7 @@ export function UserDetailPage() {
   const navigate = useNavigate()
   const { id } = useParams()
   const [showBan, setShowBan] = useState(false)
+  const [banEditLang, setBanEditLang] = useState<'en' | 'zh'>('en')
 
   const driver = useMemo(() => drivers.find(d => d.id === id), [id])
   if (!driver) return <div className="text-center py-12 text-gray-500">User not found</div>
@@ -133,8 +134,22 @@ export function UserDetailPage() {
           <p className="text-sm text-gray-600">Ban user: <strong>{driver.nickname}</strong></p>
           <Select label={t('user.banType')} options={banTypeOptions} />
           <Input label={t('user.banDuration')} placeholder="e.g., 7 days, 2 races" />
-          <Textarea label={`${t('user.banReason')} (English)`} placeholder="Reason for ban..." />
-          <Textarea label={`${t('user.banReason')} (Chinese)`} placeholder="Reason for ban..." />
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-medium text-gray-700">
+                {t('user.banReason')} ({banEditLang === 'en' ? 'EN' : '中文'})
+              </span>
+              <button
+                className={`px-2 py-0.5 text-xs rounded ${banEditLang === 'en' ? 'bg-blue-100 text-blue-700 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                onClick={() => setBanEditLang('en')}
+              >EN</button>
+              <button
+                className={`px-2 py-0.5 text-xs rounded ${banEditLang === 'zh' ? 'bg-blue-100 text-blue-700 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                onClick={() => setBanEditLang('zh')}
+              >中文</button>
+            </div>
+            <Textarea placeholder="Reason for ban..." />
+          </div>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setShowBan(false)}>{t('common.cancel')}</Button>
             <Button variant="danger">{t('user.banUser')}</Button>

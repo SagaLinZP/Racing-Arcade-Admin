@@ -11,7 +11,7 @@ import {
   createDefaultSplit,
   createDefaultSession,
   createDefaultEntryListEntry,
-  sessionTemplates,
+  stageTemplates,
 } from '@/data/competitions'
 import type {
   Stage,
@@ -20,7 +20,7 @@ import type {
   GamePlatform,
   SessionType,
   Session,
-  SessionTemplate,
+  StageTemplate,
   BopEntry,
   EntryListEntry,
 } from '@/data/competitions'
@@ -34,7 +34,7 @@ import {
   YES_NO_INT,
 } from './gameConfigOptions'
 import {
-  Plus, Trash2, ChevronUp, ChevronDown, ChevronRight, Power, AlertCircle, RefreshCw,
+  Plus, Trash2, ChevronUp, ChevronDown, ChevronRight, Power, AlertCircle, RefreshCw, Settings,
 } from 'lucide-react'
 
 type TabKey = 'splits' | 'sessions' | 'gameSettings'
@@ -61,15 +61,7 @@ export function ServerConfigModal({
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<TabKey>('splits')
   const [local, setLocal] = useState<Stage>(() => {
-    const base: Stage = {
-      ...stage,
-      gameConfig: stage.gameConfig ?? createDefaultGameConfig(game),
-      sessions: stage.sessions?.length ? stage.sessions : [
-        createDefaultSession('practice'),
-        createDefaultSession('qualifying'),
-        createDefaultSession('race'),
-      ],
-    }
+    const base: Stage = { ...stage }
     const current = base.splits ?? []
     if (current.length < splitCount) {
       const added: Split[] = []
@@ -88,11 +80,18 @@ export function ServerConfigModal({
   const [tplName, setTplName] = useState('')
   const [serverErrors, setServerErrors] = useState<string[]>([])
   const [bopExpanded, setBopExpanded] = useState(false)
+  const [confirmApply, setConfirmApply] = useState(false)
 
-  const gc = local.gameConfig!
+  const gc = local.gameConfig
+
+  const initGameConfig = () =>
+    setLocal(prev => ({ ...prev, gameConfig: prev.gameConfig ?? createDefaultGameConfig(game) }))
 
   const setGC = (key: keyof SessionGameConfig, value: string | number | boolean) =>
-    setLocal(prev => ({ ...prev, gameConfig: { ...prev.gameConfig!, [key]: value } }))
+    setLocal(prev => ({
+      ...prev,
+      gameConfig: { ...(prev.gameConfig ?? createDefaultGameConfig(game)), [key]: value },
+    }))
 
   const setSplitField = (splitId: string, key: keyof Split, value: string | number | boolean) =>
     setLocal(prev => ({
@@ -139,7 +138,7 @@ export function ServerConfigModal({
   }
 
   const addBopEntry = () => {
-    const entry: BopEntry = { track: gc.track || '', carModel: 0, ballastKg: 0 }
+    const entry: BopEntry = { track: gc?.track || '', carModel: 0, ballastKg: 0 }
     setLocal(prev => ({ ...prev, bopEntries: [...(prev.bopEntries || []), entry] }))
   }
 
@@ -197,26 +196,43 @@ export function ServerConfigModal({
   }
 
   const handleApplyTemplate = () => {
-    const tpl = sessionTemplates.find(t => t.id === selectedTemplateId)
+    if (!selectedTemplateId) return
+    if (local.gameConfig || local.sessions.length > 0) {
+      setConfirmApply(true)
+      return
+    }
+    performApply()
+  }
+
+  const performApply = () => {
+    const tpl = stageTemplates.find(t => t.id === selectedTemplateId)
     if (!tpl) return
     setLocal(prev => ({
       ...prev,
       gameConfig: { ...tpl.gameConfig },
+      sessions: tpl.sessions.length > 0
+        ? tpl.sessions.map(s => ({ ...s }))
+        : [
+            createDefaultSession('practice'),
+            createDefaultSession('qualifying'),
+            createDefaultSession('race'),
+          ],
       splits: tpl.splitConfig
         ? prev.splits.map(s => ({ ...s, ...tpl.splitConfig }))
         : prev.splits,
     }))
-    setSelectedTemplateId('')
+    setConfirmApply(false)
   }
 
   const handleSaveAsTemplate = () => {
     const now = new Date().toISOString()
-    const newTpl: SessionTemplate = {
+    const newTpl: StageTemplate = {
       id: `tpl_${Date.now()}`,
       name_zh: editLang === 'zh' ? tplName : local.name_zh,
       name_en: editLang === 'en' ? tplName : local.name_en,
       game,
-      gameConfig: { ...local.gameConfig! },
+      gameConfig: { ...(local.gameConfig ?? createDefaultGameConfig(game)) },
+      sessions: local.sessions.map(s => ({ ...s })),
       splitConfig: local.splits[0]
         ? Object.fromEntries(
             Object.entries(local.splits[0]).filter(([k]) =>
@@ -227,7 +243,7 @@ export function ServerConfigModal({
       createdAt: now,
       updatedAt: now,
     }
-    sessionTemplates.push(newTpl)
+    stageTemplates.push(newTpl)
     setTplName('')
     setShowSaveAsTemplate(false)
   }
@@ -237,10 +253,10 @@ export function ServerConfigModal({
     if (local.sessions.length === 0) {
       errors.push(t('gameConfig.errNoGameSessions'))
     }
-    if (!gc.track) {
+    if (!gc || !gc.track) {
       errors.push(t('gameConfig.errNoTrack'))
     }
-    if (game === 'AC' && !gc.cars) {
+    if (gc && game === 'AC' && !gc.cars) {
       errors.push(t('gameConfig.errNoCars'))
     }
     for (const split of local.splits) {
@@ -257,7 +273,7 @@ export function ServerConfigModal({
 
   const handleSave = () => { onSave(local); onClose() }
 
-  const compatibleTemplates = sessionTemplates.filter(tpl => tpl.game === game)
+  const compatibleTemplates = stageTemplates.filter(tpl => tpl.game === game)
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: 'splits', label: splitCount > 1 ? t('gameConfig.tabSplits') : t('gameConfig.tabServer') },
@@ -277,10 +293,13 @@ export function ServerConfigModal({
         <div className="flex-1">
           <Select
             label={t('template.applyTemplate')}
-            options={compatibleTemplates.map(tpl => ({
-              value: tpl.id,
-              label: editLang === 'en' ? tpl.name_en : tpl.name_zh,
-            }))}
+            options={[
+              { value: '', label: t('template.selectPlaceholder') },
+              ...compatibleTemplates.map(tpl => ({
+                value: tpl.id,
+                label: editLang === 'en' ? tpl.name_en : tpl.name_zh,
+              })),
+            ]}
             value={selectedTemplateId}
             onChange={(e) => setSelectedTemplateId(e.target.value)}
           />
@@ -289,10 +308,22 @@ export function ServerConfigModal({
           {t('template.apply')}
         </Button>
         <div className="w-px h-8 bg-gray-300 mx-1" />
-        <Button variant="ghost" size="sm" onClick={() => setShowSaveAsTemplate(true)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowSaveAsTemplate(true)}
+          disabled={!local.gameConfig && local.sessions.length === 0}
+        >
           {t('template.saveAsTemplate')}
         </Button>
       </div>
+
+      {/* Empty stage guidance */}
+      {!local.gameConfig && local.sessions.length === 0 && (
+        <div className="rounded-md bg-blue-50 border border-blue-200 px-4 py-3 mb-4 text-sm text-blue-700">
+          {t('gameConfig.emptyStageHint')}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-gray-200 mb-4 overflow-x-auto">
@@ -315,10 +346,20 @@ export function ServerConfigModal({
       {/* Tab: Game Settings */}
       {activeTab === 'gameSettings' && (
         <div className="space-y-3">
-          <GameConfigEditor gameConfig={gc} game={game} onChange={setGC} />
+          {gc ? (
+            <GameConfigEditor gameConfig={gc} game={game} onChange={setGC} />
+          ) : (
+            <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center">
+              <Settings className="w-6 h-6 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500 mb-3">{t('gameConfig.configEmptyHint')}</p>
+              <Button variant="secondary" size="sm" onClick={initGameConfig}>
+                {t('gameConfig.configureManually')}
+              </Button>
+            </div>
+          )}
 
           {/* BOP (ACC only) */}
-          {game === 'ACC' && (
+          {gc && game === 'ACC' && (
             <div className="rounded-lg border border-gray-200 overflow-hidden">
               <div className="flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors">
                 <button
@@ -589,6 +630,18 @@ export function ServerConfigModal({
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="secondary" size="sm" onClick={() => setShowSaveAsTemplate(false)}>{t('common.cancel')}</Button>
               <Button variant="primary" size="sm" onClick={handleSaveAsTemplate} disabled={!tplName.trim()}>{t('common.save')}</Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmApply && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30" onClick={() => setConfirmApply(false)}>
+          <div className="bg-white rounded-lg shadow-xl p-6 w-96 space-y-3" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-semibold text-gray-900">{t('template.confirmApplyTitle')}</h3>
+            <p className="text-sm text-gray-600">{t('template.confirmApplyBody')}</p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="secondary" size="sm" onClick={() => setConfirmApply(false)}>{t('common.cancel')}</Button>
+              <Button variant="primary" size="sm" onClick={performApply}>{t('template.replace')}</Button>
             </div>
           </div>
         </div>

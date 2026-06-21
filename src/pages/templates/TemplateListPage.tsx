@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '@/hooks/useAppStore'
-import { sessionTemplates } from '@/data/competitions'
-import type { SessionTemplate } from '@/data/competitions'
+import { stageTemplates } from '@/data/competitions'
+import type { StageTemplate } from '@/data/competitions'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { DataTable } from '@/components/ui/DataTable'
@@ -18,7 +18,7 @@ export function TemplateListPage() {
   const { state } = useApp()
   const lang = state.language
   const navigate = useNavigate()
-  const [templates, setTemplates] = useState<SessionTemplate[]>(() => [...sessionTemplates])
+  const [templates, setTemplates] = useState<StageTemplate[]>(() => [...stageTemplates])
   const [filterGame, setFilterGame] = useState('')
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
@@ -26,13 +26,13 @@ export function TemplateListPage() {
 
   const handleDelete = () => {
     if (!deleteId) return
-    const idx = sessionTemplates.findIndex(tpl => tpl.id === deleteId)
-    if (idx >= 0) sessionTemplates.splice(idx, 1)
+    const idx = stageTemplates.findIndex(tpl => tpl.id === deleteId)
+    if (idx >= 0) stageTemplates.splice(idx, 1)
     setTemplates(prev => prev.filter(tpl => tpl.id !== deleteId))
     setDeleteId(null)
   }
 
-  const getTrackLabel = (tpl: SessionTemplate) => {
+  const getTrackLabel = (tpl: StageTemplate) => {
     if (tpl.game === 'ACC') {
       const found = ACC_TRACKS.find(tr => tr.value === tpl.gameConfig.track)
       return found?.label || tpl.gameConfig.track || '—'
@@ -44,7 +44,7 @@ export function TemplateListPage() {
     {
       key: 'name',
       header: t('template.templateName'),
-      render: (tpl: SessionTemplate) => (
+      render: (tpl: StageTemplate) => (
         <div>
           <span className="font-medium">{lang === 'en' ? tpl.name_en : tpl.name_zh}</span>
           {(lang === 'en' ? tpl.description_en : tpl.description_zh) && (
@@ -56,27 +56,27 @@ export function TemplateListPage() {
     {
       key: 'game',
       header: t('event.game'),
-      render: (tpl: SessionTemplate) => <Badge variant="default">{tpl.game}</Badge>,
+      render: (tpl: StageTemplate) => <Badge variant="default">{tpl.game}</Badge>,
     },
     {
       key: 'track',
       header: t('gameConfig.track'),
-      render: (tpl: SessionTemplate) => getTrackLabel(tpl),
+      render: (tpl: StageTemplate) => getTrackLabel(tpl),
     },
     {
       key: 'carGroup',
       header: t('gameConfig.carGroup'),
-      render: (tpl: SessionTemplate) => tpl.gameConfig.carGroup || tpl.gameConfig.cars || '—',
+      render: (tpl: StageTemplate) => tpl.gameConfig.carGroup || tpl.gameConfig.cars || '—',
     },
     {
       key: 'createdAt',
       header: t('common.date'),
-      render: (tpl: SessionTemplate) => <span className="text-sm text-gray-500">{formatDate(tpl.createdAt)}</span>,
+      render: (tpl: StageTemplate) => <span className="text-sm text-gray-500">{formatDate(tpl.createdAt)}</span>,
     },
     {
       key: 'actions',
       header: t('common.actions'),
-      render: (tpl: SessionTemplate) => (
+      render: (tpl: StageTemplate) => (
         <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
           <Button variant="ghost" size="sm" onClick={() => navigate(`/templates/${tpl.id}/edit`)}>
             <Pencil className="w-3.5 h-3.5" />

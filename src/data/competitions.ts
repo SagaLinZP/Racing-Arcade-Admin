@@ -19,7 +19,7 @@ export type ResultStatus = 'Finished' | 'DNF' | 'DNS' | 'DSQ' | 'Qualified' | 'E
 export type RestartPolicy = 'none' | 'fixedInterval' | 'manual'
 export type MergeRule = 'bestLapPerDriver' | 'bestResultPerDriver' | 'allClassifications'
 
-export interface SessionTemplate {
+export interface StageTemplate {
   id: string
   name_zh: string
   name_en: string
@@ -27,6 +27,7 @@ export interface SessionTemplate {
   description_en?: string
   game: GamePlatform
   gameConfig: SessionGameConfig
+  sessions: Session[]
   splitConfig?: Partial<Split>
   createdAt: string
   updatedAt: string
@@ -488,11 +489,7 @@ export function createDefaultStage(roundId: string, type?: StageType): Stage {
     startsAt: tomorrow.toISOString(),
     endsAt: new Date(tomorrow.getTime() + 3 * 60 * 60 * 1000).toISOString(),
     gameConfig: undefined,
-    sessions: [
-      createDefaultSession('practice'),
-      createDefaultSession('qualifying'),
-      createDefaultSession('race'),
-    ],
+    sessions: [],
     splits: [createDefaultSplit(id, 1)],
     eligibilitySource: 'roundRegistration',
     enableMultiSplit: false,
@@ -1242,7 +1239,7 @@ const _rawCompetitions = [
   },
 ]
 
-export function createDefaultTemplate(game: GamePlatform): SessionTemplate {
+export function createDefaultTemplate(game: GamePlatform): StageTemplate {
   const now = new Date().toISOString()
   return {
     id: `tpl_${Date.now()}`,
@@ -1252,12 +1249,17 @@ export function createDefaultTemplate(game: GamePlatform): SessionTemplate {
     description_en: '',
     game,
     gameConfig: createDefaultGameConfig(game),
+    sessions: [
+      createDefaultSession('practice'),
+      createDefaultSession('qualifying'),
+      createDefaultSession('race'),
+    ],
     createdAt: now,
     updatedAt: now,
   }
 }
 
-export const sessionTemplates: SessionTemplate[] = [
+export const stageTemplates: StageTemplate[] = [
   {
     id: 'tpl_gt3_sprint',
     name_zh: 'GT3 冲刺赛 60 分钟',
@@ -1283,7 +1285,18 @@ export const sessionTemplates: SessionTemplate[] = [
       safetyRatingRequirement: -1,
       racecraftRatingRequirement: -1,
     },
+    sessions: [
+      { ...createDefaultSession('practice'), durationMinutes: 30 },
+      { ...createDefaultSession('qualifying'), durationMinutes: 15 },
+      { ...createDefaultSession('race'), raceDuration: 60, raceDurationType: 'time' },
+    ],
     splitConfig: {
+      serverName: 'MOZA GT3 Sprint #1',
+      serverPassword: 'gt3sprint2026',
+      adminPassword: 'admin123',
+      spectatorPassword: 'spectator',
+      udpPort: 9600,
+      tcpPort: 9600,
       maxConnections: 30,
       maxCarSlots: 30,
       isRaceLocked: 1,
@@ -1325,7 +1338,18 @@ export const sessionTemplates: SessionTemplate[] = [
       safetyRatingRequirement: 50,
       racecraftRatingRequirement: 50,
     },
+    sessions: [
+      { ...createDefaultSession('practice'), durationMinutes: 45 },
+      { ...createDefaultSession('qualifying'), durationMinutes: 20 },
+      { ...createDefaultSession('race'), raceDuration: 120, raceDurationType: 'time' },
+    ],
     splitConfig: {
+      serverName: 'MOZA GT3 Endurance #1',
+      serverPassword: 'gt3enduro2026',
+      adminPassword: 'admin123',
+      spectatorPassword: 'spectator',
+      udpPort: 9600,
+      tcpPort: 9600,
       maxConnections: 40,
       maxCarSlots: 40,
       isRaceLocked: 1,
@@ -1363,7 +1387,18 @@ export const sessionTemplates: SessionTemplate[] = [
       safetyRatingRequirement: -1,
       racecraftRatingRequirement: -1,
     },
+    sessions: [
+      { ...createDefaultSession('practice'), durationMinutes: 20 },
+      { ...createDefaultSession('qualifying'), durationMinutes: 10 },
+      { ...createDefaultSession('race'), raceDuration: 30, raceDurationType: 'time' },
+    ],
     splitConfig: {
+      serverName: 'MOZA GT4 Sprint #1',
+      serverPassword: 'gt4sprint2026',
+      adminPassword: 'admin123',
+      spectatorPassword: 'spectator',
+      udpPort: 9600,
+      tcpPort: 9600,
       maxConnections: 24,
       maxCarSlots: 24,
       isRaceLocked: 1,
@@ -1394,7 +1429,13 @@ export const sessionTemplates: SessionTemplate[] = [
       autoclutchAllowed: true,
       forceVirtualMirror: true,
     },
+    sessions: [
+      { ...createDefaultSession('practice'), durationMinutes: 120 },
+    ],
     splitConfig: {
+      serverName: 'MOZA AC Practice #1',
+      serverPassword: 'acpractice2026',
+      adminPassword: 'admin123',
       maxConnections: 20,
       udpPort: 9600,
       tcpPort: 9600,

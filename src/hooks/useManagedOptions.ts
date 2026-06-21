@@ -7,7 +7,7 @@ export function useManagedOptions(groupKey: string, lang: 'en' | 'zh', allLabel?
     const options = group
       ? group.options.map((o: ManagedOption) => ({
           value: o.value,
-          label: lang === 'zh' ? `${o.label_zh} / ${o.label_en}` : o.label_en,
+          label: lang === 'zh' ? o.label_zh : o.label_en,
         }))
       : []
     if (allLabel) {

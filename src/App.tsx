@@ -9,6 +9,7 @@ import { CompetitionEditPage } from './pages/competitions/CompetitionEditPage'
 import { TemplateListPage } from './pages/templates/TemplateListPage'
 import { TemplateEditPage } from './pages/templates/TemplateEditPage'
 import { ResultListPage } from './pages/results/ResultListPage'
+import { CompetitionResultsPage } from './pages/results/CompetitionResultsPage'
 import { ResultEntryPage } from './pages/results/ResultEntryPage'
 import { ProtestListPage } from './pages/protests/ProtestListPage'
 import { ProtestDetailPage } from './pages/protests/ProtestDetailPage'
@@ -52,6 +53,7 @@ export default function App() {
               <Route path="/templates/create" element={<TemplateEditPage />} />
               <Route path="/templates/:id/edit" element={<TemplateEditPage />} />
               <Route path="/results" element={<ResultListPage />} />
+              <Route path="/results/competition/:competitionId" element={<CompetitionResultsPage />} />
               <Route path="/results/:id" element={<ResultEntryPage />} />
               <Route path="/protests" element={<ProtestListPage />} />
               <Route path="/protests/:id" element={<ProtestDetailPage />} />

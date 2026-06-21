@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
@@ -7,8 +7,11 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { ImageUpload } from '@/components/ui/ImageUpload'
-import { ArrowLeft, Save, Plus, Trash2, ChevronDown, ChevronRight, Settings } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { Modal } from '@/components/ui/Modal'
+import { ArrowLeft, Save, Plus, Trash2, ChevronDown, ChevronRight, Settings, AlertCircle } from 'lucide-react'
+import { cn, getCompetitionStatus } from '@/lib/utils'
+import { scrollToTop } from '@/lib/scrollContainer'
 import { useManagedOptions } from '@/hooks/useManagedOptions'
 import { useApp } from '@/hooks/useAppStore'
 import {
@@ -17,7 +20,7 @@ import {
   createDefaultStage,
   createDefaultGameConfig,
 } from '@/data/competitions'
-import type { Competition, Round, Stage, GamePlatform } from '@/data/competitions'
+import type { Competition, Round, Stage, GamePlatform, CompetitionStatus } from '@/data/competitions'
 import type { ScoringTableEntry, Region } from '@/lib/utils'
 import { ServerConfigModal } from './ServerConfigModal'
 
@@ -69,9 +72,17 @@ export function CompetitionCreatePage() {
   const [rounds, setRounds] = useState<Round[]>([])
   const [expandedRoundId, setExpandedRoundId] = useState<string | null>(null)
   const [expandedStageId, setExpandedStageId] = useState<string | null>(null)
+  const [dirty, setDirty] = useState(false)
+  const [nameError, setNameError] = useState<string | undefined>(undefined)
+  const [errorMessages, setErrorMessages] = useState<string[]>([])
+  const [showLeaveModal, setShowLeaveModal] = useState(false)
+
+  const touch = () => { setDirty(true); setErrorMessages([]) }
 
   const update = (field: keyof FormState, value: string | number | boolean | string[]) => {
     setForm(prev => ({ ...prev, [field]: value }))
+    touch()
+    if (field === 'name_en' || field === 'name_zh') setNameError(undefined)
   }
 
   const toggleRegion = (region: string) => {
@@ -81,30 +92,37 @@ export function CompetitionCreatePage() {
         ? prev.regions.filter(r => r !== region)
         : [...prev.regions, region],
     }))
+    touch()
   }
 
   const addScoringRow = () => {
     setScoringRows(prev => [...prev, { position: prev.length + 1, points: 0, note_en: '', note_zh: '' }])
+    touch()
   }
   const removeScoringRow = (idx: number) => {
     setScoringRows(prev => prev.filter((_, i) => i !== idx).map((row, i) => ({ ...row, position: i + 1 })))
+    touch()
   }
   const updateScoringRow = (idx: number, field: string, value: string | number) => {
     setScoringRows(prev => prev.map((row, i) => i === idx ? { ...row, [field]: value } : row))
+    touch()
   }
 
   const addRound = () => {
     const round = createDefaultRound('temp')
     setRounds(prev => [...prev, round])
     setExpandedRoundId(round.id)
+    touch()
   }
 
   const updateRound = (roundId: string, patch: Partial<Round>) => {
     setRounds(prev => prev.map(r => r.id === roundId ? { ...r, ...patch } : r))
+    touch()
   }
 
   const deleteRound = (roundId: string) => {
     setRounds(prev => prev.filter(r => r.id !== roundId))
+    touch()
   }
 
   const addStage = (roundId: string) => {
@@ -113,6 +131,7 @@ export function CompetitionCreatePage() {
       r.id === roundId ? { ...r, stages: [...r.stages, stage] } : r
     ))
     setExpandedStageId(stage.id)
+    touch()
   }
 
   const updateStage = (roundId: string, stageId: string, updated: Stage) => {
@@ -121,18 +140,19 @@ export function CompetitionCreatePage() {
         ? { ...r, stages: r.stages.map(s => s.id === stageId ? updated : s) }
         : r
     ))
+    touch()
   }
 
   const deleteStage = (roundId: string, stageId: string) => {
     setRounds(prev => prev.map(r =>
       r.id === roundId ? { ...r, stages: r.stages.filter(s => s.id !== stageId) } : r
     ))
+    touch()
   }
 
-  const handleSave = (asDraft: boolean) => {
+  const buildCompetition = (asDraft: boolean): Competition => {
     const now = new Date().toISOString()
     const compId = `c_${Date.now()}`
-
     const finalRounds: Round[] = rounds.map((r, ri) => ({
       ...r,
       competitionId: compId,
@@ -142,8 +162,7 @@ export function CompetitionCreatePage() {
         gameConfig: s.gameConfig ?? createDefaultGameConfig(form.game as GamePlatform),
       })),
     }))
-
-    const newComp: Competition = {
+    return {
       id: compId,
       name_zh: form.name_zh || form.name_en || 'Untitled',
       name_en: form.name_en || form.name_zh || 'Untitled',
@@ -170,9 +189,79 @@ export function CompetitionCreatePage() {
       createdAt: now,
       updatedAt: now,
     }
+  }
 
+  const previewStatus: CompetitionStatus = useMemo(() => {
+    if (!form.name_en.trim() && !form.name_zh.trim()) return 'Draft'
+    return getCompetitionStatus({ rounds } as Competition)
+  }, [form.name_en, form.name_zh, rounds])
+
+  const statusLabel = t(`event.status.${previewStatus}`)
+
+  const validate = (asDraft: boolean): string[] => {
+    const msgs: string[] = []
+    const nameMissing = !form.name_en.trim() && !form.name_zh.trim()
+    if (nameMissing) {
+      msgs.push(t('competition.errNameRequired'))
+      setNameError(t('competition.errNameRequired'))
+    } else {
+      setNameError(undefined)
+    }
+    if (asDraft) return msgs
+
+    if (rounds.length === 0) {
+      msgs.push(t('competition.errNoRoundsPublish'))
+    }
+    rounds.forEach((r, ri) => {
+      const rLabel = `${t('competition.round')} ${ri + 1}${(r.name_en || r.name_zh) ? ` (${lang === 'zh' ? r.name_zh || r.name_en : r.name_en || r.name_zh})` : ''}`
+      if (!r.name_en.trim() && !r.name_zh.trim()) {
+        msgs.push(`${rLabel}: ${t('competition.errRoundNameRequired')}`)
+      }
+      const open = new Date(r.registrationOpenAt).getTime()
+      const close = new Date(r.registrationCloseAt).getTime()
+      if (!(close > open)) {
+        msgs.push(`${rLabel}: ${t('competition.errRoundRegDates')}`)
+      }
+      if (r.cancelRegistrationDeadline) {
+        const cd = new Date(r.cancelRegistrationDeadline).getTime()
+        if (cd > close) {
+          msgs.push(`${rLabel}: ${t('competition.errRoundCancelDeadline')}`)
+        }
+      }
+      r.stages.forEach((s, si) => {
+        const sLabel = `${rLabel} · ${t('competition.stage')} ${si + 1}`
+        if (!s.name_en.trim() && !s.name_zh.trim()) {
+          msgs.push(`${sLabel}: ${t('competition.errStageNameRequired')}`)
+        }
+        const st = new Date(s.startsAt).getTime()
+        const en = new Date(s.endsAt).getTime()
+        if (!(en > st)) {
+          msgs.push(`${sLabel}: ${t('competition.errStageTime')}`)
+        }
+      })
+    })
+    return msgs
+  }
+
+  const handleSave = (asDraft: boolean) => {
+    const msgs = validate(asDraft)
+    if (msgs.length > 0) {
+      setErrorMessages(msgs)
+      const hasInfoError = !!(nameError)
+      setTab(hasInfoError ? 'info' : 'rounds')
+      scrollToTop()
+      return
+    }
+    setErrorMessages([])
+    const newComp = buildCompetition(asDraft)
     addCompetition(newComp)
+    setDirty(false)
     navigate('/competitions')
+  }
+
+  const handleBack = () => {
+    if (dirty) setShowLeaveModal(true)
+    else navigate('/competitions')
   }
 
   const tabs: Array<{ key: TabKey; label: string; count?: number }> = [
@@ -185,34 +274,36 @@ export function CompetitionCreatePage() {
       <div className="sticky top-0 z-10 w-full bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-5xl mx-auto px-6 pt-5 pb-0">
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" onClick={() => navigate('/competitions')}>
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
-              <h1 className="text-2xl font-bold text-gray-900">{t('competition.createCompetition')}</h1>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">{t('common.language')}:</span>
-                <button
-                  className={cn('px-2.5 py-1 text-xs rounded', editLang === 'en' ? 'bg-blue-100 text-blue-700 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}
-                  onClick={() => setEditLang('en')}
-                >EN</button>
-                <button
-                  className={cn('px-2.5 py-1 text-xs rounded', editLang === 'zh' ? 'bg-blue-100 text-blue-700 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}
-                  onClick={() => setEditLang('zh')}
-                >中文</button>
-              </div>
-              <div className="w-px h-6 bg-gray-200" />
-              <Button variant="secondary" onClick={() => handleSave(true)}>
-                <Save className="w-4 h-4 mr-1" />
-                {t('event.saveAsDraft')}
-              </Button>
-              <Button onClick={() => handleSave(false)}>
-                {t('event.publishNow')}
-              </Button>
-            </div>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" onClick={handleBack}>
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <h1 className="text-2xl font-bold text-gray-900">{t('competition.createCompetition')}</h1>
+            <StatusBadge status={String(previewStatus)} label={`${t('competition.createPreviewStatus')}: ${statusLabel}`} />
           </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">{t('common.language')}:</span>
+              <button
+                className={cn('px-2.5 py-1 text-xs rounded', editLang === 'en' ? 'bg-blue-100 text-blue-700 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}
+                onClick={() => setEditLang('en')}
+              >EN</button>
+              <button
+                className={cn('px-2.5 py-1 text-xs rounded', editLang === 'zh' ? 'bg-blue-100 text-blue-700 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}
+                onClick={() => setEditLang('zh')}
+              >中文</button>
+            </div>
+            <div className="w-px h-6 bg-gray-200" />
+            <Button variant="secondary" onClick={() => handleSave(true)}>
+              <Save className="w-4 h-4 mr-1" />
+              {t('event.saveAsDraft')}
+            </Button>
+            <Button onClick={() => handleSave(false)}>
+              {t('event.publishNow')}
+            </Button>
+          </div>
+        </div>
+        <p className="text-xs text-gray-400 pb-2">{t('competition.createHintBilingual')}</p>
 
           <div className="flex gap-6">
             {tabs.map(tb => (
@@ -238,15 +329,30 @@ export function CompetitionCreatePage() {
         </div>
       </div>
 
+      {errorMessages.length > 0 && (
+        <div className="max-w-5xl mx-auto px-6 pt-4">
+          <div className="rounded-md border border-red-200 bg-red-50 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+              <span className="text-sm font-medium text-red-700">{t('competition.errPublishBlocked')}</span>
+            </div>
+            <ul className="list-disc list-inside text-sm text-red-600 space-y-0.5">
+              {errorMessages.map((m, i) => <li key={i}>{m}</li>)}
+            </ul>
+          </div>
+        </div>
+      )}
+
       {tab === 'info' && (
         <div className="max-w-5xl mx-auto p-6 space-y-6">
           <Card>
             <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionBasicInfo')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label={`${t('competition.competitionName')} (${editLang === 'en' ? 'EN' : '中文'})`}
+                label={`${t('competition.competitionName')} (${editLang === 'en' ? 'EN' : '中文'}) *`}
                 value={editLang === 'en' ? form.name_en : form.name_zh}
                 onChange={(e) => update(editLang === 'en' ? 'name_en' : 'name_zh', e.target.value)}
+                error={nameError}
               />
               <Select label={t('event.game')} options={gameOptions} value={form.game} onChange={(e) => update('game', e.target.value)} />
               <Select label={t('event.carClass')} options={carClassOptions.length > 0 ? carClassOptions : [{ value: '', label: '' }]} value={form.carClass} onChange={(e) => update('carClass', e.target.value)} />
@@ -394,6 +500,23 @@ export function CompetitionCreatePage() {
           )}
         </div>
       )}
+
+      <Modal
+        isOpen={showLeaveModal}
+        onClose={() => setShowLeaveModal(false)}
+        title={t('common.unsavedChangesTitle')}
+        size="sm"
+      >
+        <p className="text-sm text-gray-600 mb-5">{t('common.unsavedChangesBody')}</p>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setShowLeaveModal(false)}>
+            {t('common.keepEditing')}
+          </Button>
+          <Button variant="danger" onClick={() => navigate('/competitions')}>
+            {t('common.discardAndLeave')}
+          </Button>
+        </div>
+      </Modal>
     </>
   )
 }
@@ -428,8 +551,9 @@ function CreateRoundPanel({
   onUpdateStage: (stageId: string, updated: Stage) => void
 }) {
   const { t } = useTranslation()
-  const lang = useApp().state.language
-  const getName = (e: { name_zh: string; name_en: string }) => lang === 'zh' ? e.name_zh : e.name_en
+  const getName = (e: { name_zh: string; name_en: string }) =>
+    editLang === 'en' ? (e.name_en || e.name_zh || '—') : (e.name_zh || e.name_en || '—')
+  const toIso = (v: string) => v ? new Date(v).toISOString() : ''
 
   return (
     <Card padding={false}>
@@ -469,13 +593,13 @@ function CreateRoundPanel({
               label={t('event.registrationOpenAt')}
               type="datetime-local"
               value={round.registrationOpenAt.slice(0, 16)}
-              onChange={(e) => onUpdate({ registrationOpenAt: new Date(e.target.value).toISOString() })}
+              onChange={(e) => onUpdate({ registrationOpenAt: toIso(e.target.value) })}
             />
             <Input
               label={t('event.registrationCloseAt')}
               type="datetime-local"
               value={round.registrationCloseAt.slice(0, 16)}
-              onChange={(e) => onUpdate({ registrationCloseAt: new Date(e.target.value).toISOString() })}
+              onChange={(e) => onUpdate({ registrationCloseAt: toIso(e.target.value) })}
             />
             <Input
               label={t('event.cancelRegistrationDeadline')}
@@ -540,8 +664,9 @@ function CreateStagePanel({
   onDelete: () => void
 }) {
   const { t } = useTranslation()
-  const lang = useApp().state.language
-  const getName = (e: { name_zh: string; name_en: string }) => lang === 'zh' ? e.name_zh : e.name_en
+  const getName = (e: { name_zh: string; name_en: string }) =>
+    editLang === 'en' ? (e.name_en || e.name_zh || '—') : (e.name_zh || e.name_en || '—')
+  const toIso = (v: string) => v ? new Date(v).toISOString() : ''
   const [showServerConfig, setShowServerConfig] = useState(false)
 
   return (
@@ -573,13 +698,13 @@ function CreateStagePanel({
               label={t('common.from')}
               type="datetime-local"
               value={stage.startsAt.slice(0, 16)}
-              onChange={(e) => onUpdate({ ...stage, startsAt: new Date(e.target.value).toISOString() })}
+              onChange={(e) => onUpdate({ ...stage, startsAt: toIso(e.target.value) })}
             />
             <Input
               label={t('common.to')}
               type="datetime-local"
               value={stage.endsAt.slice(0, 16)}
-              onChange={(e) => onUpdate({ ...stage, endsAt: new Date(e.target.value).toISOString() })}
+              onChange={(e) => onUpdate({ ...stage, endsAt: toIso(e.target.value) })}
             />
           </div>
 

@@ -22,6 +22,7 @@ export function NotificationPage() {
   const channelOptions = useManagedOptions('notificationChannel', lang)
   const [typeFilter, setTypeFilter] = useState('')
   const [showSend, setShowSend] = useState(false)
+  const [sendEditLang, setSendEditLang] = useState<'en' | 'zh'>('en')
 
   const filtered = typeFilter ? notifications.filter(n => n.type === typeFilter) : notifications
 
@@ -53,10 +54,19 @@ export function NotificationPage() {
         <div className="space-y-4">
           <Select label={t('notification.recipients')} options={recipientOptions} />
           <Select label={t('notification.channel')} options={channelOptions} />
-          <Input label="Title (English)" />
-          <Input label="Title (Chinese)" />
-          <Textarea label="Content (English)" rows={4} />
-          <Textarea label="Content (Chinese)" rows={4} />
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">{t('common.language')}:</span>
+            <button
+              className={`px-2.5 py-1 text-xs rounded ${sendEditLang === 'en' ? 'bg-blue-100 text-blue-700 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              onClick={() => setSendEditLang('en')}
+            >EN</button>
+            <button
+              className={`px-2.5 py-1 text-xs rounded ${sendEditLang === 'zh' ? 'bg-blue-100 text-blue-700 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              onClick={() => setSendEditLang('zh')}
+            >中文</button>
+          </div>
+          <Input label={`${t('notification.title')} (${sendEditLang === 'en' ? 'EN' : '中文'})`} />
+          <Textarea label={`${t('common.description')} (${sendEditLang === 'en' ? 'EN' : '中文'})`} rows={4} />
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setShowSend(false)}>{t('common.cancel')}</Button>
             <Button><Send className="w-4 h-4 mr-1" />{t('common.submit')}</Button>

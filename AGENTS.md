@@ -71,7 +71,8 @@ src/
     │   ├── TemplateListPage.tsx      # /templates — 服务器配置模板列表
     │   └── TemplateEditPage.tsx      # /templates/create 和 /templates/:id/edit（同一组件）
     ├── results/
-    │   ├── ResultListPage.tsx        # /results — Competition→Round→Stage 三级展开树
+    │   ├── ResultListPage.tsx        # /results — 赛事列表（点击进单赛事页）
+    │   ├── CompetitionResultsPage.tsx # /results/competition/:competitionId — 单赛事分站/阶段 + 从服务器同步成绩
     │   └── ResultEntryPage.tsx       # /results/:stageId — 按 Session+Split 录入成绩（session 选择器）+ 自动积分 + 发布
     ├── protests/                     # ProtestListPage, ProtestDetailPage
     ├── users/                        # UserListPage, UserDetailPage（"用户"即 drivers）
@@ -94,7 +95,8 @@ src/
 /templates                     → 模板列表
 /templates/create              → 创建模板
 /templates/:id/edit            → 编辑模板
-/results                       → 成绩列表（按赛事→分站→阶段展开）
+/results                       → 成绩列表（赛事卡片列表，点击进入单赛事成绩页）
+/results/competition/:competitionId → 单赛事成绩（按分站→阶段，含"从服务器同步成绩"）
 /results/:stageId              → 成绩录入（:id 是 Stage ID，不是赛事 ID）
 /protests, /protests/:id       → 抗议列表 / 抗议详情
 /users, /users/:id             → 用户列表 / 用户详情
@@ -152,6 +154,14 @@ Competition（赛事，如 MOZA GT3 Challenge）
 - `createDefaultGameConfig(game)`（按 AC/ACC 返回不同默认配置）
 - `createDefaultTemplate(game)`
 - `addCompetition(c)` / `updateCompetition(updated)`（直接 mutate 导入数组）
+
+### StageTemplate（`src/data/competitions.ts`，导出为 `stageTemplates`）
+服务器配置模板，应用到 Stage 可一次性载入完整开服配方：
+- `gameConfig: SessionGameConfig`（赛道/天气/规则/辅助/门槛）
+- `sessions: Session[]`（P/Q/R 时序——冲刺 vs 耐力的本质区别就在这里）
+- `splitConfig?: Partial<Split>`（每个 Split 的服务器默认值，**含 serverName/passwords/ports/capacity/flags**；保存时仅排除 `id`/`splitNumber`/`entryList`/`results`/`resultsPublishedAt`）
+- **不含** `bopEntries`（BoP 报名后按车手水平动态配置，属实例级）、不含 `maxSplits`/`maxEntriesPerSplit`（Stage 容量决策）
+- 应用模板（`ServerConfigModal.handleApplyTemplate`）会载入 gameConfig + sessions + splitConfig；另存为模板（`handleSaveAsTemplate`）会捕获当前 Stage 的这三块
 
 ### 数据迁移说明
 mock 原始数据（`_rawCompetitions`）里 Stage 用扁平 `sessions[]`（每个 session 内嵌 `splits`/`gameConfig`），导出前由 `migrateCompetitions()` 转换：把 race session 的 `gameConfig` 和 `splits` 上提到 Stage 层级，session 列表映射为 `Session[]`（id 加 `_gs` 后缀）。**成绩归属**：迁移时为每条 `SessionResult` 回填 `sessionId`（指向迁移后的 Session id）；若原始 result 已带 `sessionId`（如手工标注的 qualifying 成绩）则保留。迁移会清除 Split 上残留的 `sessionId` 字段（一个 Split 运行所有 Session，不再属于单个 Session）。最终导出的 `competitions` 数组里 Stage 结构是扁平的 `sessions` + `splits` + `gameConfig`，splits 上无 `sessionId`，results 上带 `sessionId`。

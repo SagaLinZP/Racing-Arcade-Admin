@@ -6,8 +6,8 @@ import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
-import { sessionTemplates, createDefaultTemplate, createDefaultGameConfig } from '@/data/competitions'
-import type { SessionTemplate, SessionGameConfig, GamePlatform } from '@/data/competitions'
+import { stageTemplates, createDefaultTemplate, createDefaultGameConfig } from '@/data/competitions'
+import type { StageTemplate, SessionGameConfig, GamePlatform } from '@/data/competitions'
 import { GameConfigEditor } from '@/pages/competitions/GameConfigEditor'
 import { useApp } from '@/hooks/useAppStore'
 import { useManagedOptions } from '@/hooks/useManagedOptions'
@@ -20,15 +20,15 @@ export function TemplateEditPage() {
   const gameOptions = useManagedOptions('game', state.language)
   const isEdit = !!id
 
-  const existing = isEdit ? sessionTemplates.find(tpl => tpl.id === id) : undefined
+  const existing = isEdit ? stageTemplates.find(tpl => tpl.id === id) : undefined
 
   const [editLang, setEditLang] = useState<'en' | 'zh'>('en')
-  const [form, setForm] = useState<SessionTemplate>(() => {
+  const [form, setForm] = useState<StageTemplate>(() => {
     if (existing) return { ...existing, gameConfig: { ...existing.gameConfig } }
     return createDefaultTemplate('ACC')
   })
 
-  const setMeta = <K extends keyof SessionTemplate>(key: K, value: SessionTemplate[K]) =>
+  const setMeta = <K extends keyof StageTemplate>(key: K, value: StageTemplate[K]) =>
     setForm(prev => ({ ...prev, [key]: value }))
 
   const setGC = (key: keyof SessionGameConfig, value: string | number | boolean) =>
@@ -45,12 +45,12 @@ export function TemplateEditPage() {
   const handleSave = () => {
     const now = new Date().toISOString()
     if (isEdit) {
-      const idx = sessionTemplates.findIndex(tpl => tpl.id === id)
+      const idx = stageTemplates.findIndex(tpl => tpl.id === id)
       if (idx >= 0) {
-        sessionTemplates[idx] = { ...form, updatedAt: now }
+        stageTemplates[idx] = { ...form, updatedAt: now }
       }
     } else {
-      sessionTemplates.push({ ...form, createdAt: now, updatedAt: now })
+      stageTemplates.push({ ...form, createdAt: now, updatedAt: now })
     }
     navigate('/templates')
   }
