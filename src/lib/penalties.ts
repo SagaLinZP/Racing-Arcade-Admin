@@ -1,6 +1,10 @@
-import type { Stage } from '@/data/competitions'
+import type { Competition, Stage } from '@/data/competitions'
+import { updateCompetition } from '@/data/competitions'
+import { addAuditLog } from '@/data/admin'
 import { getPointsForPosition } from './results'
 import type { ScoringTableEntry } from './utils'
+
+export type PenaltyKind = 'warning' | 'time' | 'position' | 'points' | 'dsq'
 
 export type PenaltyAction =
   | { kind: 'warning' }
@@ -113,5 +117,42 @@ export function applyPenalty(
     break
   }
 
+  return changes
+}
+
+export interface PenaltyApplication {
+  stage: Stage
+  competition: Competition
+  sessionId?: string
+  driverId: string
+  action: PenaltyAction
+  reason: string
+  reviewedBy?: string
+  protestId?: string
+  scoringTable?: ScoringTableEntry[]
+}
+
+/** Apply a penalty, write one audit log per resulting change, and persist the competition. */
+export function applyPenaltyWithAudit(app: PenaltyApplication): PenaltyChange[] {
+  const changes = applyPenalty(app.stage, app.sessionId, app.driverId, app.action, app.scoringTable)
+  if (changes.length === 0) return changes
+  const now = new Date().toISOString()
+  changes.forEach((ch, i) => {
+    addAuditLog({
+      id: `al_${app.stage.id}_${app.driverId}_${ch.field}_${Date.now()}_${i}`,
+      competitionId: app.competition.id,
+      stageId: app.stage.id,
+      sessionId: app.sessionId,
+      driverId: ch.driverId,
+      field: ch.field,
+      oldValue: ch.oldValue,
+      newValue: ch.newValue,
+      changedBy: app.reviewedBy ?? 'admin1',
+      changedAt: now,
+      reason: app.reason,
+      protestId: app.protestId,
+    })
+  })
+  updateCompetition(app.competition)
   return changes
 }

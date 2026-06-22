@@ -13,12 +13,14 @@ import { Badge } from '@/components/ui/Badge'
 import { findStageById, getPointsForPosition, getName, getRaceSessionId } from '@/lib/results'
 import type { SessionResult, ResultStatus } from '@/data/competitions'
 import type { ScoringTableEntry } from '@/lib/utils'
-import { ArrowLeft, Save, Upload, Trophy, Plus, Trash2, CheckCircle, History } from 'lucide-react'
+import { ArrowLeft, Save, Upload, Trophy, Plus, Trash2, CheckCircle, History, Gavel } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { parseResultsJson, reconcileRows, rowsToSessionResults, type ParsedRow } from '@/lib/resultParser'
 import { auditLogs } from '@/data/admin'
 import { addNotification } from '@/data/notifications'
 import { useDataVersion } from '@/data/store'
+import { PenaltyModal } from '@/components/PenaltyModal'
+import { formatDateTimeTz } from '@/lib/timezone'
 
 interface SplitResultState {
   splitId: string
@@ -55,6 +57,7 @@ export function ResultEntryPage() {
     () => ctx?.stage ? (getRaceSessionId(ctx.stage) ?? ctx.stage.sessions[0]?.id) : undefined,
   )
   const [autoPoints, setAutoPoints] = useState(true)
+  const [penaltyTarget, setPenaltyTarget] = useState<{ driverId: string; driverName: string } | null>(null)
   const [showUpload, setShowUpload] = useState(false)
   const [pasteText, setPasteText] = useState('')
   const [preview, setPreview] = useState<ParsedRow[] | null>(null)
@@ -119,14 +122,32 @@ export function ResultEntryPage() {
     }))
   }
 
-  const handleSave = () => {
+  const commitLocal = () => {
     if (!ctx) return
     ctx.stage.splits.forEach(split => {
       const state = splitStates.find(ss => ss.splitId === split.id)
-      if (state) {
-        split.results = state.results
-      }
+      if (state) split.results = state.results.map(r => ({ ...r }))
     })
+  }
+
+  const resyncFromStage = () => {
+    if (!ctx) return
+    setSplitStates(ctx.stage.splits.map(split => ({
+      splitId: split.id,
+      splitNumber: split.splitNumber,
+      results: split.results ? split.results.map(r => ({ ...r })) : [],
+      publishedAt: split.resultsPublishedAt,
+    })))
+  }
+
+  const openPenalty = (driverId: string, driverName: string) => {
+    commitLocal()
+    setPenaltyTarget({ driverId, driverName })
+  }
+
+  const handleSave = () => {
+    if (!ctx) return
+    commitLocal()
     navigate('/results')
   }
 
@@ -255,7 +276,7 @@ export function ResultEntryPage() {
           )}
           <div>
             <span className="text-gray-500">{t('common.date')}: </span>
-            <span className="font-medium">{new Date(stage.startsAt).toLocaleDateString()}</span>
+            <span className="font-medium">{formatDateTimeTz(stage.startsAt, competition.timezone)}</span>
           </div>
           <div>
             <span className="text-gray-500">{t('competition.sessions')}: </span>
@@ -473,12 +494,16 @@ export function ResultEntryPage() {
                         />
                       </td>
                       <td className="px-3 py-1.5">
-                        <Input
-                          className="w-20"
-                          value={r.penalty ?? ''}
-                          onChange={(e) => updateResult(fullIdx, { penalty: e.target.value })}
-                          placeholder="—"
-                        />
+                        <div className="flex items-center gap-1.5">
+                          {r.penalty && <span className="text-xs text-amber-700 truncate max-w-[72px]" title={r.penalty}>{r.penalty}</span>}
+                          <button
+                            onClick={() => openPenalty(r.driverId, driver?.nickname ?? r.driverId)}
+                            className="text-gray-400 hover:text-red-600 shrink-0"
+                            title={t('result.penaltyAction')}
+                          >
+                            <Gavel className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                       <td className="px-3 py-1.5 text-right">
                         <Input
@@ -563,6 +588,21 @@ export function ResultEntryPage() {
             ))}
           </div>
         </Card>
+      )}
+
+      {penaltyTarget && (
+        <PenaltyModal
+          isOpen={true}
+          onClose={() => setPenaltyTarget(null)}
+          competition={competition}
+          stage={stage}
+          sessionId={activeSessionId}
+          driverId={penaltyTarget.driverId}
+          driverName={penaltyTarget.driverName}
+          sessionName={(() => { const s = stage.sessions.find(se => se.id === activeSessionId); return s ? getName(s, lang) : undefined })()}
+          scoringTable={scoringTable}
+          onApplied={resyncFromStage}
+        />
       )}
     </div>
   )

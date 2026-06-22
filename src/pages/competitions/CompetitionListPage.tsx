@@ -17,7 +17,8 @@ import { Badge } from '@/components/ui/Badge'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Modal } from '@/components/ui/Modal'
 import { Plus, Pencil, Ban, Trash2, Clock, AlertCircle, ClipboardList, Activity } from 'lucide-react'
-import { getCompetitionStatus, formatDate } from '@/lib/utils'
+import { getCompetitionStatus } from '@/lib/utils'
+import { formatDateTz } from '@/lib/timezone'
 
 function coverStyle(c: Competition): React.CSSProperties {
   if (c.coverImage) return { backgroundImage: `url(${c.coverImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
@@ -83,7 +84,7 @@ export function CompetitionListPage() {
     const status = getCompetitionStatus(c)
     if (status === 'Cancelled') return null
     if (status === 'Draft') return { label: t('competition.ctaContinueEdit'), to: `/competitions/${c.id}/edit`, variant: 'secondary' }
-    if (status === 'RegistrationOpen') return { label: t('competition.ctaRegistrations'), to: `/registrations?competition=${c.id}`, variant: 'primary', badge: pendingRegCount(c) }
+    if (status === 'RegistrationOpen') return { label: t('competition.ctaRegistrations'), to: `/registrations/competition/${c.id}`, variant: 'primary', badge: pendingRegCount(c) }
     if (status === 'RegistrationClosed' || status === 'InProgress') return { label: t('competition.ctaManageEvent'), to: `/results/competition/${c.id}`, variant: 'primary' }
     if (status === 'Completed') return needsResults(c)
       ? { label: t('competition.ctaEnterResults'), to: `/results/competition/${c.id}`, variant: 'primary' }
@@ -200,7 +201,7 @@ export function CompetitionListPage() {
                   <span>{c.game} · {c.carClass} · {c.rounds.length} {t('competition.rounds').toLowerCase()}</span>
                   {ms && (
                     <span className="inline-flex items-center gap-1 text-gray-400">
-                      <Clock className="w-3 h-3" />{ms.label} {formatDate(ms.date, lang)}
+                      <Clock className="w-3 h-3" />{ms.label} {formatDateTz(ms.date, c.timezone)}
                     </span>
                   )}
                 </div>

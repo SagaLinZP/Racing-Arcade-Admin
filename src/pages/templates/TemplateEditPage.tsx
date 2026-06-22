@@ -6,9 +6,10 @@ import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
-import { stageTemplates, createDefaultTemplate, createDefaultGameConfig } from '@/data/competitions'
-import type { StageTemplate, SessionGameConfig, GamePlatform } from '@/data/competitions'
+import { stageTemplates, createDefaultTemplate, createDefaultGameConfig, defaultSplitConfig } from '@/data/competitions'
+import type { StageTemplate, SessionGameConfig, GamePlatform, Split, Session } from '@/data/competitions'
 import { GameConfigEditor } from '@/pages/competitions/GameConfigEditor'
+import { SplitServerFields, SessionsEditor } from '@/pages/competitions/serverFields'
 import { useApp } from '@/hooks/useAppStore'
 import { useManagedOptions } from '@/hooks/useManagedOptions'
 
@@ -33,6 +34,11 @@ export function TemplateEditPage() {
 
   const setGC = (key: keyof SessionGameConfig, value: string | number | boolean) =>
     setForm(prev => ({ ...prev, gameConfig: { ...prev.gameConfig, [key]: value } }))
+
+  const setSplit = (key: keyof Split, value: string | number | boolean) =>
+    setForm(prev => ({ ...prev, splitConfig: { ...(prev.splitConfig ?? defaultSplitConfig()), [key]: value } }))
+
+  const setSessions = (sessions: Session[]) => setForm(prev => ({ ...prev, sessions }))
 
   const handleGameChange = (newGame: GamePlatform) => {
     setForm(prev => ({
@@ -109,6 +115,17 @@ export function TemplateEditPage() {
               />
             )}
           </div>
+        </Card>
+
+        <Card>
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">{t('template.serverSettings')}</h3>
+          <p className="text-xs text-gray-400 mb-3">{t('template.serverSettingsHint')}</p>
+          <SplitServerFields split={form.splitConfig ?? defaultSplitConfig()} game={form.game} onChange={setSplit} />
+        </Card>
+
+        <Card>
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">{t('serverConfig.tabSessions')}</h3>
+          <SessionsEditor sessions={form.sessions} game={form.game} editLang={editLang} onChange={setSessions} />
         </Card>
 
         <Card>

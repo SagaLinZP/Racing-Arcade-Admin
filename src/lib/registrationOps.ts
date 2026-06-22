@@ -2,7 +2,7 @@ import { drivers } from '@/data/drivers'
 import { teams } from '@/data/teams'
 import { getRoundRegistrations, setRegistrationStatus, assignSplit } from '@/data/registrations'
 import { updateCompetition, createDefaultSplit } from '@/data/competitions'
-import type { Competition, Round, EntryListEntry } from '@/data/competitions'
+import type { Competition, Round, Stage, EntryListEntry } from '@/data/competitions'
 
 function driverName(id: string): string {
   return drivers.find(d => d.id === id)?.nickname ?? id
@@ -12,26 +12,57 @@ function teamName(id?: string): string | undefined {
   return id ? teams.find(t => t.id === id)?.name : undefined
 }
 
-export function splitCountForRound(round: Round): number {
-  const stage = round.stages.find(s => s.enableMultiSplit) ?? round.stages[0]
-  return stage?.enableMultiSplit ? Math.max(1, stage.maxSplits ?? 1) : 1
-}
-
 export function approveAllPending(round: Round): number {
   const pending = getRoundRegistrations(round.id).filter(r => r.status === 'pending')
   pending.forEach(r => setRegistrationStatus(r.id, 'approved'))
   return pending.length
 }
 
-export function autoAssign(round: Round): void {
+function roundRegistrationStages(round: Round): Stage[] {
+  return round.stages.filter(s => (s.eligibilitySource ?? 'roundRegistration') === 'roundRegistration')
+}
+
+export interface SplitPlan {
+  splitCount: number
+  capacityPerSplit?: number
+  totalCapacity?: number
+  approvedCount: number
+  minPerGroup: number
+  perGroup: number
+}
+
+export function getSplitPlan(round: Round): SplitPlan {
   const stage = round.stages.find(s => s.enableMultiSplit) ?? round.stages[0]
-  const splitCount = splitCountForRound(round)
+  const splitCount = stage?.enableMultiSplit ? Math.max(1, stage.maxSplits ?? 1) : 1
+  const capacityPerSplit = stage?.maxEntriesPerSplit
+  const totalCapacity = capacityPerSplit ? capacityPerSplit * splitCount : undefined
+  const approvedCount = getRoundRegistrations(round.id).filter(r => r.status === 'approved').length
+  const minPerGroup = stage?.minEntries ?? 4
+  const perGroup = splitCount > 0 ? Math.floor(approvedCount / splitCount) : approvedCount
+  return { splitCount, capacityPerSplit, totalCapacity, approvedCount, minPerGroup, perGroup }
+}
+
+export type SplitWarning = 'over' | 'tooFew' | null
+
+/** Warn when approved entries exceed total capacity, or an even split leaves groups too small. */
+export function getSplitWarning(round: Round, overrideSplitCount?: number): SplitWarning {
+  const plan = getSplitPlan(round)
+  const splitCount = Math.max(1, overrideSplitCount ?? plan.splitCount)
+  if (plan.capacityPerSplit && plan.approvedCount > plan.capacityPerSplit * splitCount) return 'over'
+  if (splitCount > 1 && Math.floor(plan.approvedCount / splitCount) < plan.minPerGroup) return 'tooFew'
+  return null
+}
+
+/** Evenly distribute approved registrations across `splitCount` groups (group sizes differ by ≤1). */
+export function assignSplitsEvenly(
+  competition: Competition,
+  round: Round,
+  splitCount: number,
+  order: 'time' | 'random',
+): void {
   const approved = getRoundRegistrations(round.id).filter(r => r.status === 'approved')
-  const rule = stage?.splitAssignmentRule ?? ''
   const ordered = [...approved]
-  if (/skill/i.test(rule)) {
-    ordered.sort((a, b) => (drivers.find(d => d.id === b.driverId)?.totalPoints ?? 0) - (drivers.find(d => d.id === a.driverId)?.totalPoints ?? 0))
-  } else if (/random/i.test(rule)) {
+  if (order === 'random') {
     for (let i = ordered.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[ordered[i], ordered[j]] = [ordered[j], ordered[i]]
@@ -39,8 +70,20 @@ export function autoAssign(round: Round): void {
   } else {
     ordered.sort((a, b) => a.submittedAt.localeCompare(b.submittedAt))
   }
-  const cap = stage?.maxEntriesPerSplit ?? (Math.ceil(ordered.length / splitCount) || 1)
-  ordered.forEach((r, i) => assignSplit(r.id, Math.min(splitCount, Math.floor(i / cap) + 1)))
+  const k = Math.max(1, splitCount)
+  const n = ordered.length
+  const base = Math.floor(n / k)
+  const rem = n % k
+  let idx = 0
+  for (let g = 1; g <= k; g++) {
+    const size = base + (g <= rem ? 1 : 0)
+    for (let j = 0; j < size; j++) assignSplit(ordered[idx++].id, k > 1 ? g : 1)
+  }
+  roundRegistrationStages(round).forEach(stage => {
+    stage.enableMultiSplit = k > 1
+    stage.maxSplits = k
+  })
+  updateCompetition(competition)
 }
 
 export function applyToEntryList(competition: Competition, round: Round): number {

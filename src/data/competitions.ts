@@ -158,6 +158,11 @@ export interface Split {
   raceGasPenaltyDisabled?: number
   resultScreenTime?: number
   welcomeMessage?: string
+  numThreads?: number
+  sleepTime?: number
+  udpPluginLocalPort?: number
+  udpPluginAddress?: string
+  authPluginAddress?: string
   centralEntryListPath?: string
   forceEntryList?: number
   entryList?: EntryListEntry[]
@@ -229,6 +234,7 @@ export interface Stage {
   enableMultiSplit?: boolean
   splitAssignmentRule?: string
   minEntries?: number
+  awardsPoints?: boolean
 }
 
 export interface Round {
@@ -245,6 +251,7 @@ export interface Round {
   registrationOpenAt: string
   registrationCloseAt: string
   cancelRegistrationDeadline?: string
+  maxRegistrations?: number
   stages: Stage[]
   currentRegistrations: number
   registeredDriverIds: string[]
@@ -275,6 +282,7 @@ export interface Competition {
   game: GamePlatform
   carClass: string
   carList?: string[]
+  timezone?: string
   defaultRuleset: CompetitionRuleset
   rounds: Round[]
   statusOverride?: 'Draft' | 'Cancelled'
@@ -486,6 +494,7 @@ export function createDefaultStage(roundId: string, type?: StageType): Stage {
     splits: [createDefaultSplit(id, 1)],
     eligibilitySource: 'roundRegistration',
     enableMultiSplit: false,
+    awardsPoints: true,
   }
 }
 
@@ -512,6 +521,7 @@ export function createDefaultRound(competitionId: string): Round {
 const _rawCompetitions = [
   {
     id: 'c1',
+    timezone: 'UTC+8',
     name_zh: 'MOZA GT3 挑战赛 2026',
     name_en: 'MOZA GT3 Challenge 2026',
     description_zh: 'MOZA Racing 官方 GT3 挑战赛，顶级 GT3 赛事。共 5 站比赛，积分最高者获得年度总冠军。',
@@ -567,7 +577,7 @@ const _rawCompetitions = [
             maxEntriesPerSplit: 30,
             maxSplits: 4,
             enableMultiSplit: true,
-            splitAssignmentRule: 'By Skill',
+            splitAssignmentRule: 'skill',
             minEntries: 10,
             sessions: [
               { id: 'c1r1s1se1', stageId: 'c1r1s1', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-05-09T11:00:00Z', endsAt: '2026-05-09T11:30:00Z', durationMinutes: 30, resultType: 'classification', splits: [{ id: 'c1r1s1se1sp1', sessionId: 'c1r1s1se1', splitNumber: 1 }] },
@@ -645,7 +655,7 @@ const _rawCompetitions = [
             maxEntriesPerSplit: 30,
             maxSplits: 4,
             enableMultiSplit: true,
-            splitAssignmentRule: 'By Skill',
+            splitAssignmentRule: 'skill',
             minEntries: 10,
             sessions: [
               { id: 'c1r2s1se1', stageId: 'c1r2s1', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-05-23T13:00:00Z', endsAt: '2026-05-23T13:30:00Z', durationMinutes: 30, resultType: 'classification', splits: [{ id: 'c1r2s1se1sp1', sessionId: 'c1r2s1se1', splitNumber: 1 }] },
@@ -740,7 +750,7 @@ const _rawCompetitions = [
             maxEntriesPerSplit: 30,
             maxSplits: 4,
             enableMultiSplit: true,
-            splitAssignmentRule: 'By Skill',
+            splitAssignmentRule: 'skill',
             minEntries: 10,
             sessions: [
               { id: 'c1r3s1se1', stageId: 'c1r3s1', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-06-28T13:00:00Z', endsAt: '2026-06-28T13:30:00Z', durationMinutes: 30, resultType: 'classification', splits: [{ id: 'c1r3s1se1sp1', sessionId: 'c1r3s1se1', splitNumber: 1 }] },
@@ -763,6 +773,7 @@ const _rawCompetitions = [
     description_en: 'The Endurance Series, focusing on long-distance endurance races. 3 rounds testing driver stamina and strategy.',
     coverImage: '',
     regions: ['AP', 'CN'],
+    timezone: 'UTC+8',
     game: 'ACC',
     carClass: 'GT3',
     defaultRuleset: {
@@ -805,7 +816,7 @@ const _rawCompetitions = [
             maxEntriesPerSplit: 30,
             maxSplits: 2,
             enableMultiSplit: true,
-            splitAssignmentRule: 'By Skill',
+            splitAssignmentRule: 'skill',
             minEntries: 15,
             sessions: [
               { id: 'c2r1s1se1', stageId: 'c2r1s1', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-05-03T04:00:00Z', endsAt: '2026-05-03T04:45:00Z', durationMinutes: 45, resultType: 'classification', splits: [{ id: 'c2r1s1se1sp1', sessionId: 'c2r1s1se1', splitNumber: 1 }] },
@@ -890,7 +901,7 @@ const _rawCompetitions = [
             maxEntriesPerSplit: 30,
             maxSplits: 2,
             enableMultiSplit: true,
-            splitAssignmentRule: 'By Skill',
+            splitAssignmentRule: 'skill',
             minEntries: 15,
             sessions: [
               { id: 'c2r2s1se1', stageId: 'c2r2s1', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-06-21T04:00:00Z', endsAt: '2026-06-21T04:45:00Z', durationMinutes: 45, resultType: 'classification', splits: [{ id: 'c2r2s1se1sp1', sessionId: 'c2r2s1se1', splitNumber: 1 }] },
@@ -953,7 +964,7 @@ const _rawCompetitions = [
             maxEntriesPerSplit: 30,
             maxSplits: 2,
             enableMultiSplit: true,
-            splitAssignmentRule: 'By Skill',
+            splitAssignmentRule: 'skill',
             minEntries: 15,
             sessions: [
               { id: 'c2r3s1se1', stageId: 'c2r3s1', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-07-26T04:00:00Z', endsAt: '2026-07-26T04:45:00Z', durationMinutes: 45, resultType: 'classification', splits: [{ id: 'c2r3s1se1sp1', sessionId: 'c2r3s1se1', splitNumber: 1 }] },
@@ -976,6 +987,7 @@ const _rawCompetitions = [
     description_en: 'GT4 Cup at Shanghai International Circuit, a 30-minute sprint race.',
     coverImage: '',
     regions: ['CN'],
+    timezone: 'UTC+8',
     game: 'ACC',
     carClass: 'GT4',
     defaultRuleset: {
@@ -1025,6 +1037,7 @@ const _rawCompetitions = [
     description_en: 'Sprint Race at Circuit of the Americas, Austin, Texas. 15 laps of intense racing.',
     coverImage: '',
     regions: ['AM'],
+    timezone: 'UTC-5',
     game: 'ACC',
     carClass: 'GT3',
     defaultRuleset: {
@@ -1091,6 +1104,7 @@ const _rawCompetitions = [
   },
   {
     id: 'c5',
+    timezone: 'UTC+8',
     name_zh: 'MOZA GT3 邀请赛',
     name_en: 'MOZA GT3 Invitational',
     description_zh: '含预选赛的 GT3 邀请赛。每站包含长时间开放预选赛和正赛日两个阶段。',
@@ -1161,7 +1175,7 @@ const _rawCompetitions = [
             maxEntriesPerSplit: 30,
             maxSplits: 3,
             enableMultiSplit: true,
-            splitAssignmentRule: 'First Come First Served',
+            splitAssignmentRule: 'time',
             sessions: [
               { id: 'c5r1s2se1', stageId: 'c5r1s2', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-07-22T13:00:00Z', endsAt: '2026-07-22T13:30:00Z', durationMinutes: 30, resultType: 'classification', splits: [{ id: 'c5r1s2se1sp1', sessionId: 'c5r1s2se1', splitNumber: 1 }] },
               { id: 'c5r1s2se2', stageId: 'c5r1s2', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', startsAt: '2026-07-22T13:30:00Z', endsAt: '2026-07-22T13:45:00Z', durationMinutes: 15, resultType: 'classification', splits: [{ id: 'c5r1s2se2sp1', sessionId: 'c5r1s2se2', splitNumber: 1 }] },
@@ -1184,6 +1198,7 @@ const _rawCompetitions = [
     description_en: 'MOZA Standalone event at Nürburgring, Germany. This event has been cancelled.',
     coverImage: '',
     regions: ['EU'],
+    timezone: 'UTC+1',
     game: 'ACC',
     carClass: 'GT3',
     defaultRuleset: {
@@ -1230,6 +1245,135 @@ const _rawCompetitions = [
     createdAt: '2026-03-01T10:00:00Z',
     updatedAt: '2026-05-05T12:00:00Z',
   },
+  {
+    id: 'c7',
+    name_zh: '神力科莎 GT3 冲刺锦标赛 2026',
+    name_en: 'Assetto Corsa GT3 Sprint Championship 2026',
+    description_zh: '基于神力科莎（AC）的 GT3 冲刺锦标赛，短组距快节奏对抗。共 2 站，采用标准积分。',
+    description_en: 'A GT3 sprint championship on Assetto Corsa (AC) — short, fast-paced races. 2 rounds, standard scoring.',
+    coverImage: '',
+    regions: ['CN', 'AP'],
+    timezone: 'UTC+8',
+    game: 'AC',
+    carClass: 'GT3',
+    carList: ['ks_ferrari_488_gt3', 'ks_porsche_911_gt3_r_2016', 'mclaren_650_gt3', 'ks_mercedes_amg_gt3', 'ks_audi_r8_lms_2016'],
+    defaultRuleset: {
+      accessRequirements_zh: '需安装指定 GT3 车辆包并完成赛道认证圈速。',
+      accessRequirements_en: 'Requires the specified GT3 car pack and a verified track qualification lap.',
+      scoringTable: [
+        { position: 1, points: 25 },
+        { position: 2, points: 18 },
+        { position: 3, points: 15 },
+        { position: 4, points: 12 },
+        { position: 5, points: 10 },
+        { position: 6, points: 8 },
+        { position: 7, points: 6 },
+        { position: 8, points: 4 },
+        { position: 9, points: 2 },
+        { position: 10, points: 1 },
+      ],
+      scoringNote_zh: '前 10 名计分，最快圈 +1 分。',
+      scoringNote_en: 'Points to top 10, fastest lap +1.',
+      resources_zh: 'AC GT3 车辆包：https://example.com/ac-gt3-pack\n安装说明：解压至 assettocorsa/content/cars 目录',
+      resources_en: 'AC GT3 Car Pack: https://example.com/ac-gt3-pack\nInstall: Extract to assettocorsa/content/cars',
+      streamUrl: 'https://twitch.tv/racingarcade',
+    },
+    rounds: [
+      {
+        id: 'c7r1',
+        competitionId: 'c7',
+        roundNumber: 1,
+        name_zh: '第 1 站 - 穆杰罗',
+        name_en: 'Round 1 - Mugello',
+        track: 'Mugello',
+        trackLayout: '',
+        registrationOpenAt: '2026-05-01T12:00:00Z',
+        registrationCloseAt: '2026-05-25T12:00:00Z',
+        cancelRegistrationDeadline: '2026-05-24T12:00:00Z',
+        maxRegistrations: 48,
+        currentRegistrations: 32,
+        registeredDriverIds: ['d1', 'd5', 'd9', 'd12', 'd3', 'd7'],
+        stages: [
+          {
+            id: 'c7r1s1',
+            roundId: 'c7r1',
+            type: 'race_day',
+            name_zh: '正赛日',
+            name_en: 'Race Day',
+            startsAt: '2026-06-06T11:00:00Z',
+            endsAt: '2026-06-06T13:30:00Z',
+            maxEntriesPerSplit: 24,
+            enableMultiSplit: false,
+            minEntries: 6,
+            sessions: [
+              { id: 'c7r1s1se1', stageId: 'c7r1s1', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-06-06T11:00:00Z', endsAt: '2026-06-06T11:30:00Z', durationMinutes: 30, resultType: 'classification', splits: [{ id: 'c7r1s1se1sp1', sessionId: 'c7r1s1se1', splitNumber: 1 }] },
+              { id: 'c7r1s1se2', stageId: 'c7r1s1', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', startsAt: '2026-06-06T11:30:00Z', endsAt: '2026-06-06T11:45:00Z', durationMinutes: 15, resultType: 'classification', splits: [{ id: 'c7r1s1se2sp1', sessionId: 'c7r1s1se2', splitNumber: 1 }] },
+              {
+                id: 'c7r1s1se3', stageId: 'c7r1s1', type: 'race', name_zh: '正赛', name_en: 'Race', startsAt: '2026-06-06T12:00:00Z', endsAt: '2026-06-06T12:45:00Z', raceDuration: 40, raceDurationType: 'time', resultType: 'classification',
+                gameConfig: { track: 'mugello', trackLayout: '', cars: 'ks_ferrari_488_gt3;ks_porsche_911_gt3_r_2016;mclaren_650_gt3;ks_mercedes_amg_gt3;ks_audi_r8_lms_2016', sunAngle: 48, weatherGraphics: '3_clear', baseTempAmbient: 26, variationAmbient: 2, baseTempRoad: 10, variationRoad: 2, windSpeedMin: 2, windSpeedMax: 12, windDirection: 0, windVariationDirection: 0, damageMultiplier: 100, fuelRate: 100, tyreWearRate: 100, tcAllowed: 1, absAllowed: 1, stabilityAllowed: false, autoclutchAllowed: true, forceVirtualMirror: true, legalTyres: 'semislick', startRule: 1, raceOverTime: 180, allowedTyresOut: 2, trackGripSessionStart: 96, trackGripRandomness: 2, trackGripLapGain: 100, trackGripSessionTransfer: 50, timeMultiplier: 1 },
+                splits: [{ id: 'c7r1s1se3sp1', sessionId: 'c7r1s1se3', splitNumber: 1, serverName: 'RA AC GT3 Mugello #1', serverPassword: 'mugello2026', adminPassword: 'admin123', maxConnections: 24, registerToLobby: true, entryList: [
+                  { id: 'ele_c7r1_1', driverId: 'd1', driverName: 'Marco Rossi', teamName: 'Apex Racing', raceNumber: 7, carModel: 'ks_ferrari_488_gt3', ballastKg: 0, restrictor: 0, isAutoGenerated: false },
+                  { id: 'ele_c7r1_2', driverId: 'd5', driverName: 'Driver 5', raceNumber: 16, carModel: 'mclaren_650_gt3', ballastKg: 0, restrictor: 0, isAutoGenerated: false },
+                  { id: 'ele_c7r1_3', driverId: 'd9', driverName: 'Driver 9', raceNumber: 22, carModel: 'ks_porsche_911_gt3_r_2016', ballastKg: 0, restrictor: 0, isAutoGenerated: false },
+                  { id: 'ele_c7r1_4', driverId: 'd12', driverName: 'Driver 12', raceNumber: 4, carModel: 'ks_mercedes_amg_gt3', ballastKg: 0, restrictor: 0, isAutoGenerated: false },
+                  { id: 'ele_c7r1_5', driverId: 'd3', driverName: 'David Chen', teamName: 'Dragon Motorsport', raceNumber: 88, carModel: 'ks_audi_r8_lms_2016', ballastKg: 0, restrictor: 0, isAutoGenerated: false },
+                  { id: 'ele_c7r1_6', driverId: 'd7', driverName: 'Driver 7', raceNumber: 31, carModel: 'ks_ferrari_488_gt3', ballastKg: 0, restrictor: 0, isAutoGenerated: false },
+                ], results: [
+                  { position: 1, driverId: 'd1', totalTime: '41:12.840', bestLap: '1:47.512', lapsCompleted: 22, gapToLeader: '-', status: 'Finished', points: 25 },
+                  { position: 2, driverId: 'd9', totalTime: '41:15.207', bestLap: '1:47.733', lapsCompleted: 22, gapToLeader: '+2.367', status: 'Finished', points: 18 },
+                  { position: 3, driverId: 'd3', totalTime: '41:19.061', bestLap: '1:47.901', lapsCompleted: 22, gapToLeader: '+6.221', status: 'Finished', points: 15 },
+                  { position: 4, driverId: 'd5', totalTime: '41:24.518', bestLap: '1:48.140', lapsCompleted: 22, gapToLeader: '+11.678', status: 'Finished', points: 12 },
+                  { position: 5, driverId: 'd12', totalTime: '41:33.902', bestLap: '1:48.330', lapsCompleted: 22, gapToLeader: '+21.062', status: 'Finished', points: 10 },
+                  { position: 6, driverId: 'd7', bestLap: '1:48.755', lapsCompleted: 18, gapToLeader: '+4 lap(s)', status: 'DNF', points: 0 },
+                ] }],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'c7r2',
+        competitionId: 'c7',
+        roundNumber: 2,
+        name_zh: '第 2 站 - 伊莫拉',
+        name_en: 'Round 2 - Imola',
+        track: 'Imola',
+        trackLayout: '',
+        registrationOpenAt: '2026-06-25T12:00:00Z',
+        registrationCloseAt: '2026-07-20T12:00:00Z',
+        cancelRegistrationDeadline: '2026-07-19T12:00:00Z',
+        maxRegistrations: 48,
+        currentRegistrations: 0,
+        registeredDriverIds: [],
+        stages: [
+          {
+            id: 'c7r2s1',
+            roundId: 'c7r2',
+            type: 'race_day',
+            name_zh: '正赛日',
+            name_en: 'Race Day',
+            startsAt: '2026-08-01T11:00:00Z',
+            endsAt: '2026-08-01T13:30:00Z',
+            maxEntriesPerSplit: 24,
+            enableMultiSplit: false,
+            minEntries: 6,
+            sessions: [
+              { id: 'c7r2s1se1', stageId: 'c7r2s1', type: 'practice', name_zh: '练习赛', name_en: 'Practice', startsAt: '2026-08-01T11:00:00Z', endsAt: '2026-08-01T11:30:00Z', durationMinutes: 30, resultType: 'classification', splits: [{ id: 'c7r2s1se1sp1', sessionId: 'c7r2s1se1', splitNumber: 1 }] },
+              { id: 'c7r2s1se2', stageId: 'c7r2s1', type: 'qualifying', name_zh: '排位赛', name_en: 'Qualifying', startsAt: '2026-08-01T11:30:00Z', endsAt: '2026-08-01T11:45:00Z', durationMinutes: 15, resultType: 'classification', splits: [{ id: 'c7r2s1se2sp1', sessionId: 'c7r2s1se2', splitNumber: 1 }] },
+              {
+                id: 'c7r2s1se3', stageId: 'c7r2s1', type: 'race', name_zh: '正赛', name_en: 'Race', startsAt: '2026-08-01T12:00:00Z', endsAt: '2026-08-01T12:45:00Z', raceDuration: 40, raceDurationType: 'time', resultType: 'classification',
+                gameConfig: { track: 'imola', trackLayout: '', cars: 'ks_ferrari_488_gt3;ks_porsche_911_gt3_r_2016;mclaren_650_gt3;ks_mercedes_amg_gt3;ks_audi_r8_lms_2016', sunAngle: 40, weatherGraphics: '3_clear', baseTempAmbient: 24, variationAmbient: 2, baseTempRoad: 8, variationRoad: 2, windSpeedMin: 2, windSpeedMax: 10, windDirection: 0, windVariationDirection: 0, damageMultiplier: 100, fuelRate: 100, tyreWearRate: 100, tcAllowed: 1, absAllowed: 1, stabilityAllowed: false, autoclutchAllowed: true, forceVirtualMirror: true, legalTyres: 'semislick', startRule: 1, raceOverTime: 180, allowedTyresOut: 2, trackGripSessionStart: 95, trackGripRandomness: 2, trackGripLapGain: 100, trackGripSessionTransfer: 50, timeMultiplier: 1 },
+                splits: [{ id: 'c7r2s1se3sp1', sessionId: 'c7r2s1se3', splitNumber: 1, serverName: 'RA AC GT3 Imola #1', serverPassword: 'imola2026', adminPassword: 'admin123', maxConnections: 24, registerToLobby: true }],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    createdBy: 'admin1',
+    createdAt: '2026-04-20T10:00:00Z',
+    updatedAt: '2026-06-06T14:00:00Z',
+  },
 ]
 
 export function createDefaultTemplate(game: GamePlatform): StageTemplate {
@@ -1247,9 +1391,17 @@ export function createDefaultTemplate(game: GamePlatform): StageTemplate {
       createDefaultSession('qualifying'),
       createDefaultSession('race'),
     ],
+    splitConfig: defaultSplitConfig(),
     createdAt: now,
     updatedAt: now,
   }
+}
+
+/** Server-level Split defaults for templates (excludes id/splitNumber/entryList/results). */
+export function defaultSplitConfig(): Partial<Split> {
+  const { id: _id, splitNumber: _sn, entryList: _el, results: _r, resultsPublishedAt: _rp, ...rest } = createDefaultSplit('tpl', 1)
+  void _id; void _sn; void _el; void _r; void _rp
+  return rest
 }
 
 export const stageTemplates: StageTemplate[] = [

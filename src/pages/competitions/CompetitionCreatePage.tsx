@@ -23,6 +23,7 @@ import {
 import type { Competition, Round, Stage, GamePlatform, CompetitionStatus } from '@/data/competitions'
 import type { ScoringTableEntry, Region } from '@/lib/utils'
 import { ServerConfigModal } from './ServerConfigModal'
+import { isoToLocalInput, localInputToIso, tzSelectOptions, tzShortLabel } from '@/lib/timezone'
 
 interface FormState {
   name_en: string
@@ -32,6 +33,7 @@ interface FormState {
   game: string
   carClass: string
   carList: string
+  timezone: string
   regions: string[]
   accessRequirements_en: string
   accessRequirements_zh: string
@@ -47,6 +49,7 @@ const emptyForm = (): FormState => ({
   name_en: '', name_zh: '',
   description_en: '', description_zh: '',
   game: 'ACC', carClass: '', carList: '',
+  timezone: 'UTC+8',
   regions: ['CN'],
   accessRequirements_en: '', accessRequirements_zh: '',
   resources_en: '', resources_zh: '',
@@ -173,6 +176,7 @@ export function CompetitionCreatePage() {
       game: form.game as GamePlatform,
       carClass: form.carClass,
       carList: form.carList ? form.carList.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+      timezone: form.timezone,
       defaultRuleset: {
         scoringTable: scoringRows,
         scoringNote_zh: form.scoringNote_zh || undefined,
@@ -357,6 +361,7 @@ export function CompetitionCreatePage() {
               />
               <Select data-flow="create-game" label={t('event.game')} options={gameOptions} value={form.game} onChange={(e) => update('game', e.target.value)} />
               <Select data-flow="create-carClass" label={t('event.carClass')} options={carClassOptions.length > 0 ? carClassOptions : [{ value: '', label: '' }]} value={form.carClass} onChange={(e) => update('carClass', e.target.value)} />
+              <Select label={t('event.timezone')} options={tzSelectOptions(lang)} value={form.timezone} onChange={(e) => update('timezone', e.target.value)} />
               <Input label={t('event.carList')} placeholder={t('event.carListPlaceholder')} value={form.carList} onChange={(e) => update('carList', e.target.value)} />
               <Input label={t('event.streamUrl')} value={form.streamUrl} onChange={(e) => update('streamUrl', e.target.value)} />
               <div className="md:col-span-2 max-w-sm">
@@ -482,6 +487,7 @@ export function CompetitionCreatePage() {
               roundIdx={roundIdx}
               editLang={editLang}
               game={form.game as GamePlatform}
+              timezone={form.timezone}
               isExpanded={expandedRoundId === round.id}
               expandedStageId={expandedStageId}
               onToggleRound={() => setExpandedRoundId(expandedRoundId === round.id ? null : round.id)}
@@ -528,6 +534,7 @@ function CreateRoundPanel({
   roundIdx,
   editLang,
   game,
+  timezone,
   isExpanded,
   expandedStageId,
   onToggleRound,
@@ -542,6 +549,7 @@ function CreateRoundPanel({
   roundIdx: number
   editLang: 'en' | 'zh'
   game: GamePlatform
+  timezone?: string
   isExpanded: boolean
   expandedStageId: string | null
   onToggleRound: () => void
@@ -555,7 +563,7 @@ function CreateRoundPanel({
   const { t } = useTranslation()
   const getName = (e: { name_zh: string; name_en: string }) =>
     editLang === 'en' ? (e.name_en || e.name_zh || '—') : (e.name_zh || e.name_en || '—')
-  const toIso = (v: string) => v ? new Date(v).toISOString() : ''
+  const tzShort = tzShortLabel(timezone)
 
   return (
     <Card padding={false}>
@@ -592,22 +600,29 @@ function CreateRoundPanel({
               onChange={(e) => onUpdate({ track: e.target.value })}
             />
             <Input
-              label={t('event.registrationOpenAt')}
+              label={`${t('event.registrationOpenAt')} (${tzShort})`}
               type="datetime-local"
-              value={round.registrationOpenAt.slice(0, 16)}
-              onChange={(e) => onUpdate({ registrationOpenAt: toIso(e.target.value) })}
+              value={isoToLocalInput(round.registrationOpenAt, timezone)}
+              onChange={(e) => onUpdate({ registrationOpenAt: localInputToIso(e.target.value, timezone) })}
             />
             <Input
-              label={t('event.registrationCloseAt')}
+              label={`${t('event.registrationCloseAt')} (${tzShort})`}
               type="datetime-local"
-              value={round.registrationCloseAt.slice(0, 16)}
-              onChange={(e) => onUpdate({ registrationCloseAt: toIso(e.target.value) })}
+              value={isoToLocalInput(round.registrationCloseAt, timezone)}
+              onChange={(e) => onUpdate({ registrationCloseAt: localInputToIso(e.target.value, timezone) })}
             />
             <Input
-              label={t('event.cancelRegistrationDeadline')}
+              label={`${t('event.cancelRegistrationDeadline')} (${tzShort})`}
               type="datetime-local"
-              value={round.cancelRegistrationDeadline?.slice(0, 16) || ''}
-              onChange={(e) => onUpdate({ cancelRegistrationDeadline: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
+              value={isoToLocalInput(round.cancelRegistrationDeadline, timezone)}
+              onChange={(e) => onUpdate({ cancelRegistrationDeadline: e.target.value ? localInputToIso(e.target.value, timezone) : undefined })}
+            />
+            <Input
+              label={t('event.maxRegistrations')}
+              type="number"
+              min={0}
+              value={round.maxRegistrations ?? ''}
+              onChange={(e) => onUpdate({ maxRegistrations: e.target.value ? Number(e.target.value) : undefined })}
             />
           </div>
 
@@ -632,6 +647,7 @@ function CreateRoundPanel({
                   stageIdx={stageIdx}
                   editLang={editLang}
                   game={game}
+                  timezone={timezone}
                   isExpanded={expandedStageId === stage.id}
                   onToggle={() => onToggleStage(stage.id)}
                   onUpdate={(updated) => onUpdateStage(stage.id, updated)}
@@ -651,6 +667,7 @@ function CreateStagePanel({
   stageIdx,
   editLang,
   game,
+  timezone,
   isExpanded,
   onToggle,
   onUpdate,
@@ -660,6 +677,7 @@ function CreateStagePanel({
   stageIdx: number
   editLang: 'en' | 'zh'
   game: GamePlatform
+  timezone?: string
   isExpanded: boolean
   onToggle: () => void
   onUpdate: (updated: Stage) => void
@@ -668,7 +686,7 @@ function CreateStagePanel({
   const { t } = useTranslation()
   const getName = (e: { name_zh: string; name_en: string }) =>
     editLang === 'en' ? (e.name_en || e.name_zh || '—') : (e.name_zh || e.name_en || '—')
-  const toIso = (v: string) => v ? new Date(v).toISOString() : ''
+  const tzShort = tzShortLabel(timezone)
   const [showServerConfig, setShowServerConfig] = useState(false)
 
   return (
@@ -697,16 +715,16 @@ function CreateStagePanel({
               onChange={(e) => onUpdate({ ...stage, ...(editLang === 'en' ? { name_en: e.target.value } : { name_zh: e.target.value }) })}
             />
             <Input
-              label={t('common.from')}
+              label={`${t('common.from')} (${tzShort})`}
               type="datetime-local"
-              value={stage.startsAt.slice(0, 16)}
-              onChange={(e) => onUpdate({ ...stage, startsAt: toIso(e.target.value) })}
+              value={isoToLocalInput(stage.startsAt, timezone)}
+              onChange={(e) => onUpdate({ ...stage, startsAt: localInputToIso(e.target.value, timezone) })}
             />
             <Input
-              label={t('common.to')}
+              label={`${t('common.to')} (${tzShort})`}
               type="datetime-local"
-              value={stage.endsAt.slice(0, 16)}
-              onChange={(e) => onUpdate({ ...stage, endsAt: toIso(e.target.value) })}
+              value={isoToLocalInput(stage.endsAt, timezone)}
+              onChange={(e) => onUpdate({ ...stage, endsAt: localInputToIso(e.target.value, timezone) })}
             />
           </div>
 
@@ -715,6 +733,14 @@ function CreateStagePanel({
             value={editLang === 'en' ? stage.description_en || '' : stage.description_zh || ''}
             onChange={(e) => onUpdate({ ...stage, ...(editLang === 'en' ? { description_en: e.target.value } : { description_zh: e.target.value }) })}
           />
+
+          <div className="rounded-md bg-gray-50 border border-gray-200 p-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={stage.awardsPoints !== false} onChange={(e) => onUpdate({ ...stage, awardsPoints: e.target.checked })} className="rounded border-gray-300" />
+              <span className="text-sm text-gray-700">{t('competition.awardsPoints')}</span>
+            </label>
+            <p className="text-xs text-gray-500 mt-1 pl-6">{t('competition.awardsPointsHint')}</p>
+          </div>
 
           <div className="rounded-md border border-gray-200 bg-white p-3 transition-colors hover:bg-gray-50 hover:border-gray-300">
             <button

@@ -7,10 +7,12 @@ import { CompetitionListPage } from './pages/competitions/CompetitionListPage'
 import { CompetitionCreatePage } from './pages/competitions/CompetitionCreatePage'
 import { CompetitionEditPage } from './pages/competitions/CompetitionEditPage'
 import { RegistrationListPage } from './pages/registrations/RegistrationListPage'
+import { CompetitionRegistrationsPage } from './pages/registrations/CompetitionRegistrationsPage'
 import { TemplateListPage } from './pages/templates/TemplateListPage'
 import { TemplateEditPage } from './pages/templates/TemplateEditPage'
 import { ResultListPage } from './pages/results/ResultListPage'
 import { CompetitionResultsPage } from './pages/results/CompetitionResultsPage'
+import { StandingsPage } from './pages/results/StandingsPage'
 import { ResultEntryPage } from './pages/results/ResultEntryPage'
 import { ProtestListPage } from './pages/protests/ProtestListPage'
 import { ProtestDetailPage } from './pages/protests/ProtestDetailPage'
@@ -51,11 +53,13 @@ export default function App() {
               <Route path="/competitions/create" element={<CompetitionCreatePage />} />
               <Route path="/competitions/:id/edit" element={<CompetitionEditPage />} />
               <Route path="/registrations" element={<RegistrationListPage />} />
+              <Route path="/registrations/competition/:competitionId" element={<CompetitionRegistrationsPage />} />
               <Route path="/templates" element={<TemplateListPage />} />
               <Route path="/templates/create" element={<TemplateEditPage />} />
               <Route path="/templates/:id/edit" element={<TemplateEditPage />} />
               <Route path="/results" element={<ResultListPage />} />
               <Route path="/results/competition/:competitionId" element={<CompetitionResultsPage />} />
+              <Route path="/results/competition/:competitionId/standings" element={<StandingsPage />} />
               <Route path="/results/:id" element={<ResultEntryPage />} />
               <Route path="/protests" element={<ProtestListPage />} />
               <Route path="/protests/:id" element={<ProtestDetailPage />} />

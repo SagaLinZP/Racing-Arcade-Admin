@@ -5,18 +5,15 @@ import { useApp } from '@/hooks/useAppStore'
 import { useManagedOptions } from '@/hooks/useManagedOptions'
 import { useDataVersion } from '@/data/store'
 import { protests, updateProtest } from '@/data/protests'
-import { competitions, updateCompetition } from '@/data/competitions'
+import { competitions } from '@/data/competitions'
 import { findStageById, getName } from '@/lib/results'
-import { applyPenalty, type PenaltyAction } from '@/lib/penalties'
-import { addAuditLog } from '@/data/admin'
 import { addNotification } from '@/data/notifications'
 import { drivers } from '@/data/drivers'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { PenaltyModal, type AppliedPenalty } from '@/components/PenaltyModal'
 import { ArrowLeft, Gavel, XCircle, ExternalLink } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -29,10 +26,8 @@ export function ProtestDetailPage() {
   const { id } = useParams()
   useDataVersion()
 
-  const [penaltyType, setPenaltyType] = useState('timePenalty')
-  const [penaltySeconds, setPenaltySeconds] = useState(5)
-  const [positionDrop, setPositionDrop] = useState(3)
   const [rulingReason, setRulingReason] = useState('')
+  const [showPenalty, setShowPenalty] = useState(false)
 
   const protest = protests.find(p => p.id === id)
   if (!protest) return <div className="text-center py-12 text-gray-500">Protest not found</div>
@@ -41,50 +36,30 @@ export function ProtestDetailPage() {
   const ctx = findStageById(protest.stageId)
   const reporter = drivers.find(d => d.id === protest.reporterId)
   const reported = drivers.find(d => d.id === protest.reportedId)
-  const penaltyLabel = penaltyOptions.find(o => o.value === penaltyType)?.label ?? penaltyType
 
-  const actionFor = (): PenaltyAction => {
-    switch (penaltyType) {
-      case 'timePenalty': return { kind: 'time', seconds: penaltySeconds }
-      case 'positionDrop': return { kind: 'position', positions: positionDrop }
-      case 'disqualifyRace':
-      case 'disqualifyChampionship': return { kind: 'dsq' }
-      default: return { kind: 'warning' }
+  const penaltyTypeFor = (kind: string): string | undefined => {
+    switch (kind) {
+      case 'time': return 'timePenalty'
+      case 'position': return 'positionDrop'
+      case 'dsq': return 'disqualifyRace'
+      case 'warning': return 'warning'
+      default: return undefined
     }
   }
 
-  const handleConfirm = () => {
-    if (!ctx) return
-    const action = actionFor()
-    const changes = applyPenalty(ctx.stage, protest.sessionId, protest.reportedId, action, ctx.competition.defaultRuleset.scoringTable)
-    updateCompetition(ctx.competition)
+  const handleResolveViolation = (summary: AppliedPenalty) => {
     const now = new Date().toISOString()
-    changes.forEach((ch, i) => {
-      addAuditLog({
-        id: `al_${protest.id}_${ch.field}_${i}`,
-        competitionId: ctx.competition.id,
-        stageId: ctx.stage.id,
-        sessionId: protest.sessionId,
-        driverId: ch.driverId,
-        field: ch.field,
-        oldValue: ch.oldValue,
-        newValue: ch.newValue,
-        changedBy: 'admin1',
-        changedAt: now,
-        reason: `Protest #${protest.id}: ${rulingReason || penaltyLabel}`,
-        protestId: protest.id,
-      })
-    })
     updateProtest({
       ...protest,
       status: 'resolved',
       resolution: {
         decision: 'violation',
-        penaltyType,
-        penaltySeconds: penaltyType === 'timePenalty' ? penaltySeconds : undefined,
-        positionDrop: penaltyType === 'positionDrop' ? positionDrop : undefined,
-        dsq: action.kind === 'dsq',
-        reason: rulingReason || penaltyLabel,
+        penaltyType: penaltyTypeFor(summary.kind),
+        penaltySeconds: summary.seconds,
+        positionDrop: summary.positions,
+        pointsDeduction: summary.points,
+        dsq: summary.kind === 'dsq',
+        reason: summary.reason || rulingReason || t('protest.violationConfirmed'),
         appliedAt: now,
         reviewedBy: 'admin1',
       },
@@ -94,8 +69,8 @@ export function ProtestDetailPage() {
       type: 'penalty',
       title_zh: '处罚通知',
       title_en: 'Penalty Notification',
-      body_zh: `您在抗议 #${protest.id} 中被判罚：${penaltyLabel}`,
-      body_en: `You received a penalty in protest #${protest.id}: ${penaltyLabel}`,
+      body_zh: `您在抗议 #${protest.id} 中被判罚。`,
+      body_en: `You received a penalty in protest #${protest.id}.`,
       link: `/protests/${protest.id}`,
       isRead: false,
       createdAt: now,
@@ -178,23 +153,31 @@ export function ProtestDetailPage() {
         <Card>
           <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('protest.ruling')}</h3>
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Select label={t('protest.penaltyType')} options={penaltyOptions} value={penaltyType} onChange={(e) => setPenaltyType(e.target.value)} />
-              {penaltyType === 'timePenalty' && (
-                <Input label={t('protest.penaltySeconds')} type="number" value={String(penaltySeconds)} onChange={(e) => setPenaltySeconds(Number(e.target.value))} />
-              )}
-              {penaltyType === 'positionDrop' && (
-                <Input label={t('protest.positionDrop')} type="number" value={String(positionDrop)} onChange={(e) => setPositionDrop(Number(e.target.value))} />
-              )}
-            </div>
             <Textarea label={t('protest.rulingReason')} value={rulingReason} onChange={(e) => setRulingReason(e.target.value)} placeholder={t('protest.rulingReasonPlaceholder')} />
             {!ctx && <p className="text-xs text-amber-600">{t('protest.noLinkedStage')}</p>}
             <div className="flex gap-2">
-              <Button onClick={handleConfirm} disabled={!ctx}><Gavel className="w-4 h-4 mr-1" />{t('protest.confirmViolation')}</Button>
+              <Button onClick={() => setShowPenalty(true)} disabled={!ctx}><Gavel className="w-4 h-4 mr-1" />{t('protest.confirmViolation')}</Button>
               <Button variant="secondary" onClick={handleDismiss}><XCircle className="w-4 h-4 mr-1" />{t('protest.dismissProtest')}</Button>
             </div>
           </div>
         </Card>
+      )}
+
+      {showPenalty && ctx && (
+        <PenaltyModal
+          isOpen={true}
+          onClose={() => setShowPenalty(false)}
+          competition={ctx.competition}
+          stage={ctx.stage}
+          sessionId={protest.sessionId}
+          driverId={protest.reportedId}
+          driverName={reported?.nickname ?? protest.reportedId}
+          sessionName={getName(ctx.stage, lang)}
+          scoringTable={ctx.competition.defaultRuleset.scoringTable}
+          protestId={protest.id}
+          defaultReason={rulingReason}
+          onApplied={handleResolveViolation}
+        />
       )}
     </div>
   )

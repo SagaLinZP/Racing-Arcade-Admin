@@ -42,6 +42,8 @@ Competition  赛事
 - 成绩 `SessionResult` 存于 `Split.results`，每条带 `sessionId` 标明所属 Session。
 - 赛事 / 分站状态不是存储字段，而是由 `src/lib/utils.ts` 的 `getCompetitionStatus()` / `getRoundStatus()` 按时间与成绩**推导**得出。
 - mock 原始数据为嵌套结构，文件末尾的 `migrateCompetitions()` 会将其转换为上述扁平的 Stage 形状。
+- 时区为 Competition 级字段（`timezone`），时间统一以 UTC 存储，输入/展示按赛事时区换算（`src/lib/timezone.ts`）。
+- 是否计入积分由 `Stage.awardsPoints` 控制（仅 race session 计分）；积分榜为独立页面（`StandingsPage`）。
 
 ## 目录结构
 
@@ -55,13 +57,13 @@ src/
 ├── data/               Mock 数据（唯一数据源）
 ├── hooks/              useAppStore / useManagedOptions
 ├── i18n/               en.ts / zh.ts（键结构须完全一致）
-├── lib/                utils / results / serverResults / scrollContainer
+├── lib/                utils / results / timezone / penalties / registrationOps …
 └── pages/              各功能模块页面
 ```
 
 ## 功能模块
 
-赛事管理 · 模板管理 · 成绩管理 · 抗议 · 用户 · 新闻 · 车队 · 通知 · 下拉选项管理
+赛事管理 · 模板管理 · 报名管理 · 成绩管理 · 抗议 · 用户 · 新闻 · 车队 · 通知 · 下拉选项管理
 
 ## 开发约定
 

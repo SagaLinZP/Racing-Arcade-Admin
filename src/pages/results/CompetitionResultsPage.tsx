@@ -13,7 +13,6 @@ import {
   getRaceSessionId,
   calculateRoundStandings,
   calculateCompetitionStandings,
-  calculateTeamStandings,
   getStageTimeState,
   getName,
 } from '@/lib/results'
@@ -24,8 +23,6 @@ import { applyToEntryList } from '@/lib/registrationOps'
 import { getApprovedDriverIds } from '@/data/registrations'
 import { addNotification } from '@/data/notifications'
 import { useDataVersion } from '@/data/store'
-import { drivers } from '@/data/drivers'
-import { teams } from '@/data/teams'
 import { ArrowLeft, RefreshCw, ChevronRight, Info, ArrowUpRight, Trophy, Play, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -157,44 +154,19 @@ export function CompetitionResultsPage() {
 
       {advanceFlash && <div className="text-sm text-blue-700">{advanceFlash}</div>}
 
-      {(() => {
-        const driverStandings = calculateCompetitionStandings(comp)
-        if (driverStandings.length === 0) return null
-        const teamStandings = calculateTeamStandings(comp)
-        return (
-          <Card>
-            <div className="flex items-center gap-2 mb-3">
-              <Trophy className="w-4 h-4 text-amber-500" />
-              <h3 className="text-sm font-semibold text-gray-700">{t('result.standings')}</h3>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <div className="text-xs text-gray-400 mb-2">{t('result.driverStandings')}</div>
-                <div className="space-y-1">
-                  {driverStandings.slice(0, 8).map((s, i) => (
-                    <div key={s.driverId} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-700"><span className="text-gray-400 w-6 inline-block">{i + 1}.</span>{drivers.find(d => d.id === s.driverId)?.nickname ?? s.driverId}</span>
-                      <span className="font-medium text-gray-900">{s.totalPoints}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-400 mb-2">{t('result.teamStandings')}</div>
-                <div className="space-y-1">
-                  {teamStandings.slice(0, 6).map((s, i) => (
-                    <div key={s.teamId} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-700"><span className="text-gray-400 w-6 inline-block">{i + 1}.</span>{teams.find(tm => tm.id === s.teamId)?.name ?? s.teamId}</span>
-                      <span className="font-medium text-gray-900">{s.totalPoints}</span>
-                    </div>
-                  ))}
-                  {teamStandings.length === 0 && <div className="text-xs text-gray-400">—</div>}
-                </div>
-              </div>
-            </div>
-          </Card>
-        )
-      })()}
+      {calculateCompetitionStandings(comp).length > 0 && (
+        <button
+          onClick={() => navigate(`/results/competition/${comp.id}/standings`)}
+          className="flex items-center justify-between w-full rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 hover:bg-amber-100 transition-colors"
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold text-amber-800">
+            <Trophy className="w-4 h-4" />{t('result.standingsTitle')}
+          </span>
+          <span className="flex items-center gap-1 text-xs text-amber-700">
+            {t('result.viewStandings')}<ChevronRight className="w-4 h-4" />
+          </span>
+        </button>
+      )}
 
       <div className="space-y-6">
         {comp.rounds.map(round => {

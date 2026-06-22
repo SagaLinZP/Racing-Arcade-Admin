@@ -37,6 +37,7 @@ export function FlowAssistant() {
   const version = useDataVersion()
   const navigate = useNavigate()
   const location = useLocation()
+  const [active, setActive] = useState(false)
   const [expanded, setExpanded] = useState(true)
   const [skipped, setSkipped] = useState<Set<string>>(new Set())
   const [rect, setRect] = useState<Rect | null>(null)
@@ -55,7 +56,7 @@ export function FlowAssistant() {
   const onCreatePage = location.pathname === CREATE_ROUTE
   const isCreateTour = !allDone && current.id === 'create' && onCreatePage
   const tourIdx = Math.min(tourIndex, CREATE_TOUR.length - 1)
-  const activeTarget = allDone ? undefined : isCreateTour ? CREATE_TOUR[tourIdx].target : current.target
+  const activeTarget = !active || allDone ? undefined : isCreateTour ? CREATE_TOUR[tourIdx].target : current.target
 
   // Locate/track the active on-page target; step the panel aside when one is present.
   useEffect(() => {
@@ -98,11 +99,12 @@ export function FlowAssistant() {
   useEffect(() => {
     const prev = prevStepIdRef.current
     prevStepIdRef.current = current.id
+    if (!active) return
     if (prev === null || prev === current.id) return
     if (allDone || !current.target) return
     const route = current.route()
     if (location.pathname !== route.split('?')[0]) navigate(route)
-  }, [current, allDone, location.pathname, navigate])
+  }, [current, active, allDone, location.pathname, navigate])
 
   // Brief "step done" confirmation when progress advances.
   useEffect(() => {
@@ -140,15 +142,26 @@ export function FlowAssistant() {
 
   return (
     <>
-      {rect && !allDone && <Spotlight rect={rect} step={current} t={t} showBubble={!expanded} tour={tourCtl} />}
+      {active && rect && !allDone && <Spotlight rect={rect} step={current} t={t} showBubble={!expanded} tour={tourCtl} />}
 
-      {flash && (
+      {active && flash && (
         <div className="fixed bottom-24 right-5 z-[61] flex items-center gap-1.5 rounded-lg bg-green-600 text-white text-xs font-medium px-3 py-2 shadow-lg">
           <Check className="w-3.5 h-3.5" />{t('flowAssistant.stepDone')}
         </div>
       )}
 
-      {!expanded ? (
+      {!active ? (
+        <button
+          onClick={() => { setActive(true); setExpanded(true) }}
+          className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-full bg-blue-600 text-white shadow-lg pl-3 pr-4 py-2.5 hover:bg-blue-700 transition-colors"
+        >
+          <Sparkles className="w-4 h-4 shrink-0" />
+          <span className="text-left">
+            <span className="block text-xs font-semibold leading-tight">{t('flowAssistant.launch')}</span>
+            <span className="block text-[10px] text-blue-100 leading-tight mt-0.5">{t('flowAssistant.launchHint')}</span>
+          </span>
+        </button>
+      ) : !expanded ? (
         <button
           onClick={() => setExpanded(true)}
           className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-full bg-blue-600 text-white shadow-lg pl-3 pr-4 py-2.5 hover:bg-blue-700 transition-colors"
@@ -289,9 +302,12 @@ export function FlowAssistant() {
             </div>
           </div>
 
-          <div className="border-t border-gray-100 px-3 py-2 shrink-0">
+          <div className="border-t border-gray-100 px-3 py-2 shrink-0 flex items-center justify-between">
             <button onClick={reset} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-600 transition-colors">
               <RotateCcw className="w-3.5 h-3.5" />{t('flowAssistant.reset')}
+            </button>
+            <button onClick={() => { setActive(false); setExpanded(false) }} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+              <X className="w-3.5 h-3.5" />{t('flowAssistant.exit')}
             </button>
           </div>
         </div>

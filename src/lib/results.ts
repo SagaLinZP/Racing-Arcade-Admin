@@ -76,6 +76,14 @@ export function getSessionResultCount(stage: Stage, sessionId: string): number {
   return count
 }
 
+export interface StandingResultEntry {
+  stageId: string
+  roundId: string
+  position: number
+  points: number
+  bestLap?: string
+}
+
 export interface DriverStanding {
   driverId: string
   teamId?: string
@@ -84,12 +92,13 @@ export interface DriverStanding {
   podiums: number
   entries: number
   bestPosition: number
-  results: { stageId: string; position: number; points: number }[]
+  results: StandingResultEntry[]
 }
 
 function collectResultsFromStages(stages: Stage[], sessionId?: string): DriverStanding[] {
   const map = new Map<string, DriverStanding>()
   for (const stage of stages) {
+    if (stage.awardsPoints === false) continue
     const targetSessionId = sessionId ?? getRaceSessionId(stage)
     for (const split of stage.splits) {
       if (!split.results) continue
@@ -113,7 +122,7 @@ function collectResultsFromStages(stages: Stage[], sessionId?: string): DriverSt
         if (r.position <= 3) s.podiums++
         s.entries++
         s.bestPosition = Math.min(s.bestPosition, r.position)
-        s.results.push({ stageId: stage.id, position: r.position, points: r.points ?? 0 })
+        s.results.push({ stageId: stage.id, roundId: stage.roundId, position: r.position, points: r.points ?? 0, bestLap: r.bestLap })
       }
     }
   }

@@ -18,6 +18,7 @@ import { ArrowLeft, Save, Plus, ChevronDown, ChevronRight, Trash2, Settings } fr
 import { cn, getCompetitionStatus, getRoundStatus } from '@/lib/utils'
 import { ImageUpload } from '@/components/ui/ImageUpload'
 import { ServerConfigModal } from './ServerConfigModal'
+import { isoToLocalInput, localInputToIso, tzSelectOptions, tzShortLabel } from '@/lib/timezone'
 
 type TabKey = 'info' | 'rounds'
 
@@ -156,6 +157,7 @@ export function CompetitionEditPage() {
               <Input label={`${t('competition.competitionName')} (${editLang === 'en' ? 'EN' : '中文'})`} value={editLang === 'en' ? comp.name_en : comp.name_zh} onChange={(e) => setLocal(prev => ({ ...prev, ...(editLang === 'en' ? { name_en: e.target.value } : { name_zh: e.target.value }) }))} />
               <Select label={t('event.game')} options={gameOptions} value={comp.game} onChange={(e) => setLocal(prev => ({ ...prev, game: e.target.value as GamePlatform }))} />
               <Select label={t('event.carClass')} options={carClassOptions.length > 0 ? carClassOptions : [{ value: '', label: '' }]} value={comp.carClass} onChange={(e) => setLocal(prev => ({ ...prev, carClass: e.target.value }))} />
+              <Select label={t('event.timezone')} options={tzSelectOptions(lang)} value={comp.timezone ?? 'UTC+8'} onChange={(e) => setLocal(prev => ({ ...prev, timezone: e.target.value }))} />
               <Input label={t('event.carList')} placeholder={t('event.carListPlaceholder')} value={comp.carList?.join(', ') || ''} onChange={(e) => setLocal(prev => ({ ...prev, carList: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))} />
               <Input label={t('event.streamUrl')} value={comp.defaultRuleset.streamUrl || ''} onChange={(e) => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, streamUrl: e.target.value } }))} />
               <div className="md:col-span-2 max-w-sm">
@@ -275,6 +277,7 @@ export function CompetitionEditPage() {
               onToggleStage={(stageId) => setExpandedStageId(expandedStageId === stageId ? null : stageId)}
               editLang={editLang}
               game={comp.game}
+              timezone={comp.timezone}
               onUpdate={(patch) => updateRound(round.id, patch)}
               onDelete={() => deleteRound(round.id)}
               onAddStage={() => addStage(round.id)}
@@ -304,6 +307,7 @@ function RoundAccordion({
   onToggleStage,
   editLang,
   game,
+  timezone,
   onUpdate,
   onDelete,
   onAddStage,
@@ -318,6 +322,7 @@ function RoundAccordion({
   onToggleStage: (stageId: string) => void
   editLang: 'en' | 'zh'
   game: GamePlatform
+  timezone?: string
   onUpdate: (patch: Partial<Round>) => void
   onDelete: () => void
   onAddStage: () => void
@@ -327,6 +332,7 @@ function RoundAccordion({
   const { t } = useTranslation()
   const lang = useApp().state.language
   const getName = (e: { name_zh: string; name_en: string }) => lang === 'zh' ? e.name_zh : e.name_en
+  const tzShort = tzShortLabel(timezone)
 
   return (
     <Card padding={false}>
@@ -361,9 +367,10 @@ function RoundAccordion({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4" key={editLang}>
             <Input label={`${t('competition.roundName')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? round.name_en : round.name_zh} onChange={(e) => onUpdate(editLang === 'en' ? { name_en: e.target.value } : { name_zh: e.target.value })} />
             <Input label={t('event.track')} defaultValue={round.track || ''} onChange={(e) => onUpdate({ track: e.target.value })} />
-            <Input label={t('event.registrationOpenAt')} type="datetime-local" defaultValue={round.registrationOpenAt.slice(0, 16)} onChange={(e) => onUpdate({ registrationOpenAt: e.target.value ? new Date(e.target.value).toISOString() : round.registrationOpenAt })} />
-            <Input label={t('event.registrationCloseAt')} type="datetime-local" defaultValue={round.registrationCloseAt.slice(0, 16)} onChange={(e) => onUpdate({ registrationCloseAt: e.target.value ? new Date(e.target.value).toISOString() : round.registrationCloseAt })} />
-            <Input label={t('event.cancelRegistrationDeadline')} type="datetime-local" defaultValue={round.cancelRegistrationDeadline?.slice(0, 16) || ''} onChange={(e) => onUpdate({ cancelRegistrationDeadline: e.target.value ? new Date(e.target.value).toISOString() : undefined })} />
+            <Input label={`${t('event.registrationOpenAt')} (${tzShort})`} type="datetime-local" defaultValue={isoToLocalInput(round.registrationOpenAt, timezone)} onChange={(e) => onUpdate({ registrationOpenAt: e.target.value ? localInputToIso(e.target.value, timezone) : round.registrationOpenAt })} />
+            <Input label={`${t('event.registrationCloseAt')} (${tzShort})`} type="datetime-local" defaultValue={isoToLocalInput(round.registrationCloseAt, timezone)} onChange={(e) => onUpdate({ registrationCloseAt: e.target.value ? localInputToIso(e.target.value, timezone) : round.registrationCloseAt })} />
+            <Input label={`${t('event.cancelRegistrationDeadline')} (${tzShort})`} type="datetime-local" defaultValue={isoToLocalInput(round.cancelRegistrationDeadline, timezone)} onChange={(e) => onUpdate({ cancelRegistrationDeadline: e.target.value ? localInputToIso(e.target.value, timezone) : undefined })} />
+            <Input label={t('event.maxRegistrations')} type="number" min={0} defaultValue={round.maxRegistrations ?? ''} onChange={(e) => onUpdate({ maxRegistrations: e.target.value ? Number(e.target.value) : undefined })} />
           </div>
 
           <div className="max-w-sm">
@@ -402,6 +409,7 @@ function RoundAccordion({
                   editLang={editLang}
                   registeredDriverIds={round.registeredDriverIds}
                   game={game}
+                  timezone={timezone}
                   onUpdate={(updated) => onUpdateStage(stage.id, updated)}
                   onDelete={() => onDeleteStage(stage.id)}
                 />
@@ -422,6 +430,7 @@ function StageAccordion({
   editLang,
   registeredDriverIds,
   game,
+  timezone,
   onUpdate,
   onDelete,
 }: {
@@ -432,11 +441,13 @@ function StageAccordion({
   editLang: 'en' | 'zh'
   registeredDriverIds: string[]
   game: GamePlatform
+  timezone?: string
   onUpdate: (updated: Stage) => void
   onDelete: () => void
 }) {
   const { t } = useTranslation()
   const lang = useApp().state.language
+  const tzShort = tzShortLabel(timezone)
   const splitRuleOptions = useManagedOptions('splitRule', lang)
   const eligibilityOptions = useManagedOptions('eligibilitySource', lang)
   const getName = (e: { name_zh: string; name_en: string }) => lang === 'zh' ? e.name_zh : e.name_en
@@ -499,8 +510,8 @@ function StageAccordion({
         <div className="px-4 pb-4 space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3">
             <Input label={`${t('competition.stageName')} (${editLang === 'en' ? 'EN' : '中文'})`} value={editLang === 'en' ? stage.name_en : stage.name_zh} onChange={(e) => onUpdate({ ...stage, ...(editLang === 'en' ? { name_en: e.target.value } : { name_zh: e.target.value }) })} />
-            <Input label={t('common.from')} type="datetime-local" value={stage.startsAt.slice(0, 16)} onChange={(e) => onUpdate({ ...stage, startsAt: e.target.value ? new Date(e.target.value).toISOString() : stage.startsAt })} />
-            <Input label={t('common.to')} type="datetime-local" value={stage.endsAt.slice(0, 16)} onChange={(e) => onUpdate({ ...stage, endsAt: e.target.value ? new Date(e.target.value).toISOString() : stage.endsAt })} />
+            <Input label={`${t('common.from')} (${tzShort})`} type="datetime-local" value={isoToLocalInput(stage.startsAt, timezone)} onChange={(e) => onUpdate({ ...stage, startsAt: e.target.value ? localInputToIso(e.target.value, timezone) : stage.startsAt })} />
+            <Input label={`${t('common.to')} (${tzShort})`} type="datetime-local" value={isoToLocalInput(stage.endsAt, timezone)} onChange={(e) => onUpdate({ ...stage, endsAt: e.target.value ? localInputToIso(e.target.value, timezone) : stage.endsAt })} />
           </div>
 
           <Textarea label={`${t('common.description')} (${editLang === 'en' ? 'EN' : '中文'})`} value={editLang === 'en' ? stage.description_en || '' : stage.description_zh || ''} onChange={(e) => onUpdate({ ...stage, ...(editLang === 'en' ? { description_en: e.target.value } : { description_zh: e.target.value }) })} />
@@ -577,6 +588,14 @@ function StageAccordion({
                 )}
               </div>
             )}
+          </div>
+
+          <div className="rounded-md bg-gray-50 border border-gray-200 p-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={stage.awardsPoints !== false} onChange={(e) => onUpdate({ ...stage, awardsPoints: e.target.checked })} className="rounded border-gray-300" />
+              <span className="text-sm text-gray-700">{t('competition.awardsPoints')}</span>
+            </label>
+            <p className="text-xs text-gray-500 mt-1 pl-6">{t('competition.awardsPointsHint')}</p>
           </div>
 
           <div className="rounded-md bg-gray-50 border border-gray-200 p-3 space-y-3">

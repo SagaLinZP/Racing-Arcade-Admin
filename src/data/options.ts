@@ -57,14 +57,13 @@ export const optionGroups: OptionGroup[] = [
   },
   {
     key: 'splitRule',
-    name_en: 'Split Assignment Rule',
-    name_zh: '分组规则',
+    name_en: 'Default Split Assignment',
+    name_zh: '默认分组方式',
     category: 'competition',
     options: [
-      { value: 'First Come First Served', label_en: 'First Come First Served', label_zh: '先到先得' },
-      { value: 'By Skill', label_en: 'By Skill', label_zh: '按实力' },
-      { value: 'Manual', label_en: 'Manual', label_zh: '手动' },
-      { value: 'Random', label_en: 'Random', label_zh: '随机' },
+      { value: 'time', label_en: 'By Registration Time', label_zh: '按报名时间' },
+      { value: 'random', label_en: 'Random', label_zh: '随机' },
+      { value: 'skill', label_en: 'By Skill (coming soon)', label_zh: '按水平（即将推出）' },
     ],
   },
   {

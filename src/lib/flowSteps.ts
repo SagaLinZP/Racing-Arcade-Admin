@@ -50,7 +50,7 @@ export interface FlowStep {
   run?: () => void
 }
 
-const REG_ROUTE = `/registrations?competition=${DEMO_COMP_ID}`
+const REG_ROUTE = `/registrations/competition/${DEMO_COMP_ID}`
 const RESULTS_ROUTE = `/results/competition/${DEMO_COMP_ID}`
 
 export const flowSteps: FlowStep[] = [
