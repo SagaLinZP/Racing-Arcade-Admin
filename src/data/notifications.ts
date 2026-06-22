@@ -1,3 +1,5 @@
+import { registerSlice, bump } from './store'
+
 export interface Notification {
   id: string
   type: 'registration' | 'cancellation' | 'results' | 'protest' | 'penalty' | 'team' | 'waitlist' | 'system'
@@ -100,3 +102,25 @@ export const notifications: Notification[] = [
     createdAt: '2026-03-24T16:00:00Z',
   },
 ]
+
+registerSlice({
+  key: 'notifications',
+  get: () => notifications as unknown as Record<string, unknown>[],
+  replace: (rows) => {
+    notifications.length = 0
+    notifications.push(...(rows as unknown as Notification[]))
+  },
+})
+
+export function addNotification(n: Notification) {
+  notifications.unshift(n)
+  bump()
+}
+
+export function markNotificationRead(id: string) {
+  const n = notifications.find(x => x.id === id)
+  if (n) {
+    n.isRead = true
+    bump()
+  }
+}

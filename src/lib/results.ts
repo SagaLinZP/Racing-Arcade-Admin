@@ -138,6 +138,41 @@ export function calculateStageStandings(stage: Stage, sessionId?: string): Drive
   return collectResultsFromStages([stage], sessionId)
 }
 
+export function getStageTimeState(stage: Stage): { started: boolean; ended: boolean } {
+  const now = Date.now()
+  return {
+    started: now >= new Date(stage.startsAt).getTime(),
+    ended: now >= new Date(stage.endsAt).getTime(),
+  }
+}
+
+export interface TeamStanding {
+  teamId: string
+  totalPoints: number
+  wins: number
+  podiums: number
+  entries: number
+  drivers: string[]
+}
+
+export function calculateTeamStandings(competition: Competition, sessionId?: string): TeamStanding[] {
+  const driverStandings = calculateCompetitionStandings(competition, sessionId)
+  const map = new Map<string, TeamStanding>()
+  for (const ds of driverStandings) {
+    if (!ds.teamId) continue
+    if (!map.has(ds.teamId)) {
+      map.set(ds.teamId, { teamId: ds.teamId, totalPoints: 0, wins: 0, podiums: 0, entries: 0, drivers: [] })
+    }
+    const ts = map.get(ds.teamId)!
+    ts.totalPoints += ds.totalPoints
+    ts.wins += ds.wins
+    ts.podiums += ds.podiums
+    ts.entries += ds.entries
+    if (!ts.drivers.includes(ds.driverId)) ts.drivers.push(ds.driverId)
+  }
+  return Array.from(map.values()).sort((a, b) => b.totalPoints - a.totalPoints)
+}
+
 export function getName(obj: { name_zh: string; name_en: string }, lang: string): string {
   return lang === 'zh' ? obj.name_zh : obj.name_en
 }

@@ -6,7 +6,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export type EventStatus = 'Draft' | 'Upcoming' | 'RegistrationOpen' | 'RegistrationClosed' | 'InProgress' | 'Completed' | 'ResultsPublished' | 'Cancelled'
 export type { CompetitionStatus, RoundStatus } from "@/data/competitions"
 
 export function formatDate(date: string | Date, locale: string = 'en') {

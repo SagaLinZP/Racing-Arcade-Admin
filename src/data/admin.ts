@@ -1,3 +1,5 @@
+import { registerSlice, bump } from './store'
+
 export interface BanRecord {
   id: string
   userId: string
@@ -8,22 +10,6 @@ export interface BanRecord {
   endDate?: string
   issuedBy: string
   status: 'active' | 'expired' | 'revoked'
-}
-
-export interface DashboardStats {
-  totalUsers: number
-  newUsersToday: number
-  newUsersThisWeek: number
-  newUsersThisMonth: number
-  totalEvents: number
-  weeklyEvents: number
-  avgRegistrations: number
-  participationRate: number
-  userGrowth: Array<{ date: string; count: number }>
-  registrationTrends: Array<{ date: string; count: number }>
-  gameDistribution: Array<{ game: string; count: number }>
-  regionDistribution: Array<{ region: string; users: number; events: number }>
-  completionRate: number
 }
 
 export const banRecords: BanRecord[] = [
@@ -61,86 +47,47 @@ export const banRecords: BanRecord[] = [
   },
 ]
 
-export const dashboardStats: DashboardStats = {
-  totalUsers: 2847,
-  newUsersToday: 23,
-  newUsersThisWeek: 156,
-  newUsersThisMonth: 612,
-  totalEvents: 45,
-  weeklyEvents: 8,
-  avgRegistrations: 18.5,
-  participationRate: 0.74,
-  userGrowth: [
-    { date: '2026-03-01', count: 1800 },
-    { date: '2026-03-08', count: 1950 },
-    { date: '2026-03-15', count: 2100 },
-    { date: '2026-03-22', count: 2280 },
-    { date: '2026-03-29', count: 2350 },
-    { date: '2026-04-05', count: 2500 },
-    { date: '2026-04-12', count: 2650 },
-    { date: '2026-04-19', count: 2847 },
-  ],
-  registrationTrends: [
-    { date: '2026-03-01', count: 120 },
-    { date: '2026-03-08', count: 145 },
-    { date: '2026-03-15', count: 132 },
-    { date: '2026-03-22', count: 168 },
-    { date: '2026-03-29', count: 155 },
-    { date: '2026-04-05', count: 180 },
-    { date: '2026-04-12', count: 195 },
-    { date: '2026-04-19', count: 210 },
-  ],
-  gameDistribution: [
-    { game: 'ACC', count: 18 },
-    { game: 'iRacing', count: 8 },
-    { game: 'LMU', count: 6 },
-    { game: 'AC Evo', count: 5 },
-    { game: 'rF2', count: 4 },
-    { game: 'ETS2', count: 2 },
-    { game: 'AC', count: 2 },
-  ],
-  regionDistribution: [
-    { region: 'CN', users: 820, events: 12 },
-    { region: 'AP', users: 680, events: 10 },
-    { region: 'AM', users: 750, events: 11 },
-    { region: 'EU', users: 597, events: 12 },
-  ],
-  completionRate: 0.89,
-}
-
-export interface ResultChangeLog {
+export interface AuditLog {
   id: string
-  resultId: string
-  eventId: string
+  competitionId: string
+  stageId: string
+  sessionId?: string
+  driverId: string
   field: string
   oldValue: string
   newValue: string
   changedBy: string
   changedAt: string
   reason: string
+  protestId?: string
 }
 
-export const resultChangeLogs: ResultChangeLog[] = [
-  {
-    id: 'cl1',
-    resultId: 'r_e4_8',
-    eventId: 'e4',
-    field: 'position',
-    oldValue: '8',
-    newValue: '7',
-    changedBy: 'admin1',
-    changedAt: '2026-04-17T10:00:00Z',
-    reason: 'Protest ruling: 5-second time penalty applied to original P7 driver',
+export const auditLogs: AuditLog[] = []
+
+registerSlice({
+  key: 'banRecords',
+  get: () => banRecords as unknown as Record<string, unknown>[],
+  replace: (rows) => {
+    banRecords.length = 0
+    banRecords.push(...(rows as unknown as BanRecord[]))
   },
-  {
-    id: 'cl2',
-    resultId: 'r_e12_21',
-    eventId: 'e12',
-    field: 'status',
-    oldValue: 'Finished',
-    newValue: 'DSQ',
-    changedBy: 'admin1',
-    changedAt: '2026-03-23T14:00:00Z',
-    reason: 'Protest ruling: Disqualified for repeated blocking',
+})
+
+registerSlice({
+  key: 'auditLogs',
+  get: () => auditLogs as unknown as Record<string, unknown>[],
+  replace: (rows) => {
+    auditLogs.length = 0
+    auditLogs.push(...(rows as unknown as AuditLog[]))
   },
-]
+})
+
+export function addBanRecord(b: BanRecord) {
+  banRecords.push(b)
+  bump()
+}
+
+export function addAuditLog(log: AuditLog) {
+  auditLogs.unshift(log)
+  bump()
+}

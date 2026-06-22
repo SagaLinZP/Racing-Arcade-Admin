@@ -349,13 +349,14 @@ export function CompetitionCreatePage() {
             <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionBasicInfo')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
+                data-flow="create-name"
                 label={`${t('competition.competitionName')} (${editLang === 'en' ? 'EN' : '中文'}) *`}
                 value={editLang === 'en' ? form.name_en : form.name_zh}
                 onChange={(e) => update(editLang === 'en' ? 'name_en' : 'name_zh', e.target.value)}
                 error={nameError}
               />
-              <Select label={t('event.game')} options={gameOptions} value={form.game} onChange={(e) => update('game', e.target.value)} />
-              <Select label={t('event.carClass')} options={carClassOptions.length > 0 ? carClassOptions : [{ value: '', label: '' }]} value={form.carClass} onChange={(e) => update('carClass', e.target.value)} />
+              <Select data-flow="create-game" label={t('event.game')} options={gameOptions} value={form.game} onChange={(e) => update('game', e.target.value)} />
+              <Select data-flow="create-carClass" label={t('event.carClass')} options={carClassOptions.length > 0 ? carClassOptions : [{ value: '', label: '' }]} value={form.carClass} onChange={(e) => update('carClass', e.target.value)} />
               <Input label={t('event.carList')} placeholder={t('event.carListPlaceholder')} value={form.carList} onChange={(e) => update('carList', e.target.value)} />
               <Input label={t('event.streamUrl')} value={form.streamUrl} onChange={(e) => update('streamUrl', e.target.value)} />
               <div className="md:col-span-2 max-w-sm">
@@ -363,6 +364,7 @@ export function CompetitionCreatePage() {
               </div>
               <div className="md:col-span-2">
                 <Textarea
+                  data-flow="create-desc"
                   label={`${t('common.description')} (${editLang === 'en' ? 'EN' : '中文'})`}
                   value={editLang === 'en' ? form.description_en : form.description_zh}
                   onChange={(e) => update(editLang === 'en' ? 'description_en' : 'description_zh', e.target.value)}
@@ -373,7 +375,7 @@ export function CompetitionCreatePage() {
 
           <Card>
             <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('common.regions')}</h3>
-            <div className="flex flex-wrap gap-3">
+            <div data-flow="create-regions" className="flex flex-wrap gap-3">
               {regionOptions.map(opt => (
                 <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
                   <input

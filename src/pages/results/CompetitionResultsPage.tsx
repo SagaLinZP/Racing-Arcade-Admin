@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '@/hooks/useAppStore'
-import { competitions } from '@/data/competitions'
+import { competitions, updateCompetition } from '@/data/competitions'
+import type { Stage } from '@/data/competitions'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -11,10 +12,21 @@ import {
   getSessionResultCount,
   getRaceSessionId,
   calculateRoundStandings,
+  calculateCompetitionStandings,
+  calculateTeamStandings,
+  getStageTimeState,
   getName,
 } from '@/lib/results'
 import { canSyncStage, syncStageResults } from '@/lib/serverResults'
-import { ArrowLeft, RefreshCw, ChevronRight, Pencil, Info } from 'lucide-react'
+import { applyAdvancement, canAdvance } from '@/lib/advancement'
+import { startStageServers, isStageServerRunning, publishStageResults } from '@/lib/stageOps'
+import { applyToEntryList } from '@/lib/registrationOps'
+import { getApprovedDriverIds } from '@/data/registrations'
+import { addNotification } from '@/data/notifications'
+import { useDataVersion } from '@/data/store'
+import { drivers } from '@/data/drivers'
+import { teams } from '@/data/teams'
+import { ArrowLeft, RefreshCw, ChevronRight, Info, ArrowUpRight, Trophy, Play, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function CompetitionResultsPage() {
@@ -26,6 +38,8 @@ export function CompetitionResultsPage() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [syncing, setSyncing] = useState(false)
   const [lastSyncCount, setLastSyncCount] = useState<number | null>(null)
+  const [advanceFlash, setAdvanceFlash] = useState<string | null>(null)
+  useDataVersion()
 
   const comp = competitions.find(c => c.id === competitionId)
   void refreshKey
@@ -52,9 +66,33 @@ export function CompetitionResultsPage() {
           break
         }
       }
+      updateCompetition(comp)
       setSyncing(false)
       refresh()
     }, 500)
+  }
+
+  const handleStartServer = (stage: Stage) => {
+    const round = comp.rounds.find(r => r.stages.some(s => s.id === stage.id))
+    if (round) applyToEntryList(comp, round)
+    startStageServers(stage)
+  }
+
+  const handlePublish = (stage: Stage) => {
+    const ok = publishStageResults(stage, comp)
+    if (ok) {
+      addNotification({
+        id: `ntf_pub_${stage.id}`,
+        type: 'results',
+        title_zh: '成绩已发布',
+        title_en: 'Results Published',
+        body_zh: `${getName(comp, 'zh')} - ${getName(stage, 'zh')} 成绩已发布。`,
+        body_en: `${getName(comp, 'en')} - ${getName(stage, 'en')} results published.`,
+        link: `/results/competition/${comp.id}`,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      })
+    }
   }
 
   const syncAll = () => {
@@ -74,6 +112,7 @@ export function CompetitionResultsPage() {
           }
         }
       }
+      if (count > 0) updateCompetition(comp)
       setSyncing(false)
       refresh()
       setLastSyncCount(count)
@@ -116,6 +155,47 @@ export function CompetitionResultsPage() {
         </div>
       )}
 
+      {advanceFlash && <div className="text-sm text-blue-700">{advanceFlash}</div>}
+
+      {(() => {
+        const driverStandings = calculateCompetitionStandings(comp)
+        if (driverStandings.length === 0) return null
+        const teamStandings = calculateTeamStandings(comp)
+        return (
+          <Card>
+            <div className="flex items-center gap-2 mb-3">
+              <Trophy className="w-4 h-4 text-amber-500" />
+              <h3 className="text-sm font-semibold text-gray-700">{t('result.standings')}</h3>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <div className="text-xs text-gray-400 mb-2">{t('result.driverStandings')}</div>
+                <div className="space-y-1">
+                  {driverStandings.slice(0, 8).map((s, i) => (
+                    <div key={s.driverId} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-700"><span className="text-gray-400 w-6 inline-block">{i + 1}.</span>{drivers.find(d => d.id === s.driverId)?.nickname ?? s.driverId}</span>
+                      <span className="font-medium text-gray-900">{s.totalPoints}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-400 mb-2">{t('result.teamStandings')}</div>
+                <div className="space-y-1">
+                  {teamStandings.slice(0, 6).map((s, i) => (
+                    <div key={s.teamId} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-700"><span className="text-gray-400 w-6 inline-block">{i + 1}.</span>{teams.find(tm => tm.id === s.teamId)?.name ?? s.teamId}</span>
+                      <span className="font-medium text-gray-900">{s.totalPoints}</span>
+                    </div>
+                  ))}
+                  {teamStandings.length === 0 && <div className="text-xs text-gray-400">—</div>}
+                </div>
+              </div>
+            </div>
+          </Card>
+        )
+      })()}
+
       <div className="space-y-6">
         {comp.rounds.map(round => {
           const standings = calculateRoundStandings(round)
@@ -135,7 +215,6 @@ export function CompetitionResultsPage() {
               <Card padding={false}>
                 <div className="divide-y divide-gray-200">
                   {round.stages.map(stage => {
-                    const status = getStageResultStatus(stage)
                     const raceId = getRaceSessionId(stage)
                     const hasRace = stage.splits.some(sp => sp.results?.some(r => r.sessionId === raceId))
                     const syncable = canSyncStage(stage) && !hasRace
@@ -144,52 +223,64 @@ export function CompetitionResultsPage() {
                       count: getSessionResultCount(stage, s.id),
                     }))
                     const totalResults = sessionCounts.reduce((sum, sc) => sum + sc.count, 0)
+                    const st = getStageResultStatus(stage)
+                    const ended = getStageTimeState(stage).ended
+                    const cta = st === 'published'
+                      ? { label: t('result.ctaView'), variant: 'secondary' as const }
+                      : (st === 'entered' || st === 'partial')
+                        ? { label: t('result.ctaContinue'), variant: 'primary' as const }
+                        : ended
+                          ? { label: t('result.ctaEnter'), variant: 'primary' as const }
+                          : null
                     return (
                       <div
                         key={stage.id}
                         onClick={() => navigate(`/results/${stage.id}`)}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                        className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 cursor-pointer transition-colors"
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium text-gray-400 uppercase">{stage.type}</span>
+                            <span className="text-[11px] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 shrink-0">{stage.type}</span>
                             <span className="text-sm font-medium text-gray-900 truncate">{getName(stage, lang)}</span>
                             {stage.gameConfig?.track && (
-                              <Badge variant="default" className="text-xs">{stage.gameConfig.track}</Badge>
+                              <span className="text-xs text-gray-400 shrink-0">{stage.gameConfig.track}</span>
                             )}
                           </div>
-                          <div className="text-xs text-gray-400 mt-0.5">
-                            {stage.sessions.length} {t('competition.sessions').toLowerCase()}
-                            {' · '}
-                            {stage.splits.length} {t('result.split').toLowerCase()}(s)
-                            {totalResults > 0 && (
-                              <>
-                                {' · '}
-                                {sessionCounts.filter(sc => sc.count > 0).map(sc =>
-                                  `${getName(sc.session, lang)}:${sc.count}`,
-                                ).join(' / ')}
-                              </>
-                            )}
+                          <div className="text-xs text-gray-400 mt-1">
+                            {totalResults > 0
+                              ? sessionCounts.filter(sc => sc.count > 0).map(sc => `${getName(sc.session, lang)} ${sc.count}`).join(' · ')
+                              : t('result.noResultsYet')}
+                            {stage.splits.length > 1 && ` · ${stage.splits.length} ${t('result.serversLabel')}`}
                           </div>
                         </div>
-                        <StatusPill status={status} t={t} />
-                        {syncable && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            disabled={syncing}
-                            onClick={(e) => { e.stopPropagation(); syncOne(stage.id) }}
-                          >
-                            <RefreshCw className={cn('w-3.5 h-3.5 mr-1', syncing && 'animate-spin')} />
-                            {t('result.syncFromServer')}
-                          </Button>
-                        )}
-                        {hasRace && (
-                          <span className="inline-flex items-center gap-1 text-xs text-gray-400">
-                            <Pencil className="w-3.5 h-3.5" />
-                            {t('common.edit')}
-                          </span>
-                        )}
+                        <StageStatus stage={stage} t={t} />
+                        <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          {comp.isDemo && stage.type === 'race_day' && getApprovedDriverIds(round.id).length > 0 && !isStageServerRunning(stage) && (
+                            <Button data-flow="server" variant="primary" size="sm" onClick={() => handleStartServer(stage)}>
+                              <Play className="w-3.5 h-3.5 mr-1" />{t('gameConfig.startServer')}
+                            </Button>
+                          )}
+                          {syncable && (
+                            <Button data-flow={comp.isDemo ? 'results' : undefined} variant={comp.isDemo ? 'primary' : 'ghost'} size="sm" disabled={syncing} onClick={() => syncOne(stage.id)} title={t('result.syncFromServer')}>
+                              <RefreshCw className={cn('w-4 h-4', comp.isDemo && 'mr-1', syncing && 'animate-spin')} />{comp.isDemo && t('result.syncFromServer')}
+                            </Button>
+                          )}
+                          {comp.isDemo && (getStageResultStatus(stage) === 'entered' || getStageResultStatus(stage) === 'partial') && (
+                            <Button data-flow="publish" variant="primary" size="sm" onClick={() => handlePublish(stage)}>
+                              <Send className="w-3.5 h-3.5 mr-1" />{t('result.publishResults')}
+                            </Button>
+                          )}
+                          {canAdvance(round, stage) && (
+                            <Button data-flow={comp.isDemo ? 'advance' : undefined} variant={comp.isDemo ? 'primary' : 'ghost'} size="sm" onClick={() => { const n = applyAdvancement(comp, round, stage); setAdvanceFlash(t('result.advanceDone', { count: n })) }} title={t('result.generateAdvancers')}>
+                              <ArrowUpRight className={cn('w-4 h-4', comp.isDemo && 'mr-1')} />{comp.isDemo && t('result.generateAdvancers')}
+                            </Button>
+                          )}
+                          {cta && (
+                            <Button variant={cta.variant} size="sm" onClick={() => navigate(`/results/${stage.id}`)}>
+                              {cta.label}
+                            </Button>
+                          )}
+                        </div>
                         <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
                       </div>
                     )
@@ -204,13 +295,16 @@ export function CompetitionResultsPage() {
   )
 }
 
-function StatusPill({ status, t }: { status: string; t: (k: string) => string }) {
-  const map: Record<string, { variant: 'default' | 'info' | 'warning' | 'success'; label: string }> = {
-    pending: { variant: 'default', label: t('result.statusPending') },
-    entered: { variant: 'warning', label: t('result.statusEntered') },
-    partial: { variant: 'info', label: t('result.statusPartial') },
-    published: { variant: 'success', label: t('result.statusPublished') },
-  }
-  const cfg = map[status] || map.pending
-  return <Badge variant={cfg.variant}>{cfg.label}</Badge>
+function StageStatus({ stage, t }: { stage: Stage; t: (k: string) => string }) {
+  const st = getStageResultStatus(stage)
+  const { started, ended } = getStageTimeState(stage)
+  let key: string
+  let variant: 'default' | 'info' | 'warning' | 'success'
+  if (st === 'published') { key = 'published'; variant = 'success' }
+  else if (st === 'partial') { key = 'partial'; variant = 'info' }
+  else if (st === 'entered') { key = 'entered'; variant = 'info' }
+  else if (!started) { key = 'notStarted'; variant = 'default' }
+  else if (!ended) { key = 'live'; variant = 'warning' }
+  else { key = 'awaitingResults'; variant = 'warning' }
+  return <Badge variant={variant}>{t(`result.stageState.${key}`)}</Badge>
 }

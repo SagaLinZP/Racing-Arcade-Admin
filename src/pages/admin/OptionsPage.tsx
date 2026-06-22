@@ -5,7 +5,6 @@ import { optionGroups } from '@/data/options'
 import type { ManagedOption, OptionGroup, OptionCategory } from '@/data/options'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
 import { ArrowLeft, Plus, Trash2, ChevronRight, Lock, Check, X } from 'lucide-react'
 
 const CATEGORY_ORDER: OptionCategory[] = ['competition', 'result', 'protest', 'user', 'news', 'notification']

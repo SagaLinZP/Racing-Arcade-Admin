@@ -5,6 +5,7 @@ import { useApp } from '@/hooks/useAppStore'
 import {
   Trophy,
   ClipboardList,
+  UserCheck,
   AlertTriangle,
   Users,
   Newspaper,
@@ -19,10 +20,13 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { setScrollContainer } from '@/lib/scrollContainer'
+import { setStoredLang } from '@/lib/lang'
+import { FlowAssistant } from '@/components/FlowAssistant'
 
 const navItems = [
   { path: '/competitions', icon: Trophy, labelKey: 'admin.competitions' },
   { path: '/templates', icon: FileText, labelKey: 'admin.templates' },
+  { path: '/registrations', icon: UserCheck, labelKey: 'admin.registrations' },
   { path: '/results', icon: ClipboardList, labelKey: 'admin.results' },
   { path: '/protests', icon: AlertTriangle, labelKey: 'admin.protests' },
   { path: '/users', icon: Users, labelKey: 'admin.users' },
@@ -42,6 +46,7 @@ export function AdminLayout() {
     const newLang = state.language === 'en' ? 'zh' : 'en'
     setState({ ...state, language: newLang })
     i18n.changeLanguage(newLang)
+    setStoredLang(newLang)
   }
 
   const breadcrumbs = location.pathname.split('/').filter(Boolean).map(p => p.charAt(0).toUpperCase() + p.slice(1))
@@ -137,6 +142,8 @@ export function AdminLayout() {
           <Outlet />
         </main>
       </div>
+
+      <FlowAssistant />
     </div>
   )
 }

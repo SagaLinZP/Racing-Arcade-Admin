@@ -1,4 +1,5 @@
 import type { Region, ScoringTableEntry } from '@/lib/utils'
+import { registerSlice, bump } from './store'
 
 export type GamePlatform = 'AC' | 'ACC'
 
@@ -264,6 +265,7 @@ export interface CompetitionRuleset {
 
 export interface Competition {
   id: string
+  isDemo?: boolean
   name_zh: string
   name_en: string
   description_zh: string
@@ -281,15 +283,6 @@ export interface Competition {
   createdBy: string
   createdAt: string
   updatedAt: string
-}
-
-const coverColors = ['#1a1a2e', '#16213e', '#0f3460', '#533483', '#2b2d42', '#1b263b', '#415a77', '#2d6a4f']
-
-export function getCoverGradient(id: string): string {
-  const idx = parseInt(id.replace(/\D/g, ''), 10) || 0
-  const c1 = coverColors[idx % coverColors.length]
-  const c2 = coverColors[(idx + 3) % coverColors.length]
-  return `linear-gradient(135deg, ${c1}, ${c2})`
 }
 
 export function totalCapacity(c: Competition): number | undefined {
@@ -1534,11 +1527,42 @@ function migrateCompetitions(raw: Record<string, unknown>[]): Competition[] {
 
 export const competitions: Competition[] = migrateCompetitions(_rawCompetitions)
 
+registerSlice({
+  key: 'competitions',
+  get: () => competitions as unknown as Record<string, unknown>[],
+  replace: (rows) => {
+    competitions.length = 0
+    competitions.push(...(rows as unknown as Competition[]))
+  },
+})
+
+registerSlice({
+  key: 'stageTemplates',
+  get: () => stageTemplates as unknown as Record<string, unknown>[],
+  replace: (rows) => {
+    stageTemplates.length = 0
+    stageTemplates.push(...(rows as unknown as StageTemplate[]))
+  },
+})
+
 export function addCompetition(c: Competition) {
   competitions.push(c)
+  bump()
 }
 
 export function updateCompetition(updated: Competition) {
   const idx = competitions.findIndex(c => c.id === updated.id)
   if (idx >= 0) competitions[idx] = updated
+  bump()
+}
+
+export function deleteCompetition(id: string) {
+  const idx = competitions.findIndex(c => c.id === id)
+  if (idx >= 0) competitions.splice(idx, 1)
+  bump()
+}
+
+export function saveStageTemplate(tpl: StageTemplate) {
+  stageTemplates.push(tpl)
+  bump()
 }

@@ -13,8 +13,12 @@ import { Badge } from '@/components/ui/Badge'
 import { findStageById, getPointsForPosition, getName, getRaceSessionId } from '@/lib/results'
 import type { SessionResult, ResultStatus } from '@/data/competitions'
 import type { ScoringTableEntry } from '@/lib/utils'
-import { ArrowLeft, Save, Upload, Trophy, Plus, Trash2, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Save, Upload, Trophy, Plus, Trash2, CheckCircle, History } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { parseResultsJson, reconcileRows, rowsToSessionResults, type ParsedRow } from '@/lib/resultParser'
+import { auditLogs } from '@/data/admin'
+import { addNotification } from '@/data/notifications'
+import { useDataVersion } from '@/data/store'
 
 interface SplitResultState {
   splitId: string
@@ -29,6 +33,7 @@ export function ResultEntryPage() {
   const lang = state.language
   const statusOptions = useManagedOptions('resultStatus', lang)
   const navigate = useNavigate()
+  useDataVersion()
   const { id } = useParams<{ id: string }>()
 
   const ctx = useMemo(() => (id ? findStageById(id) : null), [id])
@@ -51,6 +56,9 @@ export function ResultEntryPage() {
   )
   const [autoPoints, setAutoPoints] = useState(true)
   const [showUpload, setShowUpload] = useState(false)
+  const [pasteText, setPasteText] = useState('')
+  const [preview, setPreview] = useState<ParsedRow[] | null>(null)
+  const [parseMsg, setParseMsg] = useState<string | null>(null)
 
   if (!ctx) {
     return (
@@ -132,6 +140,17 @@ export function ResultEntryPage() {
       if (split && !split.resultsPublishedAt) {
         split.resultsPublishedAt = new Date().toISOString()
       }
+      addNotification({
+        id: `ntf_pub_${stage.id}_${current.splitId}`,
+        type: 'results',
+        title_zh: '成绩公布',
+        title_en: 'Results Published',
+        body_zh: `${competition.name_zh} - ${stage.name_zh} 成绩已公布`,
+        body_en: `${competition.name_en} - ${stage.name_en} results published`,
+        link: `/results/${stage.id}`,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      })
     }
   }
 
@@ -144,6 +163,33 @@ export function ResultEntryPage() {
       const split = ctx.stage.splits.find(s => s.id === current.splitId)
       if (split) split.resultsPublishedAt = undefined
     }
+  }
+
+  const handleParse = () => {
+    if (!current) return
+    const res = parseResultsJson(pasteText)
+    if (!res.ok) {
+      setPreview(null)
+      setParseMsg(t(`result.parseErr_${res.error}`))
+      return
+    }
+    const reconciled = reconcileRows(res.rows, stage, current.splitNumber)
+    setPreview(reconciled)
+    const matched = reconciled.filter(r => r.matched).length
+    setParseMsg(t('result.parseSummary', { game: res.game, total: reconciled.length, matched, unmatched: reconciled.length - matched }))
+  }
+
+  const handleImport = () => {
+    if (!preview || !current || !activeSessionId) return
+    const imported = rowsToSessionResults(preview, activeSessionId, current.splitNumber, scoringTable)
+    setSplitStates(prev => prev.map(ss => {
+      if (ss.splitId !== current.splitId) return ss
+      const others = ss.results.filter(r => r.sessionId !== activeSessionId)
+      return { ...ss, results: [...others, ...imported] }
+    }))
+    setPreview(null)
+    setPasteText('')
+    setShowUpload(false)
   }
 
   const sessionResults = current
@@ -227,13 +273,60 @@ export function ResultEntryPage() {
         </div>
       </Card>
 
-      {/* Upload zone */}
+      {/* Import zone */}
       {showUpload && (
         <Card>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-            <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-500">{t('result.uploadHint')}</p>
-            <Button variant="secondary" size="sm" className="mt-3">{t('result.chooseFile')}</Button>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-700">{t('result.importTitle')}</h3>
+              <span className="text-xs text-gray-400">{t('result.importHint')}</span>
+            </div>
+            <textarea
+              className="w-full h-32 rounded-md border border-gray-300 px-3 py-2 text-xs font-mono focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder='{ "sessionResult": { "leaderBoardLines": [ ... ] } }   //   { "Result": [ ... ] }'
+              value={pasteText}
+              onChange={(e) => setPasteText(e.target.value)}
+            />
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" size="sm" onClick={handleParse} disabled={!pasteText.trim()}>{t('result.parse')}</Button>
+              {preview && preview.some(r => r.matched) && (
+                <Button variant="primary" size="sm" onClick={handleImport}>{t('result.import')}</Button>
+              )}
+              {parseMsg && <span className="text-xs text-gray-600">{parseMsg}</span>}
+            </div>
+            {preview && preview.length > 0 && (
+              <div className="max-h-52 overflow-y-auto border border-gray-200 rounded-md">
+                <table className="min-w-full divide-y divide-gray-200 text-xs">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-2 py-1.5 text-left font-medium text-gray-500 uppercase w-10">{t('result.position')}</th>
+                      <th className="px-2 py-1.5 text-left font-medium text-gray-500 uppercase">{t('result.driver')}</th>
+                      <th className="px-2 py-1.5 text-left font-medium text-gray-500 uppercase w-24">{t('result.bestLap')}</th>
+                      <th className="px-2 py-1.5 text-left font-medium text-gray-500 uppercase w-14">{t('result.laps')}</th>
+                      <th className="px-2 py-1.5 text-left font-medium text-gray-500 uppercase w-24" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {preview.map((r, i) => {
+                      const d = r.matchedDriverId ? drivers.find(dr => dr.id === r.matchedDriverId) : undefined
+                      return (
+                        <tr key={i} className={cn(!r.matched && 'bg-red-50')}>
+                          <td className="px-2 py-1 text-gray-600">{r.position}</td>
+                          <td className="px-2 py-1 text-gray-900">{d?.nickname ?? r.driverName ?? r.playerId ?? (r.raceNumber != null ? `#${r.raceNumber}` : '—')}</td>
+                          <td className="px-2 py-1 font-mono text-gray-500">{r.bestLapMs ? (r.bestLapMs / 1000).toFixed(3) : '—'}</td>
+                          <td className="px-2 py-1 text-gray-500">{r.laps ?? '—'}</td>
+                          <td className="px-2 py-1">
+                            {r.matched
+                              ? <Badge variant="success">{t('result.previewMatched')}</Badge>
+                              : <Badge variant="danger">{t('result.previewUnmatched')}</Badge>}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </Card>
       )}
@@ -447,6 +540,25 @@ export function ResultEntryPage() {
                 <span className="text-xs text-gray-400">P{entry.position}</span>
                 <span className="text-sm font-bold text-blue-600">{entry.points}</span>
                 {entry.note_en && <span className="text-xs text-gray-400">{lang === 'zh' ? entry.note_zh : entry.note_en}</span>}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {auditLogs.filter(l => l.stageId === stage.id).length > 0 && (
+        <Card>
+          <div className="flex items-center gap-2 mb-3">
+            <History className="w-4 h-4 text-gray-400" />
+            <h3 className="text-sm font-semibold text-gray-700">{t('result.auditHistory')}</h3>
+          </div>
+          <div className="space-y-2">
+            {auditLogs.filter(l => l.stageId === stage.id).map(l => (
+              <div key={l.id} className="flex flex-wrap items-baseline gap-x-2 text-xs border-b border-gray-100 pb-1.5">
+                <span className="text-gray-400 font-mono">{new Date(l.changedAt).toLocaleString()}</span>
+                <span className="text-gray-800 font-medium">{drivers.find(d => d.id === l.driverId)?.nickname ?? l.driverId}</span>
+                <span className="text-gray-500">{l.field}: {l.oldValue || '—'} → {l.newValue}</span>
+                <span className="text-gray-400">· {l.reason}</span>
               </div>
             ))}
           </div>

@@ -1,3 +1,5 @@
+import { registerSlice, bump } from './store'
+
 export interface NewsArticle {
   id: string
   title_zh: string
@@ -83,3 +85,23 @@ export const news: NewsArticle[] = [
     relatedEventIds: ['e11', 'e2'],
   },
 ]
+
+registerSlice({
+  key: 'news',
+  get: () => news as unknown as Record<string, unknown>[],
+  replace: (rows) => {
+    news.length = 0
+    news.push(...(rows as unknown as NewsArticle[]))
+  },
+})
+
+export function addNews(article: NewsArticle) {
+  news.unshift(article)
+  bump()
+}
+
+export function updateNews(updated: NewsArticle) {
+  const idx = news.findIndex(n => n.id === updated.id)
+  if (idx >= 0) news[idx] = updated
+  bump()
+}

@@ -5,6 +5,7 @@ import { useApp } from '@/hooks/useAppStore'
 import { useManagedOptions } from '@/hooks/useManagedOptions'
 import { competitions, updateCompetition, createDefaultRound, createDefaultStage } from '@/data/competitions'
 import type { Round, Stage, GamePlatform, Competition } from '@/data/competitions'
+import type { Region } from '@/lib/utils'
 import { drivers } from '@/data/drivers'
 import { teams } from '@/data/teams'
 import { Card } from '@/components/ui/Card'
@@ -148,20 +149,20 @@ export function CompetitionEditPage() {
       </div>
 
       {tab === 'info' && (
-        <div className="max-w-5xl mx-auto p-6 space-y-6" key={editLang}>
+        <div className="max-w-5xl mx-auto p-6 space-y-6">
           <Card>
             <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionBasicInfo')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input label={`${t('competition.competitionName')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? comp.name_en : comp.name_zh} />
-              <Select label={t('event.game')} options={gameOptions} defaultValue={comp.game} />
-              <Select label={t('event.carClass')} options={carClassOptions.length > 0 ? carClassOptions : [{ value: '', label: '' }]} defaultValue={comp.carClass} />
-              <Input label={t('event.carList')} placeholder={t('event.carListPlaceholder')} defaultValue={comp.carList?.join(', ') || ''} />
-              <Input label={t('event.streamUrl')} defaultValue={comp.defaultRuleset.streamUrl || ''} />
+              <Input label={`${t('competition.competitionName')} (${editLang === 'en' ? 'EN' : '中文'})`} value={editLang === 'en' ? comp.name_en : comp.name_zh} onChange={(e) => setLocal(prev => ({ ...prev, ...(editLang === 'en' ? { name_en: e.target.value } : { name_zh: e.target.value }) }))} />
+              <Select label={t('event.game')} options={gameOptions} value={comp.game} onChange={(e) => setLocal(prev => ({ ...prev, game: e.target.value as GamePlatform }))} />
+              <Select label={t('event.carClass')} options={carClassOptions.length > 0 ? carClassOptions : [{ value: '', label: '' }]} value={comp.carClass} onChange={(e) => setLocal(prev => ({ ...prev, carClass: e.target.value }))} />
+              <Input label={t('event.carList')} placeholder={t('event.carListPlaceholder')} value={comp.carList?.join(', ') || ''} onChange={(e) => setLocal(prev => ({ ...prev, carList: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))} />
+              <Input label={t('event.streamUrl')} value={comp.defaultRuleset.streamUrl || ''} onChange={(e) => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, streamUrl: e.target.value } }))} />
               <div className="md:col-span-2 max-w-sm">
-                <ImageUpload label={t('event.coverImage')} defaultValue={comp.coverImage || ''} />
+                <ImageUpload label={t('event.coverImage')} value={comp.coverImage || ''} onChange={(v) => setLocal(prev => ({ ...prev, coverImage: v }))} />
               </div>
               <div className="md:col-span-2">
-                <Textarea label={`${t('common.description')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? comp.description_en : comp.description_zh} />
+                <Textarea label={`${t('common.description')} (${editLang === 'en' ? 'EN' : '中文'})`} value={editLang === 'en' ? comp.description_en : comp.description_zh} onChange={(e) => setLocal(prev => ({ ...prev, ...(editLang === 'en' ? { description_en: e.target.value } : { description_zh: e.target.value }) }))} />
               </div>
             </div>
           </Card>
@@ -173,7 +174,8 @@ export function CompetitionEditPage() {
                 <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    defaultChecked={comp.regions.includes(opt.value as 'CN' | 'AP' | 'AM' | 'EU')}
+                    checked={comp.regions.includes(opt.value as Region)}
+                    onChange={() => setLocal(prev => ({ ...prev, regions: prev.regions.includes(opt.value as Region) ? prev.regions.filter(r => r !== opt.value) : [...prev.regions, opt.value as Region] }))}
                     className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                   <span className="text-sm text-gray-700">{opt.label}</span>
@@ -185,13 +187,13 @@ export function CompetitionEditPage() {
           <Card>
             <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionRules')}</h3>
             <div className="space-y-4">
-              <Textarea label={`${t('event.accessRequirements')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? comp.defaultRuleset.accessRequirements_en || '' : comp.defaultRuleset.accessRequirements_zh || ''} />
+              <Textarea label={`${t('event.accessRequirements')} (${editLang === 'en' ? 'EN' : '中文'})`} value={editLang === 'en' ? comp.defaultRuleset.accessRequirements_en || '' : comp.defaultRuleset.accessRequirements_zh || ''} onChange={(e) => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, ...(editLang === 'en' ? { accessRequirements_en: e.target.value } : { accessRequirements_zh: e.target.value }) } }))} />
             </div>
           </Card>
 
           <Card>
             <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionScoringTable')}</h3>
-            <div className="overflow-x-auto" key={editLang}>
+            <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-gray-500">
@@ -205,16 +207,16 @@ export function CompetitionEditPage() {
                   {(comp.defaultRuleset.scoringTable || []).map((row, idx) => (
                     <tr key={idx} className="border-b border-gray-100">
                       <td className="py-2 pr-3">
-                        <input type="number" className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm" defaultValue={row.position} />
+                        <input type="number" className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm" value={row.position} readOnly />
                       </td>
                       <td className="py-2 pr-3">
-                        <input type="number" className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm" defaultValue={row.points} />
+                        <input type="number" className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm" value={row.points} onChange={(e) => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, scoringTable: (prev.defaultRuleset.scoringTable || []).map((r, i) => i === idx ? { ...r, points: Number(e.target.value) } : r) } }))} />
                       </td>
                       <td className="py-2 pr-3">
-                        <input type="text" className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm" defaultValue={editLang === 'en' ? (row.note_en || '') : (row.note_zh || '')} />
+                        <input type="text" className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm" value={editLang === 'en' ? (row.note_en || '') : (row.note_zh || '')} onChange={(e) => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, scoringTable: (prev.defaultRuleset.scoringTable || []).map((r, i) => i === idx ? { ...r, ...(editLang === 'en' ? { note_en: e.target.value } : { note_zh: e.target.value }) } : r) } }))} />
                       </td>
                       <td className="py-2">
-                        <button className="text-red-500 hover:text-red-700">
+                        <button className="text-red-500 hover:text-red-700" onClick={() => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, scoringTable: (prev.defaultRuleset.scoringTable || []).filter((_, i) => i !== idx).map((r, i) => ({ ...r, position: i + 1 })) } }))}>
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
@@ -229,12 +231,12 @@ export function CompetitionEditPage() {
             <div className="mt-3">
               <Textarea
                 label={`${t('event.scoringNote')} (${editLang === 'en' ? 'EN' : '中文'})`}
-                defaultValue={editLang === 'en' ? comp.defaultRuleset.scoringNote_en || '' : comp.defaultRuleset.scoringNote_zh || ''}
-                key={editLang}
+                value={editLang === 'en' ? comp.defaultRuleset.scoringNote_en || '' : comp.defaultRuleset.scoringNote_zh || ''}
+                onChange={(e) => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, ...(editLang === 'en' ? { scoringNote_en: e.target.value } : { scoringNote_zh: e.target.value }) } }))}
               />
             </div>
             <div className="mt-3">
-              <Button variant="secondary" size="sm">
+              <Button variant="secondary" size="sm" onClick={() => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, scoringTable: [...(prev.defaultRuleset.scoringTable || []), { position: (prev.defaultRuleset.scoringTable?.length || 0) + 1, points: 0, note_en: '', note_zh: '' }] } }))}>
                 <Plus className="w-4 h-4 mr-1" />
                 {t('event.addRow')}
               </Button>
@@ -243,7 +245,7 @@ export function CompetitionEditPage() {
 
           <Card>
             <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.resources')}</h3>
-            <Textarea label={`Resources (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? comp.defaultRuleset.resources_en || '' : comp.defaultRuleset.resources_zh || ''} />
+            <Textarea label={`Resources (${editLang === 'en' ? 'EN' : '中文'})`} value={editLang === 'en' ? comp.defaultRuleset.resources_en || '' : comp.defaultRuleset.resources_zh || ''} onChange={(e) => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, ...(editLang === 'en' ? { resources_en: e.target.value } : { resources_zh: e.target.value }) } }))} />
           </Card>
         </div>
       )}
@@ -441,7 +443,6 @@ function StageAccordion({
   const [eligibility, setEligibility] = useState(stage.eligibilitySource || 'roundRegistration')
   const [advMetric, setAdvMetric] = useState(stage.advancementRule?.metric || 'lapTime')
   const [selectedDrivers, setSelectedDrivers] = useState<Set<string>>(new Set())
-  const [localStage, setLocalStage] = useState<Stage>(stage)
   const [enableMultiSplit, setEnableMultiSplit] = useState(stage.enableMultiSplit || false)
   const [maxSplits, setMaxSplits] = useState(stage.maxSplits || 2)
   const [showServerConfig, setShowServerConfig] = useState(false)
@@ -450,10 +451,10 @@ function StageAccordion({
 
   const handleMultiSplitChange = (enabled: boolean) => {
     setEnableMultiSplit(enabled)
+    onUpdate({ ...stage, enableMultiSplit: enabled })
   }
 
   const handleSaveStage = (updated: Stage) => {
-    setLocalStage(updated)
     onUpdate(updated)
   }
 
@@ -488,7 +489,7 @@ function StageAccordion({
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium text-gray-900">{getName(stage)}</span>
         </div>
-        <span className="text-xs text-gray-400">{localStage.sessions.length} {t('competition.sessions')}</span>
+        <span className="text-xs text-gray-400">{stage.sessions.length} {t('competition.sessions')}</span>
         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onDelete() }}>
           <Trash2 className="w-3.5 h-3.5 text-red-500" />
         </Button>
@@ -496,20 +497,20 @@ function StageAccordion({
 
       {isExpanded && (
         <div className="px-4 pb-4 space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3" key={editLang}>
-            <Input label={`${t('competition.stageName')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? stage.name_en : stage.name_zh} />
-            <Input label={t('common.from')} type="datetime-local" defaultValue={stage.startsAt.slice(0, 16)} />
-            <Input label={t('common.to')} type="datetime-local" defaultValue={stage.endsAt.slice(0, 16)} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3">
+            <Input label={`${t('competition.stageName')} (${editLang === 'en' ? 'EN' : '中文'})`} value={editLang === 'en' ? stage.name_en : stage.name_zh} onChange={(e) => onUpdate({ ...stage, ...(editLang === 'en' ? { name_en: e.target.value } : { name_zh: e.target.value }) })} />
+            <Input label={t('common.from')} type="datetime-local" value={stage.startsAt.slice(0, 16)} onChange={(e) => onUpdate({ ...stage, startsAt: e.target.value ? new Date(e.target.value).toISOString() : stage.startsAt })} />
+            <Input label={t('common.to')} type="datetime-local" value={stage.endsAt.slice(0, 16)} onChange={(e) => onUpdate({ ...stage, endsAt: e.target.value ? new Date(e.target.value).toISOString() : stage.endsAt })} />
           </div>
 
-          <Textarea label={`${t('common.description')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? stage.description_en || '' : stage.description_zh || ''} />
+          <Textarea label={`${t('common.description')} (${editLang === 'en' ? 'EN' : '中文'})`} value={editLang === 'en' ? stage.description_en || '' : stage.description_zh || ''} onChange={(e) => onUpdate({ ...stage, ...(editLang === 'en' ? { description_en: e.target.value } : { description_zh: e.target.value }) })} />
 
           <div className="space-y-3">
             <Select
               label={t('competition.eligibilitySource')}
               options={eligibilityOptions}
-              defaultValue={eligibility}
-              onChange={(e) => setEligibility(e.target.value as typeof eligibility)}
+              value={eligibility}
+              onChange={(e) => { setEligibility(e.target.value as typeof eligibility); onUpdate({ ...stage, eligibilitySource: e.target.value as Stage['eligibilitySource'] }) }}
             />
 
             {eligibility === 'previousStageResult' && (
@@ -523,7 +524,7 @@ function StageAccordion({
                       { value: 'position', label: t('competition.advancementMetricPosition') },
                     ]}
                     value={advMetric}
-                    onChange={(e) => setAdvMetric(e.target.value as typeof advMetric)}
+                    onChange={(e) => { const m = e.target.value as 'lapTime' | 'points' | 'position'; setAdvMetric(m); onUpdate({ ...stage, advancementRule: { ...(stage.advancementRule ?? { metric: m }), metric: m } }) }}
                   />
                   {advMetric === 'lapTime' ? (
                     <Input
@@ -531,10 +532,11 @@ function StageAccordion({
                       type="number"
                       step="0.01"
                       min="1"
-                      defaultValue={String(stage.advancementRule?.lapTimeMultiplier ?? 1.05)}
+                      value={String(stage.advancementRule?.lapTimeMultiplier ?? 1.05)}
+                      onChange={(e) => onUpdate({ ...stage, advancementRule: { ...(stage.advancementRule ?? { metric: 'lapTime' }), metric: 'lapTime', lapTimeMultiplier: Number(e.target.value) } })}
                     />
                   ) : (
-                    <Input label={t('competition.advancementLimit')} type="number" defaultValue={stage.advancementRule?.limit || ''} />
+                    <Input label={t('competition.advancementLimit')} type="number" value={String(stage.advancementRule?.limit ?? '')} onChange={(e) => onUpdate({ ...stage, advancementRule: { ...(stage.advancementRule ?? { metric: advMetric }), metric: advMetric, limit: Number(e.target.value) } })} />
                   )}
                 </div>
                 {advMetric === 'lapTime' && (
@@ -587,10 +589,10 @@ function StageAccordion({
             </div>
             {enableMultiSplit && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Input label={t('event.maxEntriesPerSplit')} type="number" defaultValue={stage.maxEntriesPerSplit || ''} />
-                <Input label={t('event.maxSplits')} type="number" value={String(maxSplits)} onChange={(e) => setMaxSplits(Math.max(1, Number(e.target.value)))} />
-                <Input label={t('event.minEntries')} type="number" defaultValue={stage.minEntries || ''} />
-                <Select label={t('event.splitAssignmentRule')} options={splitRuleOptions} defaultValue={stage.splitAssignmentRule || ''} />
+                <Input label={t('event.maxEntriesPerSplit')} type="number" value={String(stage.maxEntriesPerSplit ?? '')} onChange={(e) => onUpdate({ ...stage, maxEntriesPerSplit: Number(e.target.value) })} />
+                <Input label={t('event.maxSplits')} type="number" value={String(maxSplits)} onChange={(e) => { const v = Math.max(1, Number(e.target.value)); setMaxSplits(v); onUpdate({ ...stage, maxSplits: v }) }} />
+                <Input label={t('event.minEntries')} type="number" value={String(stage.minEntries ?? '')} onChange={(e) => onUpdate({ ...stage, minEntries: Number(e.target.value) })} />
+                <Select label={t('event.splitAssignmentRule')} options={splitRuleOptions} value={stage.splitAssignmentRule || ''} onChange={(e) => onUpdate({ ...stage, splitAssignmentRule: e.target.value })} />
               </div>
             )}
             {!enableMultiSplit && (
@@ -619,7 +621,7 @@ function StageAccordion({
           isOpen={true}
           onClose={() => setShowServerConfig(false)}
           onSave={handleSaveStage}
-          stage={localStage}
+          stage={stage}
           editLang={editLang}
           game={game}
           splitCount={splitCount}

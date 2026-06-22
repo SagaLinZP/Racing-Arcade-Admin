@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage'
 import { CompetitionListPage } from './pages/competitions/CompetitionListPage'
 import { CompetitionCreatePage } from './pages/competitions/CompetitionCreatePage'
 import { CompetitionEditPage } from './pages/competitions/CompetitionEditPage'
+import { RegistrationListPage } from './pages/registrations/RegistrationListPage'
 import { TemplateListPage } from './pages/templates/TemplateListPage'
 import { TemplateEditPage } from './pages/templates/TemplateEditPage'
 import { ResultListPage } from './pages/results/ResultListPage'
@@ -49,6 +50,7 @@ export default function App() {
               <Route path="/competitions" element={<CompetitionListPage />} />
               <Route path="/competitions/create" element={<CompetitionCreatePage />} />
               <Route path="/competitions/:id/edit" element={<CompetitionEditPage />} />
+              <Route path="/registrations" element={<RegistrationListPage />} />
               <Route path="/templates" element={<TemplateListPage />} />
               <Route path="/templates/create" element={<TemplateEditPage />} />
               <Route path="/templates/:id/edit" element={<TemplateEditPage />} />

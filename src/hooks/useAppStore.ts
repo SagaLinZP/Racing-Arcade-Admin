@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react'
+import { getStoredLang } from '@/lib/lang'
 
 export interface AppState {
   isLoggedIn: boolean
@@ -10,7 +11,7 @@ export interface AppState {
 export const defaultState: AppState = {
   isLoggedIn: true,
   currentUser: { id: 'admin1', nickname: 'Admin', role: 'admin' },
-  language: 'en',
+  language: getStoredLang(),
   sidebarCollapsed: false,
 }
 

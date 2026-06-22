@@ -25,6 +25,8 @@ import type {
   EntryListEntry,
 } from '@/data/competitions'
 import { GameConfigEditor } from './GameConfigEditor'
+import { startServer, stopServer, getServerInstance } from '@/data/servers'
+import { useDataVersion } from '@/data/store'
 import {
   YES_NO,
   SESSION_TYPE_OPTIONS_T,
@@ -34,7 +36,7 @@ import {
   YES_NO_INT,
 } from './gameConfigOptions'
 import {
-  Plus, Trash2, ChevronUp, ChevronDown, ChevronRight, Power, AlertCircle, RefreshCw, Settings,
+  Plus, Trash2, ChevronUp, ChevronDown, ChevronRight, Power, Square, AlertCircle, RefreshCw, Settings,
 } from 'lucide-react'
 
 type TabKey = 'splits' | 'sessions' | 'gameSettings'
@@ -59,6 +61,7 @@ export function ServerConfigModal({
   registeredDrivers: Array<{ id: string; nickname: string; teamName?: string; teamId?: string }>
 }) {
   const { t } = useTranslation()
+  useDataVersion()
   const [activeTab, setActiveTab] = useState<TabKey>('splits')
   const [local, setLocal] = useState<Stage>(() => {
     const base: Stage = { ...stage }
@@ -268,7 +271,11 @@ export function ServerConfigModal({
   }
 
   const handleStartServer = () => {
-    setServerErrors(validateServerStart())
+    const errs = validateServerStart()
+    setServerErrors(errs)
+    if (errs.length === 0) {
+      local.splits.forEach(split => startServer(local.id, split, local.gameConfig))
+    }
   }
 
   const handleSave = () => { onSave(local); onClose() }
@@ -497,6 +504,7 @@ export function ServerConfigModal({
           )}
           {local.splits.map((split) => (
             <div key={split.id} className="rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
+              <ServerStatusBar stageId={local.id} split={split} gameConfig={local.gameConfig} t={t} />
               {splitCount > 1 && (
                 <div className="flex items-center gap-2">
                   <Badge variant="info">{t('gameConfig.split')} {split.splitNumber}</Badge>
@@ -816,6 +824,35 @@ function EntryListEditor({
               <Button variant="primary" size="sm" onClick={() => { onAutoGenerate(); setShowAutoConfirm(false) }}>{t('common.confirm')}</Button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ServerStatusBar({ stageId, split, gameConfig, t }: {
+  stageId: string
+  split: Split
+  gameConfig?: SessionGameConfig
+  t: (key: string, opts?: Record<string, unknown>) => string
+}) {
+  const inst = getServerInstance(split.id)
+  const running = inst?.status === 'running'
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between rounded-md bg-white border border-gray-200 px-3 py-2">
+        <div className="flex items-center gap-2">
+          <span className={cn('w-2 h-2 rounded-full', running ? 'bg-green-500' : 'bg-gray-400')} />
+          <span className="text-xs font-medium text-gray-700">{running ? t('gameConfig.serverRunning') : t('gameConfig.serverStopped')}</span>
+          {running && <span className="text-xs text-gray-400">· {inst?.onlineCount ?? 0} {t('gameConfig.online')}</span>}
+        </div>
+        {running
+          ? <Button variant="ghost" size="sm" onClick={() => stopServer(split.id)}><Square className="w-3.5 h-3.5 mr-1" />{t('gameConfig.serverStop')}</Button>
+          : <Button variant="ghost" size="sm" onClick={() => startServer(stageId, split, gameConfig)}><Power className="w-3.5 h-3.5 mr-1" />{t('gameConfig.startServer')}</Button>}
+      </div>
+      {inst && inst.logs.length > 0 && (
+        <div className="rounded-md bg-gray-900 text-gray-100 text-xs font-mono p-2 max-h-24 overflow-y-auto space-y-0.5">
+          {inst.logs.map((l, i) => <div key={i}>{l.message}</div>)}
         </div>
       )}
     </div>

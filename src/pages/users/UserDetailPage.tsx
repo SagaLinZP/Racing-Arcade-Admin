@@ -5,7 +5,8 @@ import { useApp } from '@/hooks/useAppStore'
 import { useManagedOptions } from '@/hooks/useManagedOptions'
 import { drivers } from '@/data/drivers'
 import { teams } from '@/data/teams'
-import { events } from '@/data/events'
+import { registrations } from '@/data/registrations'
+import { competitions } from '@/data/competitions'
 import { banRecords } from '@/data/admin'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -15,7 +16,7 @@ import { Input } from '@/components/ui/Input'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Modal } from '@/components/ui/Modal'
 import { ArrowLeft, ShieldAlert, ShieldCheck } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+import { formatDate, getCompetitionStatus } from '@/lib/utils'
 
 export function UserDetailPage() {
   const { t } = useTranslation()
@@ -32,7 +33,9 @@ export function UserDetailPage() {
 
   const team = driver.teamId ? teams.find(tm => tm.id === driver.teamId) : null
   const userBans = banRecords.filter(b => b.userId === driver.id)
-  const participatedEvents = events.filter(e => e.registeredDriverIds.includes(driver.id))
+  const participatedCompetitions = [...new Set(
+    registrations.filter(r => r.driverId === driver.id && r.status === 'approved').map(r => r.competitionId),
+  )].map(cid => competitions.find(c => c.id === cid)).filter((c): c is NonNullable<typeof c> => !!c)
 
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto">
@@ -115,17 +118,21 @@ export function UserDetailPage() {
       </Card>
 
       <Card>
-        <h3 className="text-sm font-medium text-gray-700 mb-3 pb-2 border-b">Participated Events ({participatedEvents.length})</h3>
+        <h3 className="text-sm font-medium text-gray-700 mb-3 pb-2 border-b">{t('user.participatedCompetitions')} ({participatedCompetitions.length})</h3>
         <div className="space-y-2 max-h-64 overflow-y-auto">
-          {participatedEvents.map(e => (
-            <div key={e.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
-              <div>
-                <span className="text-sm font-medium">{lang === 'zh' ? e.name_zh : e.name_en}</span>
-                <span className="text-xs text-gray-400 ml-2">{e.track}</span>
+          {participatedCompetitions.map(c => {
+            const status = getCompetitionStatus(c)
+            return (
+              <div key={c.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded cursor-pointer" onClick={() => navigate(`/competitions/${c.id}/edit`)}>
+                <div>
+                  <span className="text-sm font-medium">{lang === 'zh' ? c.name_zh : c.name_en}</span>
+                  <span className="text-xs text-gray-400 ml-2">{c.game} · {c.carClass}</span>
+                </div>
+                <StatusBadge status={status} label={t(`event.status.${status}`)} />
               </div>
-              <StatusBadge status={e.status} label={t(`event.status.${e.status}`)} />
-            </div>
-          ))}
+            )
+          })}
+          {participatedCompetitions.length === 0 && <p className="text-sm text-gray-400 text-center py-4">{t('common.noData')}</p>}
         </div>
       </Card>
 
