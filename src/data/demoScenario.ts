@@ -149,8 +149,8 @@ function buildDemoRegistrations(): Registration[] {
     platformId: '7656119' + String(8200000000 + i),
     preferredNumber: DEMO_NUMBERS[i] ?? 10 + i,
     teamId: d.teamId,
-    status: 'pending',
-    paymentStatus: 'none',
+    status: 'approved',
+    paymentStatus: 'paid',
     submittedAt: new Date(now - (DEMO_DRIVER_COUNT - i) * 3_600_000).toISOString(),
   }))
 }

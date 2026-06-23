@@ -25,7 +25,7 @@ export function RegistrationListPage() {
           {competitions.map(comp => {
             const regs = comp.rounds.flatMap(r => getRoundRegistrations(r.id))
             const approved = regs.filter(r => r.status === 'approved').length
-            const pending = regs.filter(r => r.status === 'pending').length
+            const waitlisted = regs.filter(r => r.status === 'waitlisted').length
             return (
               <div
                 key={comp.id}
@@ -42,8 +42,8 @@ export function RegistrationListPage() {
                     {t('registration.roundsCount', { count: comp.rounds.length })}
                     {' · '}
                     {t('registration.approvedCount', { count: approved })}
-                    {pending > 0 && (
-                      <span className="text-amber-600"> · {t('registration.summary', { approved, pending, waitlisted: regs.filter(r => r.status === 'waitlisted').length })}</span>
+                    {waitlisted > 0 && (
+                      <span> · {t('registration.waitlistedCount', { count: waitlisted })}</span>
                     )}
                   </div>
                 </div>

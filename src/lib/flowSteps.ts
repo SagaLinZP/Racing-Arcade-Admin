@@ -7,7 +7,7 @@ import { addNotification } from '@/data/notifications'
 import { getRaceSessionId, getStageResultStatus } from '@/lib/results'
 import { syncStageResults } from '@/lib/serverResults'
 import { applyAdvancement } from '@/lib/advancement'
-import { approveAllPending, applyToEntryList } from '@/lib/registrationOps'
+import { applyToEntryList } from '@/lib/registrationOps'
 import { startStageServers, publishStageResults } from '@/lib/stageOps'
 import {
   DEMO_COMP_ID,
@@ -62,20 +62,12 @@ export const flowSteps: FlowStep[] = [
   },
   {
     id: 'review',
-    target: 'review',
     isDone: () => {
       const c = ctx()
       if (!c) return false
-      const regs = getRoundRegistrations(c.round.id)
-      const approved = regs.filter(r => r.status === 'approved').length
-      const pending = regs.filter(r => r.status === 'pending').length
-      return approved > 0 && pending === 0
+      return getRoundRegistrations(c.round.id).some(r => r.status === 'approved')
     },
     route: () => REG_ROUTE,
-    run: () => {
-      const c = ctx()
-      if (c) approveAllPending(c.round)
-    },
   },
   {
     id: 'server',

@@ -1,6 +1,6 @@
 import { drivers } from '@/data/drivers'
 import { teams } from '@/data/teams'
-import { getRoundRegistrations, setRegistrationStatus, assignSplit } from '@/data/registrations'
+import { getRoundRegistrations, assignSplit } from '@/data/registrations'
 import { updateCompetition, createDefaultSplit } from '@/data/competitions'
 import type { Competition, Round, Stage, EntryListEntry } from '@/data/competitions'
 
@@ -10,12 +10,6 @@ function driverName(id: string): string {
 
 function teamName(id?: string): string | undefined {
   return id ? teams.find(t => t.id === id)?.name : undefined
-}
-
-export function approveAllPending(round: Round): number {
-  const pending = getRoundRegistrations(round.id).filter(r => r.status === 'pending')
-  pending.forEach(r => setRegistrationStatus(r.id, 'approved'))
-  return pending.length
 }
 
 function roundRegistrationStages(round: Round): Stage[] {

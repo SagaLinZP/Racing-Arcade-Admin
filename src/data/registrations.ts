@@ -2,7 +2,7 @@ import { registerSlice, bump } from './store'
 import { competitions } from './competitions'
 import { drivers } from './drivers'
 
-export type RegistrationStatus = 'pending' | 'approved' | 'rejected' | 'waitlisted' | 'withdrawn'
+export type RegistrationStatus = 'approved' | 'rejected' | 'waitlisted' | 'withdrawn'
 export type PaymentStatus = 'none' | 'unpaid' | 'paid' | 'refunded'
 
 export interface Registration {
@@ -52,7 +52,7 @@ function seedRegistrations(): Registration[] {
       })
       const others = drivers.filter(d => !approvedIds.includes(d.id)).slice(0, 3)
       others.forEach((d, i) => {
-        const status: RegistrationStatus = i === 2 ? 'waitlisted' : 'pending'
+        const status: RegistrationStatus = i === 2 ? 'waitlisted' : 'approved'
         out.push({
           id: `reg_${regSeq}`,
           competitionId: comp.id,
@@ -141,7 +141,7 @@ export function createDefaultRegistration(competitionId: string, roundId: string
     roundId,
     driverId,
     platformId: '',
-    status: 'pending',
+    status: 'approved',
     paymentStatus: 'unpaid',
     submittedAt: new Date().toISOString(),
   }

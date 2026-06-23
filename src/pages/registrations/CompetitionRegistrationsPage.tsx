@@ -12,7 +12,6 @@ import {
   type RegistrationStatus,
 } from '@/data/registrations'
 import {
-  approveAllPending,
   applyToEntryList,
   assignSplitsEvenly,
   getSplitPlan,
@@ -31,7 +30,6 @@ import { ArrowLeft, Check, X, Clock, Users, CheckCheck, Shuffle, Upload, AlertTr
 function statusVariant(s: RegistrationStatus): 'default' | 'info' | 'warning' | 'success' | 'danger' {
   switch (s) {
     case 'approved': return 'success'
-    case 'pending': return 'warning'
     case 'waitlisted': return 'info'
     case 'rejected': return 'danger'
     default: return 'default'
@@ -100,7 +98,6 @@ function RoundRegistrationCard({ competition, round, onFlash }: { competition: C
   const all = getRoundRegistrations(round.id)
   const counts = {
     approved: all.filter(r => r.status === 'approved').length,
-    pending: all.filter(r => r.status === 'pending').length,
     waitlisted: all.filter(r => r.status === 'waitlisted').length,
   }
   const approvedRegs = all.filter(r => r.status === 'approved')
@@ -131,14 +128,14 @@ function RoundRegistrationCard({ competition, round, onFlash }: { competition: C
   return (
     <Card padding={false}>
       <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 border-b border-gray-200">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" data-flow={competition.isDemo ? 'review' : undefined}>
           <Users className="w-4 h-4 text-gray-400" />
           <span className="text-sm font-semibold text-gray-800">{getName(round, lang)}</span>
           <span className="text-xs text-gray-400">{t('registration.summary', counts)}</span>
         </div>
-        <Button data-flow={competition.isDemo ? 'review' : undefined} variant="ghost" size="sm" onClick={() => approveAllPending(round)} disabled={counts.pending === 0}>
-          <CheckCheck className="w-3.5 h-3.5 mr-1" />{t('registration.approveAllPending')}
-        </Button>
+        <span className="inline-flex items-center gap-1 text-xs text-green-600">
+          <CheckCheck className="w-3.5 h-3.5" />{t('registration.autoApproved')}
+        </span>
       </div>
 
       {/* Split assignment panel */}

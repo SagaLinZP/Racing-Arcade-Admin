@@ -63,7 +63,7 @@ src/
 │   ├── serverResults.ts       # 模拟服务器生成比赛成绩（种子化伪随机，从 entryList/报名车手生成 race 成绩）
 │   ├── stageOps.ts            # ★ 开服/发布：startStageServers(), isStageServerRunning(), publishStageResults()
 │   ├── advancement.ts         # ★ 晋级：computeAdvancers()/applyAdvancement()（position/points/lapTime 三种 metric）
-│   ├── registrationOps.ts     # ★ 报名运营：approveAllPending(), autoAssign()(分 split), applyToEntryList()(写入 entryList)
+│   ├── registrationOps.ts     # ★ 报名运营：assignSplitsEvenly()(均分分组), getSplitPlan()/getSplitWarning()(容量校验), applyToEntryList()(写入 entryList)
 │   ├── resultParser.ts        # ★ 解析真实 ACC/AC 成绩 JSON → reconcile 匹配车手 → SessionResult
 │   ├── penalties.ts           # ★ 成绩处罚：applyPenalty()（warning/time/position/points/dsq，自动重算名次积分）
 │   ├── flowSteps.ts           # ★ FlowAssistant 的 8 步引导定义（每步 isDone/route/run）
@@ -83,7 +83,7 @@ src/
     │   └── gameConfigOptions.ts      # 赛道、车型等常量下拉选项
     ├── registrations/
     │   ├── RegistrationListPage.tsx  # /registrations — 赛事列表（下钻入口）
-    │   └── CompetitionRegistrationsPage.tsx # /registrations/competition/:id — 按分站审批 + 均分分组
+    │   └── CompetitionRegistrationsPage.tsx # /registrations/competition/:id — 按分站管理报名(自动通过) + 均分分组
     ├── templates/
     │   ├── TemplateListPage.tsx      # /templates — 服务器配置模板列表
     │   └── TemplateEditPage.tsx      # 模板编辑：服务器设置(SplitServerFields) + Session 时序 + GameConfig 三块
@@ -112,7 +112,7 @@ src/
 /competitions/create           → 创建赛事
 /competitions/:id/edit         → 编辑赛事（Info / Rounds 双 Tab）
 /registrations                 → 报名赛事列表（下钻入口）
-/registrations/competition/:id → 单赛事报名审批 + 均分分组（报名截止后定组数）
+/registrations/competition/:id → 单赛事报名管理(自动通过，可移除/转候补) + 均分分组（报名截止后定组数）
 /templates, /templates/create, /templates/:id/edit
 /results                       → 成绩列表（赛事卡片列表，点击进入单赛事成绩页）
 /results/competition/:competitionId → 单赛事成绩（分站/阶段 + 开服/同步/发布/晋级）
@@ -173,7 +173,8 @@ Competition（赛事，如 MOZA GT3 Challenge）
 - `Split` 服务器字段已覆盖 AC/ACC server guide 全部非报名字段（含 AC 高级：`numThreads`/`sleepTime`/`udpPlugin*`/`authPluginAddress`），由 `SplitServerFields` 统一编辑
 
 ### Registration（`data/registrations.ts`，新）
-- driver ↔ round 的报名记录：`status`(pending/approved/rejected/waitlisted/withdrawn)、`paymentStatus`(none/unpaid/paid/refunded)、`splitNumber?`、`platformId`(Steam GUID)、`preferredNumber?`、`teamId?`
+- driver ↔ round 的报名记录：`status`(**approved**/rejected/waitlisted/withdrawn)、`paymentStatus`(none/unpaid/paid/refunded)、`splitNumber?`、`platformId`(Steam GUID)、`preferredNumber?`、`teamId?`
+- **报名全自动**：新报名默认 `approved`，**无「待审/pending」概念**；管理员可在报名页对个人「移除报名(rejected)」或「转候补(waitlisted)」/恢复
 - 助手：`getRoundRegistrations()`、`getApprovedDriverIds()`、`setRegistrationStatus()`、`assignSplit()`、`addRegistration()`
 - 已注册到 store slice（持久化）
 
@@ -210,7 +211,7 @@ Competition（赛事，如 MOZA GT3 Challenge）
 
 | 模块 | 关键函数 | 作用 |
 |------|---------|------|
-| `registrationOps.ts` | `approveAllPending`、`assignSplitsEvenly`(报名后按组数**均分**，按报名时间/随机)、`getSplitPlan`/`getSplitWarning`(超容量/每组过少强提示)、`applyToEntryList`(approved → 各 Stage entryList) | 报名→分组→参赛名单 |
+| `registrationOps.ts` | `assignSplitsEvenly`(报名后按组数**均分**，按报名时间/随机)、`getSplitPlan`/`getSplitWarning`(超容量/每组过少强提示)、`applyToEntryList`(approved → 各 Stage entryList) | 报名(自动通过)→分组→参赛名单 |
 | `stageOps.ts` | `startStageServers`(按 split 开服)、`isStageServerRunning`、`publishStageResults`(标记发布) | 开服/发布 |
 | `serverResults.ts` | `syncStageResults`(从 entryList/报名车手种子化生成 race 成绩) | 模拟服务器上报成绩 |
 | `resultParser.ts` | `parseResultsJson`(真实 ACC/AC JSON)、`reconcileRows`(按 playerId/raceNumber/name 匹配)、`rowsToSessionResults` | 导入真实成绩文件 |
@@ -223,6 +224,7 @@ Competition（赛事，如 MOZA GT3 Challenge）
 ```
 create → review → server(push) → results(pull) → protest(可选) → publish → advance → done
 ```
+- `review` 步因报名已自动通过而**无 `run`/`target`**：建赛后自动判定为已完成（passive），流程直接推进到 `server`
 - 每步 `FlowStep`：`id`、`isDone()`、`route()`、`run?()`（"替我执行"）、`target?`（页面元素 `data-flow` 钩子）、`serverDir?`(push/pull)
 - 用 `data-flow="<target>"` 属性标记页面控件，助手会 spotlight 高亮 + 气泡提示
 - demo 数据由 `demoScenario.ts` 提供（`createDemoScenario`/`resetDemoScenario`）
@@ -249,8 +251,9 @@ create → review → server(push) → results(pull) → protest(可选) → pub
 - 弹窗 `onApplied(summary)` 回传判罚明细，抗议页据此回填 `ProtestResolution`
 - 成绩页打开弹窗前先 `commitLocal()`（本地编辑落到 live results），应用后 `resyncFromStage()` 回灌本地副本
 
-## 分组（报名截止后均分，`lib/registrationOps.ts`）
+## 报名与分组（`lib/registrationOps.ts`）
 
+- **报名全自动**：车手报名即 `approved`，无审核/待审环节；管理员可在报名页对个人「移除报名」或「转候补」/恢复。无 `approveAllPending`（已删）
 - 分组在**报名管理下钻页**（`/registrations/competition/:id`）进行：管理员选组数 + 分配方式（按报名时间/随机；按水平即将推出）→ `assignSplitsEvenly` 把 approved 报名**均分**（组间人数差 ≤1，写 `splitNumber` 并回写 Stage 的 `maxSplits/enableMultiSplit`）
 - 未手动分组时沿用赛事编辑里的 split 配置；`getSplitWarning` 在超总容量或每组人数低于 `minEntries` 时强提示
 - 仅对 `eligibilitySource === 'roundRegistration'` 的 Stage 分组；晋级类 Stage 不参与

@@ -6,7 +6,6 @@ import { useManagedOptions } from '@/hooks/useManagedOptions'
 import { useDataVersion } from '@/data/store'
 import { competitions, updateCompetition, deleteCompetition } from '@/data/competitions'
 import type { Competition } from '@/data/competitions'
-import { registrations } from '@/data/registrations'
 import { addNotification } from '@/data/notifications'
 import { getStageResultStatus } from '@/lib/results'
 import { Card } from '@/components/ui/Card'
@@ -16,7 +15,7 @@ import { Select } from '@/components/ui/Select'
 import { Badge } from '@/components/ui/Badge'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Modal } from '@/components/ui/Modal'
-import { Plus, Pencil, Ban, Trash2, Clock, AlertCircle, ClipboardList, Activity } from 'lucide-react'
+import { Plus, Pencil, Ban, Trash2, Clock, ClipboardList, Activity } from 'lucide-react'
 import { getCompetitionStatus } from '@/lib/utils'
 import { formatDateTz } from '@/lib/timezone'
 
@@ -26,10 +25,6 @@ function coverStyle(c: Competition): React.CSSProperties {
   const h1 = (n * 47) % 360
   const h2 = (n * 47 + 40) % 360
   return { background: `linear-gradient(135deg, hsl(${h1} 45% 32%), hsl(${h2} 45% 24%))` }
-}
-
-function pendingRegCount(c: Competition): number {
-  return registrations.filter(r => r.competitionId === c.id && r.status === 'pending').length
 }
 
 function needsResults(c: Competition): boolean {
@@ -75,7 +70,6 @@ export function CompetitionListPage() {
     return matchesSearch && matchesGame && matchesStatus
   })
 
-  const totalPendingReg = registrations.filter(r => r.status === 'pending').length
   const totalNeedsResults = competitions.filter(c => getCompetitionStatus(c) !== 'Cancelled' && needsResults(c)).length
   const totalInProgress = competitions.filter(c => getCompetitionStatus(c) === 'InProgress').length
 
@@ -84,7 +78,7 @@ export function CompetitionListPage() {
     const status = getCompetitionStatus(c)
     if (status === 'Cancelled') return null
     if (status === 'Draft') return { label: t('competition.ctaContinueEdit'), to: `/competitions/${c.id}/edit`, variant: 'secondary' }
-    if (status === 'RegistrationOpen') return { label: t('competition.ctaRegistrations'), to: `/registrations/competition/${c.id}`, variant: 'primary', badge: pendingRegCount(c) }
+    if (status === 'RegistrationOpen') return { label: t('competition.ctaRegistrations'), to: `/registrations/competition/${c.id}`, variant: 'primary' }
     if (status === 'RegistrationClosed' || status === 'InProgress') return { label: t('competition.ctaManageEvent'), to: `/results/competition/${c.id}`, variant: 'primary' }
     if (status === 'Completed') return needsResults(c)
       ? { label: t('competition.ctaEnterResults'), to: `/results/competition/${c.id}`, variant: 'primary' }
@@ -141,13 +135,6 @@ export function CompetitionListPage() {
 
       {/* To-do overview */}
       <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => navigate('/registrations')}
-          className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${totalPendingReg > 0 ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' : 'border-gray-200 bg-gray-50 text-gray-500'}`}
-        >
-          <AlertCircle className="w-3.5 h-3.5" />
-          {totalPendingReg} {t('competition.todoPendingReg')}
-        </button>
         <button
           onClick={() => setStatusFilter('Completed')}
           className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${totalNeedsResults > 0 ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100' : 'border-gray-200 bg-gray-50 text-gray-500'}`}
