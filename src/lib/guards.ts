@@ -50,8 +50,13 @@ export function canDeleteCompetition(comp: Competition): boolean {
   return getCompetitionStatus(comp) === 'Draft'
 }
 
-/** 取消赛事：成绩公示/锁定（聚合 Completed）或已取消后不可取消。 */
+/** 取消赛事：成绩公示/锁定（聚合 Completed）、已存档或已取消后不可取消。 */
 export function canCancelCompetition(comp: Competition): boolean {
   const s = getCompetitionStatus(comp)
-  return s !== 'Completed' && s !== 'Cancelled'
+  return s !== 'Completed' && s !== 'Archived' && s !== 'Cancelled'
+}
+
+/** 存档/结束赛事（管理员手动）：除已取消外均可存档或撤销存档。 */
+export function canArchiveCompetition(comp: Competition): boolean {
+  return getCompetitionStatus(comp) !== 'Cancelled'
 }

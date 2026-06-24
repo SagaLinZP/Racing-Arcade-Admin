@@ -47,6 +47,7 @@ export function statusColor(status: string): string {
     case 'InProgress': return 'bg-orange-100 text-orange-700'
     case 'Completed': return 'bg-purple-100 text-purple-700'
     case 'ResultsLocked': return 'bg-emerald-100 text-emerald-700'
+    case 'Archived': return 'bg-slate-200 text-slate-600'
     case 'Cancelled': return 'bg-red-100 text-red-700'
     case 'pending': return 'bg-yellow-100 text-yellow-700'
     case 'reviewing': return 'bg-blue-100 text-blue-700'

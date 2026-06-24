@@ -10,6 +10,7 @@ export type CompetitionStatus =
   | 'RegistrationClosed'
   | 'InProgress'
   | 'Completed'
+  | 'Archived'
   | 'Cancelled'
 
 export type RoundStatus = CompetitionStatus | 'ResultsLocked'
@@ -286,7 +287,7 @@ export interface Competition {
   resultLockWindowHours?: number
   defaultRuleset: CompetitionRuleset
   rounds: Round[]
-  statusOverride?: 'Draft' | 'Cancelled'
+  statusOverride?: 'Draft' | 'Cancelled' | 'Archived'
   cancelledReason_zh?: string
   cancelledReason_en?: string
   createdBy: string

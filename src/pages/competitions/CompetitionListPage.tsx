@@ -15,9 +15,9 @@ import { Select } from '@/components/ui/Select'
 import { Badge } from '@/components/ui/Badge'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Modal } from '@/components/ui/Modal'
-import { Plus, Pencil, Ban, Trash2, Clock, ClipboardList, Activity } from 'lucide-react'
-import { getCompetitionStatus } from '@/lib/utils'
-import { canCancelCompetition, canDeleteCompetition } from '@/lib/guards'
+import { Plus, Pencil, Ban, Trash2, Clock, Archive, ArchiveRestore } from 'lucide-react'
+import { cn, getCompetitionStatus } from '@/lib/utils'
+import { canCancelCompetition, canDeleteCompetition, canArchiveCompetition } from '@/lib/guards'
 import { formatDateTz } from '@/lib/timezone'
 
 function coverStyle(c: Competition): React.CSSProperties {
@@ -52,6 +52,7 @@ export function CompetitionListPage() {
     { value: 'RegistrationClosed', label: t('event.status.RegistrationClosed') },
     { value: 'InProgress', label: t('event.status.InProgress') },
     { value: 'Completed', label: t('event.status.Completed') },
+    { value: 'Archived', label: t('event.status.Archived') },
     { value: 'Cancelled', label: t('event.status.Cancelled') },
   ]
   const [search, setSearch] = useState('')
@@ -71,13 +72,11 @@ export function CompetitionListPage() {
     return matchesSearch && matchesGame && matchesStatus
   })
 
-  const totalNeedsResults = competitions.filter(c => getCompetitionStatus(c) !== 'Cancelled' && needsResults(c)).length
-  const totalInProgress = competitions.filter(c => getCompetitionStatus(c) === 'InProgress').length
-
   interface PrimaryAction { label: string; to: string; variant: 'primary' | 'secondary'; badge?: number }
   const primaryAction = (c: Competition): PrimaryAction | null => {
     const status = getCompetitionStatus(c)
     if (status === 'Cancelled') return null
+    if (status === 'Archived') return { label: t('competition.ctaViewResults'), to: `/results/competition/${c.id}`, variant: 'secondary' }
     if (status === 'Draft') return { label: t('competition.ctaContinueEdit'), to: `/competitions/${c.id}/edit`, variant: 'secondary' }
     if (status === 'RegistrationOpen') return { label: t('competition.ctaRegistrations'), to: `/registrations/competition/${c.id}`, variant: 'primary' }
     if (status === 'RegistrationClosed' || status === 'InProgress') return { label: t('competition.ctaManageEvent'), to: `/results/competition/${c.id}`, variant: 'primary' }
@@ -87,15 +86,24 @@ export function CompetitionListPage() {
     return { label: t('common.edit'), to: `/competitions/${c.id}/edit`, variant: 'secondary' }
   }
 
-  const milestone = (c: Competition): { label: string; date: string } | null => {
+  const roundName = (r: Competition['rounds'][number]) => lang === 'zh' ? r.name_zh : r.name_en
+  const stageName = (s: Competition['rounds'][number]['stages'][number]) => lang === 'zh' ? s.name_zh : s.name_en
+
+  const milestone = (c: Competition): { label: string; date: string; context: string } | null => {
     const status = getCompetitionStatus(c)
     if (status === 'RegistrationOpen') {
-      const future = c.rounds.map(r => new Date(r.registrationCloseAt).getTime()).filter(ts => ts > Date.now()).sort((a, b) => a - b)[0]
-      if (future) return { label: t('competition.regDeadline'), date: new Date(future).toISOString() }
+      const cand = c.rounds
+        .map(r => ({ ts: new Date(r.registrationCloseAt).getTime(), round: r }))
+        .filter(x => x.ts > Date.now())
+        .sort((a, b) => a.ts - b.ts)[0]
+      if (cand) return { label: t('competition.regDeadline'), date: new Date(cand.ts).toISOString(), context: roundName(cand.round) }
     }
-    if (status === 'Upcoming' || status === 'RegistrationClosed') {
-      const starts = c.rounds.flatMap(r => r.stages.map(s => new Date(s.startsAt).getTime())).filter(ts => ts > Date.now()).sort((a, b) => a - b)[0]
-      if (starts) return { label: t('competition.startsLabel'), date: new Date(starts).toISOString() }
+    if (status === 'Upcoming' || status === 'RegistrationClosed' || status === 'InProgress') {
+      const cand = c.rounds
+        .flatMap(r => r.stages.map(s => ({ ts: new Date(s.startsAt).getTime(), round: r, stage: s })))
+        .filter(x => x.ts > Date.now())
+        .sort((a, b) => a.ts - b.ts)[0]
+      if (cand) return { label: t('competition.startsLabel'), date: new Date(cand.ts).toISOString(), context: `${roundName(cand.round)} · ${stageName(cand.stage)}` }
     }
     return null
   }
@@ -124,6 +132,11 @@ export function CompetitionListPage() {
     setDeleteTarget(null)
   }
 
+  const toggleArchive = (c: Competition) => {
+    const archived = c.statusOverride === 'Archived'
+    updateCompetition({ ...c, statusOverride: archived ? undefined : ('Archived' as const) })
+  }
+
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
@@ -132,24 +145,6 @@ export function CompetitionListPage() {
           <Plus className="w-4 h-4 mr-1" />
           {t('competition.createCompetition')}
         </Button>
-      </div>
-
-      {/* To-do overview */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setStatusFilter('Completed')}
-          className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${totalNeedsResults > 0 ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100' : 'border-gray-200 bg-gray-50 text-gray-500'}`}
-        >
-          <ClipboardList className="w-3.5 h-3.5" />
-          {totalNeedsResults} {t('competition.todoResults')}
-        </button>
-        <button
-          onClick={() => setStatusFilter('InProgress')}
-          className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${totalInProgress > 0 ? 'border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100' : 'border-gray-200 bg-gray-50 text-gray-500'}`}
-        >
-          <Activity className="w-3.5 h-3.5" />
-          {totalInProgress} {t('competition.todoInProgress')}
-        </button>
       </div>
 
       {/* Filters */}
@@ -185,36 +180,51 @@ export function CompetitionListPage() {
               <div className="w-12 h-12 rounded-lg shrink-0" style={coverStyle(c)} />
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-gray-900 truncate">{getName(c)}</div>
-                <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-x-2 gap-y-0.5 flex-wrap">
-                  <span>{c.game} · {c.carClass} · {c.rounds.length} {t('competition.rounds').toLowerCase()}</span>
-                  {ms && (
-                    <span className="inline-flex items-center gap-1 text-gray-400">
-                      <Clock className="w-3 h-3" />{ms.label} {formatDateTz(ms.date, c.timezone)}
-                    </span>
+                <div className="text-xs text-gray-500 mt-0.5 truncate">
+                  {c.game} · {c.carClass} · {c.rounds.length} {t('competition.rounds').toLowerCase()}
+                </div>
+                {ms && (
+                  <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1 truncate">
+                    <Clock className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{ms.label} {formatDateTz(ms.date, c.timezone)} · {ms.context}</span>
+                  </div>
+                )}
+              </div>
+              {/* Status — fixed-width slot keeps badges vertically aligned across rows */}
+              <div className="w-40 shrink-0 flex justify-start">
+                <StatusBadge status={status} label={t(`event.status.${status}`)} />
+              </div>
+              <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                {/* Primary CTA — fixed-width slot keeps trailing icons aligned */}
+                <div className="w-36 flex justify-end">
+                  {action && (
+                    <Button variant={action.variant} size="sm" onClick={() => navigate(action.to)}>
+                      {action.label}
+                      {action.badge ? <Badge variant="danger" className="ml-1.5">{action.badge}</Badge> : null}
+                    </Button>
                   )}
                 </div>
-              </div>
-              <StatusBadge status={status} label={t(`event.status.${status}`)} />
-              <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                {action && (
-                  <Button variant={action.variant} size="sm" onClick={() => navigate(action.to)}>
-                    {action.label}
-                    {action.badge ? <Badge variant="danger" className="ml-1.5">{action.badge}</Badge> : null}
-                  </Button>
-                )}
+                {/* Fixed-function icons — always rendered; greyed (disabled) when N/A */}
                 <Button variant="ghost" size="sm" onClick={() => navigate(`/competitions/${c.id}/edit`)} title={t('common.edit')}>
                   <Pencil className="w-4 h-4" />
                 </Button>
-                {canCancelCompetition(c) && (
-                  <Button variant="ghost" size="sm" onClick={() => { setCancelTarget(c); setCancelReason('') }} title={t('competition.cancelCompetition')}>
-                    <Ban className="w-4 h-4 text-orange-500" />
-                  </Button>
-                )}
-                {canDeleteCompetition(c) && (
-                  <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(c)} title={t('competition.deleteCompetition')}>
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
-                )}
+                {(() => {
+                  const archived = c.statusOverride === 'Archived'
+                  const canArchive = canArchiveCompetition(c)
+                  return (
+                    <Button variant="ghost" size="sm" disabled={!canArchive} onClick={() => toggleArchive(c)} title={archived ? t('competition.unarchiveCompetition') : t('competition.archiveCompetition')}>
+                      {archived
+                        ? <ArchiveRestore className={cn('w-4 h-4', canArchive ? 'text-slate-600' : 'text-gray-300')} />
+                        : <Archive className={cn('w-4 h-4', canArchive ? 'text-slate-500' : 'text-gray-300')} />}
+                    </Button>
+                  )
+                })()}
+                <Button variant="ghost" size="sm" disabled={!canCancelCompetition(c)} onClick={() => { setCancelTarget(c); setCancelReason('') }} title={t('competition.cancelCompetition')}>
+                  <Ban className={cn('w-4 h-4', canCancelCompetition(c) ? 'text-orange-500' : 'text-gray-300')} />
+                </Button>
+                <Button variant="ghost" size="sm" disabled={!canDeleteCompetition(c)} onClick={() => setDeleteTarget(c)} title={t('competition.deleteCompetition')}>
+                  <Trash2 className={cn('w-4 h-4', canDeleteCompetition(c) ? 'text-red-500' : 'text-gray-300')} />
+                </Button>
               </div>
             </div>
           )
