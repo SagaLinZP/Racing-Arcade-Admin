@@ -120,20 +120,25 @@ export function ServerConfigModal({
   const performApply = () => {
     const tpl = stageTemplates.find(t => t.id === selectedTemplateId)
     if (!tpl) return
-    setLocal(prev => ({
-      ...prev,
-      gameConfig: { ...tpl.gameConfig },
-      sessions: tpl.sessions.length > 0
-        ? tpl.sessions.map(s => ({ ...s }))
-        : [
-            createDefaultSession('practice'),
-            createDefaultSession('qualifying'),
-            createDefaultSession('race'),
-          ],
-      splits: tpl.splitConfig
-        ? prev.splits.map(s => ({ ...s, ...tpl.splitConfig }))
-        : prev.splits,
-    }))
+    setLocal(prev => {
+      const baseSplit = tpl.splitConfig
+        ? { ...prev.splits[0], ...tpl.splitConfig }
+        : prev.splits[0]
+      const firstSplit = { ...baseSplit, splitNumber: 1 }
+      const otherSplits = prev.splits.slice(1)
+      return {
+        ...prev,
+        gameConfig: { ...tpl.gameConfig },
+        sessions: tpl.sessions.length > 0
+          ? tpl.sessions.map(s => ({ ...s }))
+          : [
+              createDefaultSession('practice'),
+              createDefaultSession('qualifying'),
+              createDefaultSession('race'),
+            ],
+        splits: propagateFromBase([firstSplit, ...otherSplits]),
+      }
+    })
     setConfirmApply(false)
   }
 
@@ -161,7 +166,11 @@ export function ServerConfigModal({
     setShowSaveAsTemplate(false)
   }
 
-  const handleSave = () => { onSave(local); onClose() }
+  const handleSave = () => {
+    const propagated: Stage = { ...local, splits: propagateFromBase(local.splits) }
+    onSave(propagated)
+    onClose()
+  }
 
   const compatibleTemplates = stageTemplates.filter(tpl => tpl.game === game)
 
@@ -392,6 +401,24 @@ export function ServerConfigModal({
       )}
     </Modal>
   )
+}
+
+function propagateFromBase(splits: Split[]): Split[] {
+  if (splits.length <= 1) return splits
+  const base = splits[0]
+  const serverParams = { ...base } as Partial<Split> & Record<string, unknown>
+  delete serverParams.id
+  delete serverParams.splitNumber
+  delete serverParams.serverName
+  delete serverParams.entryList
+  delete serverParams.results
+  delete serverParams.resultsPublishedAt
+  delete serverParams.resultsLockedAt
+  return splits.map((split, i) => {
+    if (i === 0) return split
+    const baseName = base.serverName?.trim() || 'Server'
+    return { ...split, ...serverParams, serverName: `${baseName} #${i + 1}` }
+  })
 }
 
 function EntryListEditor({

@@ -53,10 +53,25 @@ export function getSplitWarning(round: Round, comp?: Competition, overrideSplitC
   return null
 }
 
-/** 把报名分站 Stage 调整为恰好 k 个 Split（不足则新建，多余则裁剪）。 */
+/** 把报名分站 Stage 调整为恰好 k 个 Split。新增的 Split 从 Split 1 克隆服务器配置，仅派生 serverName。 */
 function ensureSplitCount(stage: Stage, k: number): void {
+  const base = stage.splits[0]
   while (stage.splits.length < k) {
-    stage.splits.push(createDefaultSplit(stage.id, stage.splits.length + 1))
+    const n = stage.splits.length + 1
+    if (base) {
+      const baseName = base.serverName?.trim() || 'Server'
+      stage.splits.push({
+        ...base,
+        id: `${stage.id}_sp${n}_${Date.now()}`,
+        splitNumber: n,
+        serverName: `${baseName} #${n}`,
+        entryList: undefined,
+        results: undefined,
+        resultsLockedAt: undefined,
+      })
+    } else {
+      stage.splits.push(createDefaultSplit(stage.id, n))
+    }
   }
   if (stage.splits.length > k) {
     stage.splits = stage.splits.slice(0, k).map((s, i) => ({ ...s, splitNumber: i + 1 }))

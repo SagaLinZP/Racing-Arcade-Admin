@@ -455,7 +455,7 @@ flowchart TD
 - **Split 是 Stage 的横向并行维度**：一个 Stage 可拆分为多个 Split（并行服务器实例）以容纳更多车手。Split 数量在**报名截止后于报名页确定**（按实际人数均分，见 4.5.4）；默认仅 1 个 Split。
 - **一份开赛参数（`game_config`）共享给 Stage 下所有 Split**：该参数含赛道、天气、规则、辅助等游戏引擎配置，**Session 的时序信息（P/Q/R 时长、时段、时间倍率）也定义在这份开赛参数中**，因此同一 Stage 内各 Split 运行的 Session 时序完全一致。
 - **Session 归属于 Split**：每个 Split（服务器）各自按统一的时序运行这些 Session，并产出独立成绩。Session 是成绩归属的最小颗粒度——例如在同一个"正赛日" Stage 中，车手既能查看 Qualifying Session 的排位成绩，也能查看 Race Session 的正赛成绩，两者互不覆盖。
-- **各 Split 仅在服务器实例层面不同**：服务器名称、密码、端口、车位、Entry List（参赛名单）按 Split 独立配置；开赛参数与 Session 时序由 Stage 统一掌控。
+- **各 Split 的服务器参数从基准派生**：Split 1 为"基准服务器"（母版），密码、端口、标志位、容量等服务器参数由 Split 1 统一设置并**自动同步**到其他 Split（见 4.5.7）；仅 serverName 按编号派生（`基准名 #N`）、Entry List 和成绩各自独立。开赛参数与 Session 时序由 Stage 统一掌控。
 - **成绩汇总方向**：Session（单场时段成绩）→ Split（服务器成绩）→ Stage（阶段成绩）→ Round（分站成绩）→ Competition（总积分）。晋级名单、分站成绩和年度积分均沿此链路聚合。
 
 **创建服务器的流程顺序**（管理员视角）：
@@ -534,7 +534,7 @@ Round 是用户实际报名和参赛的主要单位，对应"一站"或"一场�
 
 ### 4.1.6 Stage 数据模型
 
-Stage 是 Round 内部的流程阶段，用来表达"预选赛 → 正赛日 → 决赛"这类同一站内的推进关系。**一个 Stage 对应一份共享开赛参数**——Stage 统一管理游戏引擎参数（`game_config`）、Session 时序模板（`sessions`，即 P/Q/R 的时长与时段，共享给所有 Split）、默认分组方式与开赛下限；各 Split（并行服务器）按这套统一的时序运行 Session 并各自产出成绩，仅在服务器参数与参赛名单上独立。详见 4.1.3 的层级关系。
+Stage 是 Round 内部的流程阶段，用来表达"预选赛 → 正赛日 → 决赛"这类同一站内的推进关系。**一个 Stage 对应一份共享开赛参数**——Stage 统一管理游戏引擎参数（`game_config`）、Session 时序模板（`sessions`，即 P/Q/R 的时长与时段，共享给所有 Split）、默认分组方式与开赛下限；各 Split（并行服务器）按这套统一的时序运行 Session 并各自产出成绩，服务器参数从 Split 1（基准）派生（见 4.5.7），仅在 serverName、参赛名单与成绩上各自独立。详见 4.1.3 的层级关系。
 
 | 字段名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
@@ -547,7 +547,7 @@ Stage 是 Round 内部的流程阶段，用来表达"预选赛 → 正赛日 →
 | ends_at | DateTime | 是 | 阶段结束时间 |
 | game_config | SessionGameConfig | 否 | 共享开赛参数（赛道、天气、规则、辅助限制等），按 AC/ACC 配置文件组织，详见 4.1.8；分发给该 Stage 下所有 Split |
 | sessions | Session[] | 是 | **共享的 Session 时序模板**（Practice/Qualifying/Race 的时长、时段、时间倍率等），定义在开赛参数中，所有 Split 按此统一时序运行；详见 4.1.7 |
-| splits | Split[] | 是 | 服务器实例列表；每个 Split 对应一个并行服务器，按统一的 Session 时序运行，含独立的服务器参数、参赛名单（Entry List）。**各 Session 的成绩按 Session 归属**（同一 Split 内 qualify 与 race 成绩各自独立），未启用多 Split 时仅有 1 个 Split |
+| splits | Split[] | 是 | 服务器实例列表；每个 Split 对应一个并行服务器，按统一的 Session 时序运行。服务器参数（密码、端口、标志位等）从 Split 1（基准）派生并自动同步（见 4.5.7），仅 serverName 按编号区分；参赛名单（Entry List）和成绩各自独立。**各 Session 的成绩按 Session 归属**（同一 Split 内 qualify 与 race 成绩各自独立），未启用多 Split 时仅有 1 个 Split |
 | bop_entries | BopEntry[] | 否 | 性能平衡（BoP）条目，每项含 `track`、`carModel`、`ballastKg` |
 | eligibility_source | Enum | 否 | `roundRegistration` / `previousStageResult` / `manualInvite`，各选项的子字段见下方 |
 | advancement_rule | AdvancementRule | 否 | 晋级规则，见下方 |
@@ -652,7 +652,7 @@ MVP 阶段赛事只面向 AC 与 ACC。后台创建赛事时，管理员不是�
 **配置归属原则**：
 
 - **一个 Stage = 一份共享开赛参数**：自动开服配置（`Stage.game_config`）与 Session 时序模板（`Stage.sessions`）绑定在 Stage 层级，统一分发给该 Stage 下所有 Split
-- Stage 下的每个 Split 对应一个并行服务器实例，Split 内含独立的服务器参数（名称、密码、端口、车位等）和参赛名单（Entry List）；各 Split 按统一的 Session 时序运行，并**各自产出按 Session 归属的成绩**（qualifying / race 等独立）
+- Stage 下的每个 Split 对应一个并行服务器实例；服务器参数（密码、端口、标志位等）从 Split 1（基准）派生并自动同步，仅 serverName 按编号区分、Entry List 和成绩各自独立（详见 4.5.7）；各 Split 按统一的 Session 时序运行，并**各自产出按 Session 归属的成绩**（qualifying / race 等独立）
 - Competition / Round 提供默认赛道、车型、规则、天气等模板，Stage 可覆盖具体参数
 - 游戏内 Session 时序（Practice/Qualifying/Race 的时长、时段、时间倍率）通过 `Stage.sessions`（Session[]）编排，作为模板共享给所有 Split
 - 基础设施字段（端口、容器路径、管理员密码、插件地址）由系统生成或运维配置，不要求普通赛事管理员手填
@@ -667,7 +667,7 @@ MVP 阶段赛事只面向 AC 与 ACC。后台创建赛事时，管理员不是�
 |------------|-------------|------|
 | `game_config` | 游戏引擎参数 | 赛道、天气、规则、辅助限制等，按 AC/ACC 配置文件组织（event.json、eventRules.json、assistRules.json、settings.json / server_cfg.ini） |
 | `sessions` | 游戏内 Session 时序 | Practice/Qualifying/Race 的时长、时段、时间倍率 |
-| `splits[]` | 服务器实例 | 每个 Split 含独立的服务器参数和 Entry List；多 Split 时各实例共享 `game_config` 和 `sessions` 时序，各自产出按 Session 归属的成绩 |
+| `splits[]` | 服务器实例 | 每个 Split 的服务器参数从 Split 1（基准）派生并自动同步（见 4.5.7），仅 serverName 按编号区分、Entry List 和成绩各自独立；多 Split 时各实例共享 `game_config` 和 `sessions` 时序，各自产出按 Session 归属的成绩 |
 | `bop_entries` | 性能平衡 | BoP 表，对应 ACC `bop.json` 或 AC `entry_list.ini [CAR_N].BALLAST` |
 
 **Entry List 管理**：
@@ -886,7 +886,7 @@ flowchart TD
    - 配置 Stage 级多 Split 参数（如需）
 5. 在 Stage 的**"会话与服务器配置"弹窗**中统一配置（一个 Stage = 一份服务器配置）：
    - **Sessions 标签页**：编排游戏内 Practice/Qualifying/Race 的时长、时段、时间倍率（`Session`）
-   - **Servers (Splits) 标签页**：配置每个服务器实例的名称、密码、端口、车位等；可从开服模板快速填充
+   - **Servers (Splits) 标签页**：配置 Split 1（基准服务器）的名称、密码、端口、车位等；多 Split 时其余 Split 从基准自动派生（见 4.5.7），可从开服模板快速填充基准配置
    - **Game Settings 标签页**：按 AC/ACC 配置文件（event.json、eventRules.json、assistRules.json、settings.json / server_cfg.ini）填写赛道、天气、规则、辅助限制等参数
    - **Entry List**：为每个 Split 管理参赛名单——可从 Round 报名自动生成，或手动添加/编辑条目
    - **BoP**：配置性能平衡条目
@@ -1096,6 +1096,40 @@ flowchart TD
 | Stage 开赛后再调整分组 | 一旦 Stage 开赛，分组与名单应用即**硬锁定**（见 4.x 锁矩阵），不可再均分/应用 |
 | 未设置 `max_registrations`（为空） | 不限制报名总量；服务器数量仍由报名截止后人工决定 |
 | 报名达到 `max_registrations` | 新用户无法报名（报名按钮显示"名额已满"），可加入候补 |
+
+### 4.5.7 多 Split 服务器配置派生规则
+
+模版（StageTemplate）在设计上只包含**一份服务器配置**（splitConfig）。开赛前管理员在"会话与服务器配置"弹窗中应用模版时，Stage 仅有 1 个 Split，模版配置完整落地到 Split 1。当报名截止后管理员扩展为 N 个 Split 时，新增的服务器配置按以下规则**自动派生**。
+
+**设计原则：Split 1 为"基准服务器"（母版），其余 Split 从基准派生。**
+
+> 由于每个 Split 运行在**独立物理服务器**上，端口无需递增，各 Split 使用相同端口号；密码、标志位、容量等服务器参数也完全一致。**唯一不同的是** serverName（可区分）和 entryList / results（各自独立）。
+
+**时机 1：报名截止后扩展分组（`assignStageSplits` → `ensureSplitCount` 创建 Split N，N > 1）**
+
+| 字段 | 处理方式 |
+|------|---------|
+| 服务器参数（密码、端口、标志位、容量、welcomeMessage 等） | 从 Split 1 **克隆**，值完全相同 |
+| serverName | **派生**：`{Split1.serverName} #{N}`（基准名为空时用 `Server #{N}` 兜底） |
+| entryList | 清空（待分配时填入） |
+| results / resultsLockedAt | 清空 |
+| id / splitNumber | 各自独立 |
+
+**时机 2：管理员回到赛事管理调整服务器参数后保存（ServerConfigModal `handleSave`）**
+
+管理员编辑了 Split 1 的服务器参数（或重新应用了模版），保存时自动执行**参数广播**：
+
+- Split 1 → 保持管理员编辑的内容
+- Split 2..N → 从 Split 1 同步全部服务器参数（密码、端口、标志位、容量等）
+- **保留**各自的 id、splitNumber、serverName（从新基准名重新派生 `#{N}`）、entryList、results、resultsLockedAt
+
+**时机 3：模版重新应用（`handleApplyTemplate`）**
+
+1. 模版 splitConfig → 只写入 Split 1
+2. 触发参数广播：Split 1 的服务器参数 → 同步到 Split 2..N
+3. Split 2..N 的 serverName 从 Split 1 的新名字重新派生
+
+**不需要新增模型字段**：端口不递增、不引入 portStep / namingPattern。派生逻辑是纯运行时行为，集中在 `ensureSplitCount`（扩展时克隆+改名）和 `propagateFromBase`（保存/应用模版时广播参数）。
 
 ## 4.6 赛事准入门槛
 
@@ -2237,5 +2271,11 @@ Pit House 是 MOZA 设备调节软件，用户在赛车过程中通常保持开�
 > - **CompetitionRuleset 修订**：移除 `weather` / `has_pitstop` / `min_entries` / `result_lock_window_hours`（`result_lock_window_hours` 改为 Competition 级字段；`min_entries` 在 Stage 层；天气由 `game_config` 表达）。
 > - **Round 模型修订**：`stage_ids` → 内嵌 `stages`；移除未实现的 `rule_overrides`；新增 `registration_override`。
 > - **硬编辑锁矩阵**：身份/规则（报名开放即锁）、参赛资格来源（报名截止锁）、报名时间与人数上限（Stage 开赛锁）、服务器配置（已开服/Stage 结束锁）、参赛名单（Stage 开赛锁）、Stage 开始时间（开赛锁）、成绩（锁定后锁）、删除（仅 Draft）、取消（成绩公示/锁定后禁）。均为字段禁用 + 提交拒绝的硬拦截。详见《赛事状态流转设计》§4。
+
+> **v3.6 变更摘要**（多 Split 服务器配置派生 + 报名流程细化）：
+> - **多 Split 服务器派生规则**（新增 4.5.7）：Split 1 为"基准服务器"（母版），模版只配置一份服务器参数。报名截止后扩展为 N 个 Split 时，新增 Split 从 Split 1 克隆全部服务器参数（端口不递增、密码/标志位/容量完全一致），仅 serverName 按编号派生（`基准名 #N`）、entryList 和成绩清空各自独立。管理员调整 Split 1 后保存时自动广播到其他 Split（保留各自的 serverName/entryList/成绩）。修正了 4.1.3 / 4.1.6 / 4.1.8 中"各 Split 服务器参数独立配置"的旧描述。
+> - **第一个 Stage 资格锁定**：Round 内第一个 Stage 必须使用 `roundRegistration`（此前无成绩可判断），资格来源下拉不可改。
+> - **成绩锁定截止约束**：上一阶段成绩锁定时间最晚不超过下一阶段开赛前 10 分钟（硬编码），违反时编辑器红字提示 + 保存阻断。
+> - **晋级规则精简**：删除 `points` 指标，仅保留 `lapTime`（圈速倍率）和 `position`（名次取前 N）。
 
 > **文档结束**

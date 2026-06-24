@@ -807,6 +807,7 @@ export const zh = {
     entryFromAdvancement: '名单由晋级规则生成',
     entryFromManualInvite: '名单由手动邀请生成',
     roundRegistrationsTitle: '分站报名名单',
+    submittedAt: '报名时间',
     noEntryListYet: '尚无参赛名单，待上一阶段成绩产出后自动生成。',
     approvedLabel: '已通过',
     perGroupLabel: '每组人数',
