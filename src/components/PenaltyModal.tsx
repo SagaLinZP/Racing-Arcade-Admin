@@ -29,8 +29,6 @@ export interface AppliedPenalty {
   kind: PenaltyKind
   reason: string
   seconds?: number
-  positions?: number
-  points?: number
 }
 
 export function PenaltyModal({
@@ -51,23 +49,17 @@ export function PenaltyModal({
   const [kind, setKind] = useState<PenaltyKind>('time')
   const [reason, setReason] = useState(defaultReason ?? '')
   const [seconds, setSeconds] = useState(5)
-  const [positions, setPositions] = useState(3)
-  const [points, setPoints] = useState(5)
   const [error, setError] = useState<string | null>(null)
 
   const kindOptions = [
     { value: 'time', label: t('result.penaltyKindTime') },
     { value: 'dsq', label: t('result.penaltyKindDsq') },
-    { value: 'position', label: t('result.penaltyKindPosition') },
-    { value: 'points', label: t('result.penaltyKindPoints') },
     { value: 'warning', label: t('result.penaltyKindWarning') },
   ]
 
   const buildAction = (): PenaltyAction => {
     switch (kind) {
       case 'time': return { kind: 'time', seconds }
-      case 'position': return { kind: 'position', positions }
-      case 'points': return { kind: 'points', points }
       case 'dsq': return { kind: 'dsq' }
       default: return { kind: 'warning' }
     }
@@ -97,8 +89,6 @@ export function PenaltyModal({
       kind,
       reason: reason.trim(),
       seconds: kind === 'time' ? seconds : undefined,
-      positions: kind === 'position' ? positions : undefined,
-      points: kind === 'points' ? points : undefined,
     })
     setReason('')
     onClose()
@@ -124,12 +114,6 @@ export function PenaltyModal({
           <Select label={t('result.penaltyKind')} options={kindOptions} value={kind} onChange={(e) => setKind(e.target.value as PenaltyKind)} />
           {kind === 'time' && (
             <Input label={t('result.penaltySecondsLabel')} type="number" min={0} value={String(seconds)} onChange={(e) => setSeconds(Number(e.target.value))} />
-          )}
-          {kind === 'position' && (
-            <Input label={t('result.penaltyPositionsLabel')} type="number" min={1} value={String(positions)} onChange={(e) => setPositions(Number(e.target.value))} />
-          )}
-          {kind === 'points' && (
-            <Input label={t('result.penaltyPointsLabel')} type="number" min={0} value={String(points)} onChange={(e) => setPoints(Number(e.target.value))} />
           )}
         </div>
 

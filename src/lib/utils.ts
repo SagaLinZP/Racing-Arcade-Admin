@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { Competition, Round, CompetitionStatus, RoundStatus } from "@/data/competitions"
+import { isStageLocked } from "./results"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -45,7 +46,7 @@ export function statusColor(status: string): string {
     case 'RegistrationClosed': return 'bg-yellow-100 text-yellow-700'
     case 'InProgress': return 'bg-orange-100 text-orange-700'
     case 'Completed': return 'bg-purple-100 text-purple-700'
-    case 'ResultsPublished': return 'bg-emerald-100 text-emerald-700'
+    case 'ResultsLocked': return 'bg-emerald-100 text-emerald-700'
     case 'Cancelled': return 'bg-red-100 text-red-700'
     case 'pending': return 'bg-yellow-100 text-yellow-700'
     case 'reviewing': return 'bg-blue-100 text-blue-700'
@@ -59,7 +60,7 @@ export function statusColor(status: string): string {
   }
 }
 
-export function getRoundStatus(round: Round): RoundStatus {
+export function getRoundStatus(round: Round, comp?: Competition): RoundStatus {
   const now = Date.now()
   const regOpen = new Date(round.registrationOpenAt).getTime()
   const regClose = new Date(round.registrationCloseAt).getTime()
@@ -67,43 +68,41 @@ export function getRoundStatus(round: Round): RoundStatus {
   if (round.cancelledReason_zh || round.cancelledReason_en) return 'Cancelled'
 
   const allStages = round.stages
-  const firstStart = allStages.length > 0 ? Math.min(...allStages.map(s => new Date(s.startsAt).getTime())) : Infinity
-  const lastEnd = allStages.length > 0 ? Math.max(...allStages.map(s => new Date(s.endsAt).getTime())) : -Infinity
-  const anyLive = allStages.some(s => {
-    const st = new Date(s.startsAt).getTime()
-    const en = new Date(s.endsAt).getTime()
-    return now >= st && now < en
-  })
+  const startAt = (s: typeof allStages[number]) => new Date(s.startsAt).getTime()
+  const startedStages = allStages.filter(s => now >= startAt(s))
+  const anyLive = allStages.some(s => now >= startAt(s) && now < new Date(s.endsAt).getTime())
 
-  const allSplits = round.stages.flatMap(s => s.splits)
-  const hasPublishedResults = allSplits.some(sp => sp.resultsPublishedAt)
-  const hasUnpublishedResults = allSplits.some(sp =>
-    sp.results && sp.results.length > 0 && !sp.resultsPublishedAt
-  )
+  // 比赛/成绩阶段：跟随最新（已开赛）Stage 的状态（不受报名人工覆盖影响）
+  if (anyLive) return 'InProgress'
+  if (startedStages.length > 0) {
+    const current = startedStages.reduce((a, b) => (startAt(b) >= startAt(a) ? b : a))
+    // 还有更靠后、尚未开赛的 Stage → 站间，赛事仍在进行中
+    const hasLaterNotStarted = allStages.some(s => startAt(s) > startAt(current))
+    if (hasLaterNotStarted) return 'InProgress'
+    return isStageLocked(current, comp) ? 'ResultsLocked' : 'Completed'
+  }
 
+  // 报名阶段：人工覆盖优先于时间
+  const forced = round.registrationOverride
+  if (forced === 'forceClosed') return 'RegistrationClosed'
+  if (forced === 'forceOpen') return 'RegistrationOpen'
+  const firstStart = allStages.length > 0 ? Math.min(...allStages.map(startAt)) : Infinity
   if (now < regOpen) return 'Upcoming'
   if (now >= regOpen && now < regClose) return 'RegistrationOpen'
-  if (anyLive) return 'InProgress'
-  if (now >= lastEnd && lastEnd > 0) {
-    if (hasPublishedResults && !hasUnpublishedResults) return 'ResultsPublished'
-    return 'Completed'
-  }
   if (now >= regClose && now < firstStart) return 'RegistrationClosed'
   return 'Upcoming'
 }
 
+// Competition 状态 = 当前站（按顺序第一个未进入终态的 Round）的状态；全部终结取最后一站。
 export function getCompetitionStatus(comp: Competition): CompetitionStatus {
   if (comp.statusOverride) return comp.statusOverride
   if (comp.rounds.length === 0) return 'Draft'
 
-  const statuses = comp.rounds.map(getRoundStatus)
-
-  if (statuses.some(s => s === 'InProgress')) return 'InProgress'
-  if (statuses.some(s => s === 'RegistrationOpen')) return 'RegistrationOpen'
-  if (statuses.some(s => s === 'Cancelled') && statuses.every(s => s === 'Cancelled')) return 'Cancelled'
-  if (statuses.every(s => s === 'ResultsPublished' || s === 'Completed')) return 'Completed'
-  if (statuses.some(s => s === 'Completed' || s === 'ResultsPublished')) return 'InProgress'
-  if (statuses.every(s => s === 'Upcoming' || s === 'RegistrationClosed')) return 'Upcoming'
-  if (statuses.some(s => s === 'RegistrationClosed')) return 'RegistrationClosed'
-  return 'Draft'
+  const isTerminal = (s: RoundStatus) => s === 'Completed' || s === 'ResultsLocked' || s === 'Cancelled'
+  const statuses = comp.rounds.map(r => getRoundStatus(r, comp))
+  let idx = statuses.findIndex(s => !isTerminal(s))
+  if (idx === -1) idx = statuses.length - 1
+  const cur = statuses[idx]
+  // Competition 层不单列 ResultsLocked，统一显示 Completed
+  return (cur === 'ResultsLocked' ? 'Completed' : cur) as CompetitionStatus
 }

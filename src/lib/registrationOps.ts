@@ -16,38 +16,55 @@ function roundRegistrationStages(round: Round): Stage[] {
   return round.stages.filter(s => (s.eligibilitySource ?? 'roundRegistration') === 'roundRegistration')
 }
 
+/** 人工覆盖报名状态：提前结束 / 重开报名 / 撤销覆盖（恢复时间推导）。 */
+export function setRegistrationOverride(competition: Competition, round: Round, override: Round['registrationOverride']): void {
+  round.registrationOverride = override
+  updateCompetition(competition)
+}
+
 export interface SplitPlan {
+  /** 当前服务器(Split)数量 = 报名分站 Stage 的 splits 数 */
   splitCount: number
-  capacityPerSplit?: number
-  totalCapacity?: number
   approvedCount: number
   minPerGroup: number
   perGroup: number
 }
 
-export function getSplitPlan(round: Round): SplitPlan {
-  const stage = round.stages.find(s => s.enableMultiSplit) ?? round.stages[0]
-  const splitCount = stage?.enableMultiSplit ? Math.max(1, stage.maxSplits ?? 1) : 1
-  const capacityPerSplit = stage?.maxEntriesPerSplit
-  const totalCapacity = capacityPerSplit ? capacityPerSplit * splitCount : undefined
-  const approvedCount = getRoundRegistrations(round.id).filter(r => r.status === 'approved').length
-  const minPerGroup = stage?.minEntries ?? 4
-  const perGroup = splitCount > 0 ? Math.floor(approvedCount / splitCount) : approvedCount
-  return { splitCount, capacityPerSplit, totalCapacity, approvedCount, minPerGroup, perGroup }
+/** 报名分组依据的 Stage（取资格来源为分站报名的第一个 Stage）。 */
+function planningStage(round: Round): Stage | undefined {
+  return roundRegistrationStages(round)[0] ?? round.stages[0]
 }
 
-export type SplitWarning = 'over' | 'tooFew' | null
+export function getSplitPlan(round: Round): SplitPlan {
+  const stage = planningStage(round)
+  const splitCount = Math.max(1, stage?.splits.length ?? 1)
+  const approvedCount = getRoundRegistrations(round.id).filter(r => r.status === 'approved').length
+  const minPerGroup = stage?.minEntries ?? 4
+  const perGroup = Math.floor(approvedCount / splitCount)
+  return { splitCount, approvedCount, minPerGroup, perGroup }
+}
 
-/** Warn when approved entries exceed total capacity, or an even split leaves groups too small. */
+export type SplitWarning = 'tooFew' | null
+
+/** 多组均分后每组人数过少时提示（容量上限已不在 Stage 层校验）。 */
 export function getSplitWarning(round: Round, overrideSplitCount?: number): SplitWarning {
   const plan = getSplitPlan(round)
   const splitCount = Math.max(1, overrideSplitCount ?? plan.splitCount)
-  if (plan.capacityPerSplit && plan.approvedCount > plan.capacityPerSplit * splitCount) return 'over'
   if (splitCount > 1 && Math.floor(plan.approvedCount / splitCount) < plan.minPerGroup) return 'tooFew'
   return null
 }
 
-/** Evenly distribute approved registrations across `splitCount` groups (group sizes differ by ≤1). */
+/** 把报名分站 Stage 调整为恰好 k 个 Split（不足则新建，多余则裁剪）。 */
+function ensureSplitCount(stage: Stage, k: number): void {
+  while (stage.splits.length < k) {
+    stage.splits.push(createDefaultSplit(stage.id, stage.splits.length + 1))
+  }
+  if (stage.splits.length > k) {
+    stage.splits = stage.splits.slice(0, k).map((s, i) => ({ ...s, splitNumber: i + 1 }))
+  }
+}
+
+/** 报名截止后：把已通过报名均分到 k 个服务器（组间人数差 ≤1），并把各分站 Stage 调整为 k 个 Split。 */
 export function assignSplitsEvenly(
   competition: Competition,
   round: Round,
@@ -71,22 +88,16 @@ export function assignSplitsEvenly(
   let idx = 0
   for (let g = 1; g <= k; g++) {
     const size = base + (g <= rem ? 1 : 0)
-    for (let j = 0; j < size; j++) assignSplit(ordered[idx++].id, k > 1 ? g : 1)
+    for (let j = 0; j < size; j++) assignSplit(ordered[idx++].id, g)
   }
-  roundRegistrationStages(round).forEach(stage => {
-    stage.enableMultiSplit = k > 1
-    stage.maxSplits = k
-  })
+  roundRegistrationStages(round).forEach(stage => ensureSplitCount(stage, k))
   updateCompetition(competition)
 }
 
 export function applyToEntryList(competition: Competition, round: Round): number {
   const approved = getRoundRegistrations(round.id).filter(r => r.status === 'approved')
-  for (const stage of round.stages) {
-    const sc = stage.enableMultiSplit ? Math.max(1, stage.maxSplits ?? 1) : 1
-    while (stage.splits.length < sc) {
-      stage.splits.push(createDefaultSplit(stage.id, stage.splits.length + 1))
-    }
+  for (const stage of roundRegistrationStages(round)) {
+    if (stage.splits.length === 0) stage.splits.push(createDefaultSplit(stage.id, 1))
     stage.splits.forEach(split => {
       const list = approved.filter(r => (r.splitNumber ?? 1) === split.splitNumber)
       const entries: EntryListEntry[] = list.map((r, i) => ({

@@ -65,8 +65,6 @@ function buildDemoCompetition(): Competition {
     sessions: buildSessions(DEMO_RACE_STAGE_ID),
     splits: [buildSplit(DEMO_RACE_STAGE_ID, 1, 'Demo GT3 Monza #1')],
     eligibilitySource: 'roundRegistration',
-    maxEntriesPerSplit: 30,
-    enableMultiSplit: false,
     minEntries: 4,
   }
 
@@ -85,8 +83,6 @@ function buildDemoCompetition(): Competition {
     splits: [buildSplit(DEMO_FINAL_STAGE_ID, 1, 'Demo GT3 Monza Final')],
     eligibilitySource: 'previousStageResult',
     advancementRule: { metric: 'position', limit: 6, targetStageId: DEMO_FINAL_STAGE_ID, fallbackPolicy: 'fillNext' },
-    maxEntriesPerSplit: 30,
-    enableMultiSplit: false,
     minEntries: 4,
   }
 
@@ -150,7 +146,6 @@ function buildDemoRegistrations(): Registration[] {
     preferredNumber: DEMO_NUMBERS[i] ?? 10 + i,
     teamId: d.teamId,
     status: 'approved',
-    paymentStatus: 'paid',
     submittedAt: new Date(now - (DEMO_DRIVER_COUNT - i) * 3_600_000).toISOString(),
   }))
 }

@@ -40,7 +40,6 @@ export function ProtestDetailPage() {
   const penaltyTypeFor = (kind: string): string | undefined => {
     switch (kind) {
       case 'time': return 'timePenalty'
-      case 'position': return 'positionDrop'
       case 'dsq': return 'disqualifyRace'
       case 'warning': return 'warning'
       default: return undefined
@@ -56,8 +55,6 @@ export function ProtestDetailPage() {
         decision: 'violation',
         penaltyType: penaltyTypeFor(summary.kind),
         penaltySeconds: summary.seconds,
-        positionDrop: summary.positions,
-        pointsDeduction: summary.points,
         dsq: summary.kind === 'dsq',
         reason: summary.reason || rulingReason || t('protest.violationConfirmed'),
         appliedAt: now,
@@ -139,7 +136,7 @@ export function ProtestDetailPage() {
           <div className="space-y-3 text-sm">
             <div className="flex items-center gap-2">
               <StatusBadge status={protest.resolution.decision === 'violation' ? 'resolved' : 'dismissed'} label={protest.resolution.decision === 'violation' ? t('protest.violationConfirmed') : t('protest.dismissed')} />
-              {protest.resolution.penaltyType && <span className="text-gray-600">{t('protest.penalty')}: {penaltyOptions.find(o => o.value === protest.resolution!.penaltyType)?.label ?? protest.resolution.penaltyType}{protest.resolution.penaltySeconds ? ` (+${protest.resolution.penaltySeconds}s)` : ''}{protest.resolution.positionDrop ? ` (+${protest.resolution.positionDrop} pos)` : ''}</span>}
+              {protest.resolution.penaltyType && <span className="text-gray-600">{t('protest.penalty')}: {penaltyOptions.find(o => o.value === protest.resolution!.penaltyType)?.label ?? protest.resolution.penaltyType}{protest.resolution.penaltySeconds ? ` (+${protest.resolution.penaltySeconds}s)` : ''}</span>}
             </div>
             <p className="text-gray-700">{protest.resolution.reason}</p>
             {ctx && (

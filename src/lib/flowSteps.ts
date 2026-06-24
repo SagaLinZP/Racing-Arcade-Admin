@@ -8,7 +8,7 @@ import { getRaceSessionId, getStageResultStatus } from '@/lib/results'
 import { syncStageResults } from '@/lib/serverResults'
 import { applyAdvancement } from '@/lib/advancement'
 import { applyToEntryList } from '@/lib/registrationOps'
-import { startStageServers, publishStageResults } from '@/lib/stageOps'
+import { startStageServers, lockStageResults } from '@/lib/stageOps'
 import {
   DEMO_COMP_ID,
   DEMO_RACE_STAGE_ID,
@@ -139,21 +139,21 @@ export const flowSteps: FlowStep[] = [
     target: 'publish',
     isDone: () => {
       const c = ctx()
-      return !!c && getStageResultStatus(c.raceStage) === 'published'
+      return !!c && getStageResultStatus(c.raceStage, c.comp) === 'locked'
     },
     route: () => RESULTS_ROUTE,
     run: () => {
       const c = ctx()
       if (!c) return
-      const published = publishStageResults(c.raceStage, c.comp)
-      if (!published) return
+      const locked = lockStageResults(c.raceStage, c.comp)
+      if (!locked) return
       addNotification({
-        id: 'ntf_demo_publish',
+        id: 'ntf_demo_lock',
         type: 'results',
-        title_zh: '成绩已发布',
-        title_en: 'Results Published',
-        body_zh: '【演示】流程示例赛事 - 第 1 站 正赛日成绩已发布。',
-        body_en: '[Demo] Flow Example Competition - Round 1 race day results published.',
+        title_zh: '成绩已锁定',
+        title_en: 'Results Locked',
+        body_zh: '【演示】流程示例赛事 - 第 1 站 正赛日成绩已锁定，积分已发放。',
+        body_en: '[Demo] Flow Example Competition - Round 1 race day results locked, points awarded.',
         link: RESULTS_ROUTE,
         isRead: false,
         createdAt: new Date().toISOString(),

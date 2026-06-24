@@ -5,8 +5,6 @@ export interface ProtestResolution {
   decision: 'violation' | 'noFault'
   penaltyType?: string
   penaltySeconds?: number
-  pointsDeduction?: number
-  positionDrop?: number
   dsq?: boolean
   reason: string
   appliedAt?: string
@@ -67,7 +65,7 @@ const templates: ProtestTemplate[] = [
     lapNumber: 24,
     location: 'Start/Finish Straight',
     status: 'resolved',
-    resolution: { decision: 'violation', penaltyType: 'positionDrop', positionDrop: 3, reason: 'Repeated blocking maneuvers under braking zone.', reviewedBy: 'admin1' },
+    resolution: { decision: 'violation', penaltyType: 'disqualifyRace', dsq: true, reason: 'Repeated blocking maneuvers under braking zone.', reviewedBy: 'admin1' },
   },
 ]
 

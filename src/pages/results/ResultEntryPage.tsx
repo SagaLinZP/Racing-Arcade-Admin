@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Badge } from '@/components/ui/Badge'
-import { findStageById, getPointsForPosition, getName, getRaceSessionId } from '@/lib/results'
+import { findStageById, getPointsForPosition, getName, getRaceSessionId, isStageLocked } from '@/lib/results'
+import { lockStageResults, unlockStageResults } from '@/lib/stageOps'
 import type { SessionResult, ResultStatus } from '@/data/competitions'
 import type { ScoringTableEntry } from '@/lib/utils'
 import { ArrowLeft, Save, Upload, Trophy, Plus, Trash2, CheckCircle, History, Gavel } from 'lucide-react'
@@ -48,7 +49,7 @@ export function ResultEntryPage() {
       splitId: split.id,
       splitNumber: split.splitNumber,
       results: split.results ? split.results.map(r => ({ ...r })) : [],
-      publishedAt: split.resultsPublishedAt,
+      publishedAt: split.resultsLockedAt,
     }))
   })
 
@@ -77,7 +78,7 @@ export function ResultEntryPage() {
   const { competition, round, stage } = ctx
   const registeredDrivers = round.registeredDriverIds
   const current = splitStates[activeSplit]
-  const isPublished = !!current?.publishedAt
+  const locked = isStageLocked(stage, competition)
 
   const updateResult = (idx: number, patch: Partial<SessionResult>) => {
     setSplitStates(prev => prev.map(ss => {
@@ -136,7 +137,7 @@ export function ResultEntryPage() {
       splitId: split.id,
       splitNumber: split.splitNumber,
       results: split.results ? split.results.map(r => ({ ...r })) : [],
-      publishedAt: split.resultsPublishedAt,
+      publishedAt: split.resultsLockedAt,
     })))
   }
 
@@ -151,39 +152,26 @@ export function ResultEntryPage() {
     navigate('/results')
   }
 
-  const handlePublish = () => {
-    setSplitStates(prev => prev.map(ss => {
-      if (ss.splitId !== current.splitId) return ss
-      return { ...ss, publishedAt: ss.publishedAt ?? new Date().toISOString() }
-    }))
-    if (ctx) {
-      const split = ctx.stage.splits.find(s => s.id === current.splitId)
-      if (split && !split.resultsPublishedAt) {
-        split.resultsPublishedAt = new Date().toISOString()
-      }
-      addNotification({
-        id: `ntf_pub_${stage.id}_${current.splitId}`,
-        type: 'results',
-        title_zh: '成绩公布',
-        title_en: 'Results Published',
-        body_zh: `${competition.name_zh} - ${stage.name_zh} 成绩已公布`,
-        body_en: `${competition.name_en} - ${stage.name_en} results published`,
-        link: `/results/${stage.id}`,
-        isRead: false,
-        createdAt: new Date().toISOString(),
-      })
-    }
+  const handleLock = () => {
+    commitLocal()
+    lockStageResults(stage, competition)
+    resyncFromStage()
+    addNotification({
+      id: `ntf_lock_${stage.id}`,
+      type: 'results',
+      title_zh: '成绩已锁定',
+      title_en: 'Results Locked',
+      body_zh: `${competition.name_zh} - ${stage.name_zh} 成绩已锁定，积分已发放`,
+      body_en: `${competition.name_en} - ${stage.name_en} results locked, points awarded`,
+      link: `/results/${stage.id}`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    })
   }
 
-  const handleUnpublish = () => {
-    setSplitStates(prev => prev.map(ss => {
-      if (ss.splitId !== current.splitId) return ss
-      return { ...ss, publishedAt: undefined }
-    }))
-    if (ctx) {
-      const split = ctx.stage.splits.find(s => s.id === current.splitId)
-      if (split) split.resultsPublishedAt = undefined
-    }
+  const handleUnlock = () => {
+    unlockStageResults(stage, competition)
+    resyncFromStage()
   }
 
   const handleParse = () => {
@@ -248,14 +236,14 @@ export function ResultEntryPage() {
             <Save className="w-4 h-4 mr-1" />
             {t('common.save')}
           </Button>
-          {isPublished ? (
-            <Button variant="danger" onClick={handleUnpublish}>
-              {t('result.unpublish')}
+          {locked ? (
+            <Button variant="danger" onClick={handleUnlock}>
+              {t('result.unlockResults')}
             </Button>
           ) : (
-            <Button variant="primary" onClick={handlePublish}>
+            <Button variant="primary" onClick={handleLock}>
               <CheckCircle className="w-4 h-4 mr-1" />
-              {t('result.publishResults')}
+              {t('result.lockResults')}
             </Button>
           )}
         </div>
@@ -392,9 +380,16 @@ export function ResultEntryPage() {
               )}
             >
               {t('result.split')} {ss.splitNumber}
-              {ss.publishedAt && <Badge variant="success" className="ml-2 text-xs">{t('result.statusPublished')}</Badge>}
+              {locked && <Badge variant="success" className="ml-2 text-xs">{t('result.statusLocked')}</Badge>}
             </button>
           ))}
+        </div>
+      )}
+
+      {locked && (
+        <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700">
+          <History className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{t('result.lockedHint')}</span>
         </div>
       )}
 
@@ -405,11 +400,12 @@ export function ResultEntryPage() {
             <h3 className="text-sm font-semibold text-gray-700">
               {splitStates.length > 1 ? `${t('result.split')} ${current?.splitNumber}` : t('result.manualEntry')}
             </h3>
-            {isPublished && <Badge variant="success">{t('result.statusPublished')}</Badge>}
+            {locked && <Badge variant="success">{t('result.statusLocked')}</Badge>}
           </div>
           <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
             <input
               type="checkbox"
+              disabled={locked}
               checked={autoPoints}
               onChange={(e) => setAutoPoints(e.target.checked)}
               className="rounded"
@@ -445,6 +441,7 @@ export function ResultEntryPage() {
                       <td className="px-3 py-1.5">
                         <Input
                           type="number"
+                          disabled={locked}
                           className="w-12 text-center"
                           value={String(r.position)}
                           onChange={(e) => handlePositionChange(fullIdx, Number(e.target.value))}
@@ -457,6 +454,7 @@ export function ResultEntryPage() {
                       <td className="px-3 py-1.5">
                         <Input
                           className="w-24"
+                          disabled={locked}
                           value={r.totalTime ?? ''}
                           onChange={(e) => updateResult(fullIdx, { totalTime: e.target.value })}
                           placeholder="0:00:00"
@@ -465,6 +463,7 @@ export function ResultEntryPage() {
                       <td className="px-3 py-1.5">
                         <Input
                           className="w-24"
+                          disabled={locked}
                           value={r.bestLap ?? ''}
                           onChange={(e) => updateResult(fullIdx, { bestLap: e.target.value })}
                           placeholder="0:00.0"
@@ -473,6 +472,7 @@ export function ResultEntryPage() {
                       <td className="px-3 py-1.5">
                         <Input
                           type="number"
+                          disabled={locked}
                           className="w-12"
                           value={String(r.lapsCompleted ?? 0)}
                           onChange={(e) => updateResult(fullIdx, { lapsCompleted: Number(e.target.value) })}
@@ -481,6 +481,7 @@ export function ResultEntryPage() {
                       <td className="px-3 py-1.5">
                         <Input
                           className="w-20"
+                          disabled={locked}
                           value={r.gapToLeader ?? ''}
                           onChange={(e) => updateResult(fullIdx, { gapToLeader: e.target.value })}
                           placeholder="—"
@@ -490,36 +491,42 @@ export function ResultEntryPage() {
                         <Select
                           options={statusOptions}
                           value={r.status}
+                          disabled={locked}
                           onChange={(e) => updateResult(fullIdx, { status: e.target.value as ResultStatus })}
                         />
                       </td>
                       <td className="px-3 py-1.5">
                         <div className="flex items-center gap-1.5">
                           {r.penalty && <span className="text-xs text-amber-700 truncate max-w-[72px]" title={r.penalty}>{r.penalty}</span>}
-                          <button
-                            onClick={() => openPenalty(r.driverId, driver?.nickname ?? r.driverId)}
-                            className="text-gray-400 hover:text-red-600 shrink-0"
-                            title={t('result.penaltyAction')}
-                          >
-                            <Gavel className="w-3.5 h-3.5" />
-                          </button>
+                          {!locked && (
+                            <button
+                              onClick={() => openPenalty(r.driverId, driver?.nickname ?? r.driverId)}
+                              className="text-gray-400 hover:text-red-600 shrink-0"
+                              title={t('result.penaltyAction')}
+                            >
+                              <Gavel className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                       <td className="px-3 py-1.5 text-right">
                         <Input
                           type="number"
+                          disabled={locked}
                           className="w-14 text-right"
                           value={String(r.points ?? 0)}
                           onChange={(e) => updateResult(fullIdx, { points: Number(e.target.value) })}
                         />
                       </td>
                       <td className="px-3 py-1.5">
-                        <button
-                          onClick={() => removeResult(fullIdx)}
-                          className="text-gray-300 hover:text-red-500"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {!locked && (
+                          <button
+                            onClick={() => removeResult(fullIdx)}
+                            className="text-gray-300 hover:text-red-500"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   )
@@ -532,7 +539,7 @@ export function ResultEntryPage() {
         )}
 
         {/* Add driver */}
-        {availableDrivers.length > 0 && (
+        {!locked && availableDrivers.length > 0 && (
           <div className="flex items-center gap-2 px-4 py-3 border-t border-gray-200">
             <Plus className="w-4 h-4 text-gray-400" />
             <select

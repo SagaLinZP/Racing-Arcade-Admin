@@ -16,8 +16,11 @@ import {
   assignSplitsEvenly,
   getSplitPlan,
   getSplitWarning,
+  setRegistrationOverride,
 } from '@/lib/registrationOps'
 import { getName } from '@/lib/results'
+import { isEntryListLocked } from '@/lib/guards'
+import { getRoundStatus } from '@/lib/utils'
 import { drivers } from '@/data/drivers'
 import { teams } from '@/data/teams'
 import { Card } from '@/components/ui/Card'
@@ -88,10 +91,11 @@ function RoundRegistrationCard({ competition, round, onFlash }: { competition: C
   const lang = state.language
 
   const plan = getSplitPlan(round)
-  const defaultStage = round.stages.find(s => s.enableMultiSplit) ?? round.stages[0]
+  const defaultStage = round.stages.find(s => (s.eligibilitySource ?? 'roundRegistration') === 'roundRegistration') ?? round.stages[0]
   const [splitCount, setSplitCount] = useState(plan.splitCount)
   const [order, setOrder] = useState<'time' | 'random'>(defaultStage?.splitAssignmentRule === 'random' ? 'random' : 'time')
 
+  const roundStatus = getRoundStatus(round, competition)
   const driverName = (id: string) => drivers.find(d => d.id === id)?.nickname ?? id
   const teamName = (id?: string) => (id ? teams.find(tm => tm.id === id)?.name : undefined)
 
@@ -103,6 +107,9 @@ function RoundRegistrationCard({ competition, round, onFlash }: { competition: C
   const approvedRegs = all.filter(r => r.status === 'approved')
   const warning = getSplitWarning(round, splitCount)
   const perGroup = Math.floor(counts.approved / Math.max(1, splitCount))
+  const minEntries = defaultStage?.minEntries ?? plan.minPerGroup
+  const belowMinEntries = roundStatus === 'RegistrationClosed' && counts.approved < minEntries
+  const entryLocked = isEntryListLocked(round)
 
   const distribution = Array.from({ length: Math.max(1, splitCount) }, (_, i) => ({
     splitNumber: i + 1,
@@ -133,9 +140,24 @@ function RoundRegistrationCard({ competition, round, onFlash }: { competition: C
           <span className="text-sm font-semibold text-gray-800">{getName(round, lang)}</span>
           <span className="text-xs text-gray-400">{t('registration.summary', counts)}</span>
         </div>
-        <span className="inline-flex items-center gap-1 text-xs text-green-600">
-          <CheckCheck className="w-3.5 h-3.5" />{t('registration.autoApproved')}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1 text-xs text-green-600">
+            <CheckCheck className="w-3.5 h-3.5" />{t('registration.autoApproved')}
+          </span>
+          {round.registrationOverride ? (
+            <Button variant="ghost" size="sm" onClick={() => setRegistrationOverride(competition, round, undefined)}>
+              {t('registration.clearOverride')}
+            </Button>
+          ) : roundStatus === 'RegistrationOpen' ? (
+            <Button variant="ghost" size="sm" onClick={() => setRegistrationOverride(competition, round, 'forceClosed')}>
+              <Clock className="w-3.5 h-3.5 mr-1" />{t('registration.closeEarly')}
+            </Button>
+          ) : roundStatus === 'RegistrationClosed' ? (
+            <Button variant="ghost" size="sm" onClick={() => setRegistrationOverride(competition, round, 'forceOpen')}>
+              <Clock className="w-3.5 h-3.5 mr-1" />{t('registration.reopen')}
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {/* Split assignment panel */}
@@ -145,9 +167,15 @@ function RoundRegistrationCard({ competition, round, onFlash }: { competition: C
           <span className="text-xs text-gray-400">{t('registration.splitPlanHint')}</span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {belowMinEntries && (
+          <div className="flex items-start gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{t('registration.belowMinEntries', { approved: counts.approved, min: minEntries })}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-3 gap-3">
           <Stat label={t('registration.approvedLabel')} value={String(counts.approved)} />
-          <Stat label={t('registration.capacityLabel')} value={plan.totalCapacity != null ? String(plan.capacityPerSplit! * Math.max(1, splitCount)) : '—'} />
           <div>
             <label className="block text-[11px] font-medium text-gray-500 mb-1">{t('registration.splitCount')}</label>
             <Input type="number" min={1} value={String(splitCount)} onChange={(e) => setSplitCount(Math.max(1, Number(e.target.value) || 1))} />
@@ -155,14 +183,10 @@ function RoundRegistrationCard({ competition, round, onFlash }: { competition: C
           <Stat label={t('registration.perGroupLabel')} value={String(perGroup)} />
         </div>
 
-        {warning && (
+        {warning === 'tooFew' && (
           <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>
-              {warning === 'over'
-                ? t('registration.warnOver', { approved: counts.approved, capacity: plan.capacityPerSplit != null ? plan.capacityPerSplit * Math.max(1, splitCount) : '—' })
-                : t('registration.warnTooFew', { perGroup, min: plan.minPerGroup })}
-            </span>
+            <span>{t('registration.warnTooFew', { perGroup, min: plan.minPerGroup })}</span>
           </div>
         )}
 
@@ -170,13 +194,14 @@ function RoundRegistrationCard({ competition, round, onFlash }: { competition: C
           <div className="w-48">
             <Select label={t('registration.assignOrder')} options={orderOptions} value={order} onChange={(e) => setOrder(e.target.value as 'time' | 'random')} />
           </div>
-          <Button variant="secondary" size="sm" onClick={handleAssign} disabled={counts.approved === 0}>
+          <Button variant="secondary" size="sm" onClick={handleAssign} disabled={counts.approved === 0 || entryLocked}>
             <Shuffle className="w-3.5 h-3.5 mr-1" />{t('registration.assignEvenly')}
           </Button>
-          <Button data-flow={competition.isDemo ? 'entryList' : undefined} variant="primary" size="sm" onClick={handleApply} disabled={counts.approved === 0}>
+          <Button data-flow={competition.isDemo ? 'entryList' : undefined} variant="primary" size="sm" onClick={handleApply} disabled={counts.approved === 0 || entryLocked}>
             <Upload className="w-3.5 h-3.5 mr-1" />{t('registration.applyToEntryList')}
           </Button>
         </div>
+        {entryLocked && <p className="text-xs text-gray-400">{t('registration.entryLockedHint')}</p>}
 
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="text-gray-400">{t('registration.splitDistribution')}:</span>

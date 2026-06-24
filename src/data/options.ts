@@ -110,12 +110,8 @@ export const optionGroups: OptionGroup[] = [
     category: 'protest',
     options: [
       { value: 'warning', label_en: 'Warning', label_zh: '警告' },
-      { value: 'timePenalty', label_en: 'Time Penalty', label_zh: '时间处罚' },
-      { value: 'positionDrop', label_en: 'Position Drop', label_zh: '名次降级' },
-      { value: 'disqualifyRace', label_en: 'Disqualify (Race)', label_zh: '取消资格（本场）' },
-      { value: 'disqualifyChampionship', label_en: 'Disqualify (Championship)', label_zh: '取消资格（整个赛事）' },
-      { value: 'raceBan', label_en: 'Race Ban', label_zh: '禁赛' },
-      { value: 'timeBan', label_en: 'Time Ban', label_zh: '限时封禁' },
+      { value: 'timePenalty', label_en: 'Time Penalty', label_zh: '罚时' },
+      { value: 'disqualifyRace', label_en: 'Disqualify (Race / DSQ)', label_zh: '取消该场成绩 (DSQ)' },
     ],
   },
   {

@@ -64,7 +64,6 @@ Racing Arcade 是一个**由 MOZA Racing 官方运营的模拟赛车赛事发布
 | 维度 | SimGrid | Racing Arcade |
 |------|---------|--------------|
 | **运营模式** | 用户共创（UGC），1277+ 社区自行发布赛事 | 官方自营，仅 MOZA 运营团队发布赛事 |
-| **盈利模式** | 免费 + Grid Pass 付费订阅（$5.99/月） | 完全免费 |
 | **赛事来源** | 任何用户可创建社区并发布赛事 | 仅官方发布，品质统一 |
 | **支持游戏** | 16+ 款（ACC、AC Evo、iRacing、LMU 等） | 初期聚焦 AC / ACC，先打通自动开服与成绩导入闭环 |
 | **账号体系** | Discord / Steam 登录 | Pit House SSO（主）+ Discord / Steam 绑定 |
@@ -73,7 +72,7 @@ Racing Arcade 是一个**由 MOZA Racing 官方运营的模拟赛车赛事发布
 | **硬件生态** | 无硬件关联 | MOZA 硬件生态（车手档案展示 MOZA 设备） |
 | **社区功能** | 社区系统为核心 | 无社区功能，聚焦赛事 |
 | **区域化** | 无明确区域划分 | 四区域独立运营 + 跨区可浏览可报名 |
-| **成绩分析** | Performance Analysis（付费） | 免费（基础统计） |
+| **成绩分析** | Performance Analysis | 基础统计 |
 | **直播集成** | 无内置直播 | 嵌入 Twitch / YouTube 直播 |
 
 ## 1.5 目标用户画像
@@ -453,7 +452,7 @@ flowchart TD
 
 **Stage、Split、Session 三者的关系**：
 
-- **Split 是 Stage 的横向并行维度**：一个 Stage 可拆分为多个 Split（并行服务器实例）以容纳更多车手。Split 数量在 Stage 层级设定（`max_splits`）；未启用多 Split 时仅 1 个 Split。
+- **Split 是 Stage 的横向并行维度**：一个 Stage 可拆分为多个 Split（并行服务器实例）以容纳更多车手。Split 数量在**报名截止后于报名页确定**（按实际人数均分，见 4.5.4）；默认仅 1 个 Split。
 - **一份开赛参数（`game_config`）共享给 Stage 下所有 Split**：该参数含赛道、天气、规则、辅助等游戏引擎配置，**Session 的时序信息（P/Q/R 时长、时段、时间倍率）也定义在这份开赛参数中**，因此同一 Stage 内各 Split 运行的 Session 时序完全一致。
 - **Session 归属于 Split**：每个 Split（服务器）各自按统一的时序运行这些 Session，并产出独立成绩。Session 是成绩归属的最小颗粒度——例如在同一个"正赛日" Stage 中，车手既能查看 Qualifying Session 的排位成绩，也能查看 Race Session 的正赛成绩，两者互不覆盖。
 - **各 Split 仅在服务器实例层面不同**：服务器名称、密码、端口、车位、Entry List（参赛名单）按 Split 独立配置；开赛参数与 Session 时序由 Stage 统一掌控。
@@ -461,7 +460,7 @@ flowchart TD
 
 **创建服务器的流程顺序**（管理员视角）：
 
-1. 在 Stage 层级设定最多几个 Split（`max_splits`、`max_entries_per_split`）
+1. 报名截止后于报名页按实际人数确定服务器（Split）数量并均分（见 4.5.4）
 2. 配置一套开赛参数（`game_config`：赛道、天气、规则、辅助，以及 Session 时序 P/Q/R）
 3. 将这套开赛参数分发给各个服务器（Split）；各 Split 仅补充自己的服务器参数与 Entry List
 4. 每个 Split 按开赛参数中的 Session 时序依次运行 Practice / Qualifying / Race，产出各 Session 的成绩
@@ -486,12 +485,14 @@ Competition 是前台列表中的主要卡片对象，也是详情页的主入�
 | description_zh / description_en | RichText | 否 | 赛事项目描述（中/英） |
 | cover_image | URL | 否 | 封面图片 |
 | regions | Enum[] | 是 | 发布区域（CN / AP / AM / EU，可多选） |
+| timezone | String | 否 | 赛事级时区（如 `UTC+8`）；时间统一以 UTC 存储，输入/展示按此时区换算（见 4.1.2） |
 | game | Enum | 是 | 游戏平台；MVP 仅开放 AC / ACC，后续可扩展其他模拟赛车游戏 |
 | car_class | String | 是 | 车型组（GT3 / GT4 / Porsche Cup / LMP2 / Formula 等） |
 | car_list | String[] | 否 | 可选车辆列表 |
-| default_ruleset | CompetitionRuleset | 是 | 默认赛制、Split、准入、积分、资源、直播等公共配置 |
+| result_lock_window_hours | Integer | 否 | 成绩公示/申诉窗口时长（小时），到期自动锁定；默认 24，可提前锁定（见 4.3.3）。**赛事级（Competition）字段**，非 ruleset 内 |
+| default_ruleset | CompetitionRuleset | 是 | 默认赛制、准入、积分、资源、直播等公共配置 |
 | rounds | Round[] | 是 | 分站列表，管理员可拖拽排序 |
-| status | Enum | 自动 | 从 Round/Stage 状态聚合得到 |
+| status | Enum | 自动 | 取**当前站**（current round）的状态（见 4.3.1），除非 `status_override`=Draft/Cancelled |
 | created_by | UUID | 自动 | 创建者管理员 ID |
 | created_at | DateTime | 自动 | 创建时间 |
 | updated_at | DateTime | 自动 | 最后更新时间 |
@@ -500,9 +501,6 @@ Competition 是前台列表中的主要卡片对象，也是详情页的主入�
 
 | 字段名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| weather | Enum | 否 | 默认天气设置 |
-| has_pitstop | Boolean | 否 | 默认是否需要进站 |
-| min_entries | Integer | 否 | 最低开赛人数阈值 |
 | access_requirements_zh / access_requirements_en | String | 否 | 准入条件描述（中/英） |
 | scoring_table | ScoringTableEntry[] | 否 | 默认积分表 |
 | scoring_note_zh / scoring_note_en | String | 否 | 积分表总计备注（中/英），显示在积分表末尾 |
@@ -510,8 +508,9 @@ Competition 是前台列表中的主要卡片对象，也是详情页的主入�
 | stream_url | URL | 否 | 默认直播链接 |
 
 > **已合并字段**：赛制规则（rules）、积分规则说明（scoring_rules）、晋级规则说明（advancement_rules）已合并到 Competition 的 `description` 字段中，不再作为独立字段。
-> **已移除字段**：`cancel_registration_deadline_offset` 不再作为 Competition 级配置。
-> **Split 配置**：多 Split 配置位于 Stage 层级（`enable_multi_split`、`max_entries_per_split`、`max_splits`、`split_assignment_rule`，见 4.1.6）。
+> **已移除字段**：`cancel_registration_deadline_offset` 不再作为 Competition 级配置；`weather`、`has_pitstop` 由 Stage 的 `game_config` 表达，不在 ruleset 内；`min_entries` 位于 Stage 层级（见 4.1.6）。
+> **锁定窗口**：`result_lock_window_hours` 为 **Competition 级**字段（非 ruleset 内，见 4.1.4 主表）。
+> **分组配置**：服务器（Split）数量在**报名截止后于报名页确定并均分**（见 4.5.4），不再有 `max_splits` / `max_entries_per_split` / `enable_multi_split` 概念；Stage 仅保留 `min_entries`（开赛下限）与 `split_assignment_rule`（默认分组方式）。
 
 ### 4.1.5 Round 数据模型
 
@@ -528,14 +527,14 @@ Round 是用户实际报名和参赛的主要单位，对应"一站"或"一场�
 | registration_open_at | DateTime | 是 | Round 报名起始时间 |
 | registration_close_at | DateTime | 是 | Round 报名截止时间 |
 | cancel_registration_deadline | DateTime | 否 | 允许取消 Round 报名的截止时间 |
-| max_registrations | Integer | 否 | **分站报名人数上限**（Round 级），在创建/编辑页填写；为空表示不限制 |
-| stage_ids | UUID[] | 是 | 本 Round 下的 Stage 顺序（分站序号由排列顺序派生） |
-| rule_overrides | Partial<CompetitionRuleset> | 否 | 分站级规则覆盖，如特殊天气、双倍积分 |
-| status | Enum | 自动 | 从 Stage 时间与 Split 成绩聚合 |
+| max_registrations | Integer | 否 | **分站报名人数上限**（Round 级），仅用于限制报名总量；在创建/编辑页填写，为空表示不限制。**不在 Stage 层做分组容量校验** |
+| registration_override | Enum | 否 | 报名状态人工覆盖：`forceOpen`（重开报名）/ `forceClosed`（提前结束报名）；为空时按时间推导（见 4.3.x） |
+| stages | Stage[] | 是 | 本 Round 下的 Stage 列表（内嵌；分站序号由排列顺序派生） |
+| status | Enum | 自动 | **跟随最新（已开赛）Stage 的状态**（含派生锁定）；报名阶段按时间 + `registration_override` 推导（见 4.3） |
 
 ### 4.1.6 Stage 数据模型
 
-Stage 是 Round 内部的流程阶段，用来表达"预选赛 → 正赛日 → 决赛"这类同一站内的推进关系。**一个 Stage 对应一份共享开赛参数**——Stage 统一管理游戏引擎参数（`game_config`）、Session 时序模板（`sessions`，即 P/Q/R 的时长与时段，共享给所有 Split）、Split 数量与分组规则；各 Split（并行服务器）按这套统一的时序运行 Session 并各自产出成绩，仅在服务器参数与参赛名单上独立。详见 4.1.3 的层级关系。
+Stage 是 Round 内部的流程阶段，用来表达"预选赛 → 正赛日 → 决赛"这类同一站内的推进关系。**一个 Stage 对应一份共享开赛参数**——Stage 统一管理游戏引擎参数（`game_config`）、Session 时序模板（`sessions`，即 P/Q/R 的时长与时段，共享给所有 Split）、默认分组方式与开赛下限；各 Split（并行服务器）按这套统一的时序运行 Session 并各自产出成绩，仅在服务器参数与参赛名单上独立。详见 4.1.3 的层级关系。
 
 | 字段名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
@@ -552,13 +551,13 @@ Stage 是 Round 内部的流程阶段，用来表达"预选赛 → 正赛日 →
 | bop_entries | BopEntry[] | 否 | 性能平衡（BoP）条目，每项含 `track`、`carModel`、`ballastKg` |
 | eligibility_source | Enum | 否 | `roundRegistration` / `previousStageResult` / `manualInvite`，各选项的子字段见下方 |
 | advancement_rule | AdvancementRule | 否 | 晋级规则，见下方 |
-| enable_multi_split | Boolean | 否 | 是否启用多 Split |
-| max_entries_per_split | Integer | 否 | 单 Split 最大参赛人数 |
-| max_splits | Integer | 否 | 最大 Split 数。总报名容量 = max_splits × max_entries_per_split。实际组数在报名截止后于报名页确定（见 4.5.4） |
 | split_assignment_rule | Enum | 否 | **默认分组方式**：`time`（按报名时间）/ `random`（随机）/ `skill`（按水平，即将推出）。报名页分组时以此为默认值 |
 | awards_points | Boolean | 否 | **是否计入积分**，默认计入（缺省视为 true）。关闭时该 Stage 成绩照常展示但不进任何积分榜；仅该 Stage 的 race session 成绩作为发放积分依据，多 Split 自动汇总 |
-| min_entries | Integer | 否 | 最低开赛人数阈值；亦作为分组时"每组人数过少"的下限 |
+| min_entries | Integer | 否 | 最低开赛人数阈值；报名截止人数低于此值时报名页提示，亦作为分组时"每组人数过少"的下限 |
+| results_lock_at | DateTime | 否 | **成绩计划锁定时间**；未设则默认 = `ends_at` + `result_lock_window_hours`（默认 24h）。到此时间自动锁定，管理员亦可手动提前锁定（见 4.3.3） |
 | status | Enum | 自动 | 从时间与 Session 成绩聚合（沿 Session → Split → Stage 链路） |
+
+> **服务器（Split）数量**不在 Stage 预设，而是在**报名截止后于报名页确定**：管理员按实际报名人数选择服务器数 N，系统据此创建 N 个 Split 并把报名**尽量均分**（组间人数差 ≤1）。已删除 `max_splits` / `max_entries_per_split` / `enable_multi_split` 概念。
 
 **Split 数据结构**：
 
@@ -574,7 +573,7 @@ Stage 是 Round 内部的流程阶段，用来表达"预选赛 → 正赛日 →
 | udp_port / tcp_port / http_port | Integer | 否 | 网络端口 |
 | entry_list | EntryListEntry[] | 否 | 参赛名单，可从 Round 报名自动生成或手动编辑 |
 | results | SessionResult[] | 自动 | 本 Split 产出的成绩，**按 Session 归属**（每条记录指明属于哪个 Session，如 qualifying 或 race）；同一 Split 内不同 Session 的成绩各自独立。详见 4.1.7 |
-| results_published_at | DateTime | 自动 | 成绩发布时间 |
+| results_locked_at | DateTime | 自动 | 成绩**锁定**时间（锁定以整个 Stage 为单位，该 Stage 各 Split 同时写入；锁定前为"公示中"，见 4.3.3） |
 
 > Split 还包含各游戏引擎专用的服务器参数字段（AC 的 `pickup_mode_enabled`、`locked_entry_list`、`max_ballast_kg`、以及高级项 `num_threads`/`sleep_time`/`udp_plugin_*`/`auth_plugin_address` 等；ACC 的 `is_race_locked`、`short_formation_lap`、`dump_leaderboards` 等），覆盖 AC/ACC server guide 中除报名名单外的全部字段，完整字段参见 4.1.8 配置文件参考表。这些服务器字段在「服务器配置弹窗」与「模板编辑页」中均可编辑（共用同一套字段组件）。
 
@@ -906,42 +905,99 @@ flowchart TD
 
 ## 4.3 赛事状态流转
 
-> **实现说明**：状态由系统按 Competition / Round / Stage 分层计算。`Draft`、`Cancelled` 为管理员手动覆盖；其余状态根据报名窗口、Stage 时间窗口和成绩数据自动派生。前台列表主要展示 Competition 聚合状态；详情页展示 Round 当前状态和 Stage 进度。
+> 状态分 **Competition / Round / Stage** 三层：**报名生命周期挂在 Round**，**比赛与成绩生命周期挂在 Stage**，**Competition 状态取"当前站"**（4.3.1）。状态主要由"时间到点 + 成绩动作"自动推导，叠加少量管理员人工覆盖（4.3.6）。
+
+### 4.3.1 三层与聚合口径
+
+- **Round（分站）** —— 用户报名与参赛的主单位，状态见 4.3.2。
+- **Stage（阶段）** —— Round 内的预选/正赛等阶段，自身有时间窗口与成绩子状态（4.3.3）。
+- **Competition（赛事）= 当前站状态** —— 按 `round_number` 顺序取**第一个尚未进入终态（Completed / ResultsLocked / Cancelled）的 Round**；若全部终结，则取最后一站。Competition 状态 = 该站的状态（**取代旧的优先级聚合**；列表筛选、首页待办均按此口径）。`Draft` / `Cancelled` 人工覆盖仍优先。
+
+### 4.3.2 Round 状态机
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Draft: 创建 Round
-    Draft --> Upcoming: 发布但报名未开放
-    Draft --> RegistrationOpen: 发布且报名已开放
+    [*] --> Draft: 创建赛事
+    Draft --> Upcoming: 发布（填好报名/赛程时间）
     Upcoming --> RegistrationOpen: 到达报名起始时间
-    RegistrationOpen --> RegistrationClosed: 到达报名截止时间<br/>或手动关闭报名
-    RegistrationOpen --> Cancelled: 管理员取消
-    RegistrationClosed --> StagePending: 等待首个 Stage 开始
-    StagePending --> InStage: Stage 进行中
-    InStage --> StageCompleted: Stage 结束并生成结果
-    StageCompleted --> InStage: 下一 Stage 开始
-    StageCompleted --> Completed: 最后 Stage 结束
-    Completed --> ResultsPublished: 成绩/晋级名单发布
+    RegistrationOpen --> RegistrationClosed: 到达报名截止时间 / 管理员提前结束报名
+    RegistrationClosed --> RegistrationOpen: 管理员延后报名截止时间（回退）
+    RegistrationClosed --> InProgress: 首个 Stage 开赛
+    InProgress --> Completed: 最后一个 Stage 结束，仍有未锁定成绩（公示中）
+    Completed --> ResultsLocked: 该 Round 所有成绩已锁定
+    ResultsLocked --> [*]
+    Draft --> Cancelled
+    Upcoming --> Cancelled
+    RegistrationOpen --> Cancelled
+    RegistrationClosed --> Cancelled
+    InProgress --> Cancelled
+    Cancelled --> [*]
 ```
 
-| 状态 | 说明 | 可执行操作 |
-|------|------|-----------|
-| **Draft（草稿）** | Competition/Round/Stage 已创建但未发布 | 编辑、删除、发布 |
-| **Upcoming（未来）** | 已发布但报名未开放 | 编辑报名起始时间、取消 |
-| **RegistrationOpen（报名中）** | Round 开放报名 | 关闭报名、取消 |
-| **RegistrationClosed（报名截止）** | 报名已截止，等待 Stage 开始 | 取消、修改服务器信息 |
-| **StagePending（等待阶段开始）** | Round 已报名截止，但首个 Stage 尚未开始 | 修改服务器信息、发布补充说明 |
-| **InStage（阶段进行中）** | 某个 Stage 正在进行，如预选赛服务器开放中 | 展示当前 Stage、榜单或直播 |
-| **StageCompleted（阶段结束）** | 某个 Stage 已结束，但 Round 未完成 | 录入/复核结果、生成晋级名单 |
-| **Completed（已结束）** | Round 的最后 Stage 已结束 | 录入成绩 |
-| **ResultsPublished（成绩已发布）** | 成绩、积分或晋级名单已发布 | 修改成绩（需记录变更日志） |
-| **Cancelled（已取消）** | Competition/Round/Stage 被取消 | 无 |
+| 流转 | 触发 |
+|------|------|
+| Draft → Upcoming | 赛事发布且当前时间 < 报名开始 |
+| Upcoming → RegistrationOpen | 到达报名起始时间 |
+| RegistrationOpen → RegistrationClosed | 到达报名截止时间，或管理员**提前结束报名** |
+| RegistrationClosed → RegistrationOpen | 管理员**延后报名截止时间 / 重开报名**（回退） |
+| RegistrationClosed → InProgress | 任一 Stage 进入其时间窗口 |
+| InProgress → Completed | 最后一个 Stage 结束，存在"已出成绩但未锁定（公示中）" |
+| Completed → ResultsLocked | 该 Round 所有成绩已锁定 |
+| 任意 → Cancelled | 管理员取消（开赛前可撤销恢复） |
 
-**聚合规则**：
+### 4.3.3 Stage 成绩子状态：公示 → 锁定
 
-- Competition 状态由其所有 Round 聚合：存在报名中 Round 则显示"报名中"；存在当前进行 Stage 则显示"进行中"；全部 Round 完成则显示"已结束"。
-- Round 状态由报名窗口与 Stage 状态决定。
-- Stage 状态由 Stage 时间窗口和 Split 成绩决定。
+成绩生命周期挂在 Stage 上，分两段（取代旧的"录入 → 发布才可见"）：
+
+| 阶段 | 含义 | 可见 | 可改成绩 | 可申诉 | 积分 |
+|------|------|:---:|:---:|:---:|------|
+| **无成绩** | Stage 未结束或未上报 | — | — | — | — |
+| **公示中** | Stage 结束 / 服务器上报后，成绩**立即对用户展示**；进入复核 + 申诉窗口 | ✅ 立即 | ✅ 管理员 | ✅ 选手 | 未计入 |
+| **锁定** | 管理员锁定，或公示窗口到期自动锁定 | ✅ | 🔒 | 🔒 | **发放并计入榜单** |
+
+- **展示不需要"发布"动作**：服务器成绩一产生即对用户可见；管理员的关键动作是**锁定**。
+- **公示窗口可配**：时长为每赛事配置项 `result_lock_window_hours`（默认 24h）；窗口到期**自动锁定**，管理员也可**提前锁定**。
+- **锁定以整个 Stage 为单位**一次完成（该 Stage 所有 Split 同时锁定，无逐 Split 部分锁定）。
+- 锁定后**冻结成绩与统计口径、停止申诉、发放积分**；**仅已锁定的成绩计入积分榜**。
+- 多 Round 锦标赛：**下一 Round 仍为自由报名**，不依据上一 Round 成绩定资格；`previousStageResult` 资格来源仅在**同一 Round 内 Stage 之间**（如预选→正赛）生效，且以**已锁定成绩**为依据。
+
+### 4.3.4 各状态可执行操作（选手 / 管理员）
+
+| 状态 | 选手 | 管理员 |
+|------|------|--------|
+| **Draft 草稿** | 不可见 | 编辑全部、删除、发布 |
+| **Upcoming 已发布·报名未开放** | 浏览详情/规则/赛程 | 编辑配置、提前开放报名、取消 |
+| **RegistrationOpen 报名中** | **报名**（自动通过）、截止前自助取消、满员加入候补 | 移除/转候补个别车手、提前结束报名、取消；身份/规则已锁 |
+| **RegistrationClosed 报名截止** | 查看最终名单/分组、不可再自助报名 | **分组+应用名单**、开服、延后报名回退、缺额补位；资格来源已锁 |
+| **InProgress 进行中** | 参赛、看实时成绩、赛后窗口提交抗议 | 监控/启停服务器、Stage 结束后修正成绩、判罚；开始时间锁、结束时间可调 |
+| **Completed 成绩公示中** | **立即看成绩**、公示窗口内提交抗议/申诉 | 修正成绩、判罚、**锁定成绩**（可提前） |
+| **ResultsLocked 成绩已锁定** | 看最终成绩/名次/积分构成；不可再申诉 | 算下一 Stage 名单（晋级）；改已锁定成绩需"撤销锁定→修正→重锁定"+留痕+通知 |
+| **Cancelled 已取消** | 看取消通知与原因 | 开赛前可撤销恢复 |
+
+### 4.3.5 字段编辑锁（硬拦截）
+
+**编辑锁为硬拦截**：被锁字段在该状态下禁用、提交即拒绝（非软提醒）。关键规则：
+
+- **身份/规则**（游戏、车型组、赛区、积分表、准入门槛、`result_lock_window_hours` 等）：**报名一开放即锁定**，此后不可改。
+- **人数上限 / 容量**：报名开放后可改，但**不得低于当前已报名人数**。
+- **参赛资格来源**（eligibility_source）：**报名截止起锁定**。
+- **Stage 起止时间**：Stage 进行中**开始时间锁定、结束时间可调**；已结束阶段锁定。
+- **服务器配置 / 参赛名单**：对应 Stage 已开服 / 已开赛后锁定。
+- **成绩与统计口径**：公示中可改，**锁定后锁死**。
+- **报名时间**：报名截止后仍可延后以回退到"报名开放"。
+- 完整字段 × 状态矩阵见配套文档《赛事状态流转设计》§4。
+
+### 4.3.6 人工状态覆盖
+
+默认由时间 + 成绩推导，管理员可额外**手动覆盖**以下报名阶段状态（均留痕）：
+
+| 覆盖 | 作用 |
+|------|------|
+| 草稿 / 取消（恢复） | 保持未发布 / 终止赛事（开赛前可恢复） |
+| **提前结束报名** | 未到截止也立即关闭报名 → RegistrationClosed |
+| **重新开放 / 延长报名** | 已截止后重新开放 → RegistrationOpen |
+
+> 比赛/成绩阶段（进行中/公示/锁定）**不设强制跳转**——管理员通过调整 Stage 时间或"提前锁定"动作控制，而非直接改状态。
 
 ## 4.4 赛事模板系统
 
@@ -967,34 +1023,29 @@ stateDiagram-v2
 
 ### 4.5.1 功能概述
 
-当报名人数超过单个游戏服务器容量时，系统自动将参赛者分配到多个并行的游戏服务器（Split）中。每个 Split 独立进行比赛，对应一个服务器实例，维护独立的参赛名单（Entry List）和成绩。
+当报名人数较多、需要多个并行游戏服务器（Split）时，管理员在**报名截止后**根据实际报名人数决定分几个服务器，并把报名**尽量均分**到各 Split。每个 Split 独立进行比赛，对应一个服务器实例，维护独立的参赛名单（Entry List）和成绩。
 
-> **配置层级**：多 Split 配置位于 **Stage 层级**（`enable_multi_split`、`max_entries_per_split`、`max_splits`、`split_assignment_rule`，见 4.1.6），而非 Competition 层级。每个 Stage 可独立决定是否启用多 Split 及其参数。
+> **配置层级**：服务器（Split）数量**不在 Stage 预设**，而是在报名截止后于报名页确定（见 4.5.4）。Stage 层级仅保留 `split_assignment_rule`（默认分组方式）与 `min_entries`（开赛下限），不再有 `max_splits` / `max_entries_per_split` / `enable_multi_split` 及"总容量"概念。
 
 ### 4.5.2 配置项
 
-> 以下配置项为 Stage 级字段，在 Stage 编辑界面和"会话与服务器配置"弹窗中设置。
+> 以下为 Stage 级字段，在 Stage 编辑界面和"会话与服务器配置"弹窗中设置。
 
 | 配置项 | 类型 | 说明 |
 |--------|------|------|
-| 启用多 Split | Boolean | 开关，是否启用自动多 Split |
-| 单 Split 最大人数 | Integer | 每个服务器容纳的最大车手数，取决于游戏和赛道 |
-| 最大 Split 数 | Integer | 服务器资源上限。总报名容量 = 最大 Split 数 × 单 Split 最大人数。报名人数达到总容量后拒绝新报名。为空表示不限制 |
-| 默认分组方式 | Enum | `time`（按报名时间）/ `random`（随机）/ `skill`（按水平，即将推出）。仅作为报名页分组时的**默认值**，实际分组在报名截止后于报名页执行（见 4.5.4） |
-| 各 Split 时间安排 | Option | 同时并行 / 错开时间 |
+| 默认分组方式 `split_assignment_rule` | Enum | `time`（按报名时间）/ `random`（随机）/ `skill`（按水平，即将推出）。仅作为报名页分组时的**默认值**，实际分组在报名截止后于报名页执行（见 4.5.4） |
+| 开赛下限 `min_entries` | Integer | 最低开赛人数；报名截止人数低于此值时报名页提示，亦作为分组时"每组人数过少"的下限 |
 
 > **Entry List（参赛名单）**：每个 Split 维护独立的 `entry_list`（EntryListEntry[]），可从 Round 报名名单自动生成（自动填充车手姓名、车队、赛车号），也支持手动添加/编辑/删除。自动生成时会弹出确认提示。详见 4.1.6 EntryListEntry 和 4.1.8。
 
-### 4.5.3 报名容量控制
+### 4.5.3 报名总量控制
 
-启用多 Split 时，报名人数上限为：
+报名总量由 **Round 级 `max_registrations`** 控制（仅用于限制报名过多，不做 Stage 容量校验）：
 
-> **总容量 = max_splits × max_entries_per_split**
-
-- 若未设置 max_splits（为空），则不限制报名人数，Split 数量随报名人数自动扩展
-- 若设置了 max_splits，报名人数达到总容量后，新用户无法报名，报名按钮变为"名额已满"
-- 报名页面实时显示："当前已报名 X / Y 人（Z 个服务器）"
-- 车手取消报名后释放名额，后续候补或新用户可继续报名
+- 为空表示不限制报名人数
+- 达到 `max_registrations` 后，新用户无法报名（报名按钮显示"名额已满"），可加入候补
+- 车手取消报名后释放名额，候补或新用户可继续报名
+- 报名页实时显示："当前已报名 X 人"；分组后显示 "N 个服务器，每组约 ⌊X/N⌋ 人"
 
 ### 4.5.4 Split 分组流程
 
@@ -1004,30 +1055,31 @@ stateDiagram-v2
 flowchart TD
     A[报名截止] --> B[管理员进入报名管理下钻页]
     B --> C[查看报名名单（已自动通过；可移除个别人或转候补）]
-    C --> D[查看分组面板：已报名人数 / 总容量 / 每组人数预览]
-    D --> E{是否需要调整组数?}
-    E -->|否| F[沿用赛事编辑中的 Split 配置]
-    E -->|是| G[填写组数 + 选择分配方式]
+    C --> D[查看分组面板：已报名人数 / 组数 / 每组人数预览]
+    D --> E{设定服务器数 N?}
+    E -->|沿用当前 1 组| F[单服务器，全部报名进 1 组]
+    E -->|按实际人数设定 N| G[填写组数 + 选择分配方式]
     G --> H{分配方式}
     H -->|按报名时间| H1[按提交时间顺序均分到各组]
     H -->|随机| H2[随机打乱后均分到各组]
     H -->|按水平（即将推出）| H3[排名机制完成后按实力蛇形均分]
-    F & H1 & H2 & H3 --> I[均分分组：组间人数差 ≤ 1，写入各车手 split 编号]
-    I --> J{容量校验}
-    J -->|超过总容量 或 每组人数低于下限| K[强提示管理员重新设定组数]
+    F & H1 & H2 & H3 --> I[创建 N 个 Split 并均分：组间人数差 ≤ 1，写入各车手 split 编号]
+    I --> J{每组人数校验}
+    J -->|低于 min_entries 下限| K[强提示建议减少组数]
     J -->|通过| L[应用到参赛名单 entry_list]
     L --> M[通知车手分组信息]
 ```
 
 - **均分**：N 组 M 人时，前 `M%N` 组各 `⌈M/N⌉` 人、其余各 `⌊M/N⌋` 人，保证组间人数差 ≤ 1
+- **服务器数 N** 在报名截止后由管理员决定（无预设上限/容量）；填写 N 后系统创建 N 个 Split 并均分
 - **分配方式**：`按报名时间`（默认，保留报名顺序）、`随机`；`按水平` 待排名（ranking）机制完成后再开放（蛇形均分各组实力）
-- **强提示场景**：① 报名通过人数 > 总容量（max_splits × max_entries_per_split）；② 按当前组数均分后每组人数低于 `min_entries`
-- 默认分配方式取自 Stage 的 `split_assignment_rule`；管理员调整组数会回写 Stage 的 `max_splits` / `enable_multi_split`
+- **强提示场景**：按当前组数均分后每组人数低于 `min_entries`，建议减少组数
+- 默认分配方式取自 Stage 的 `split_assignment_rule`
 - 仅对「资格来源 = 分站报名」的 Stage 分组；晋级类 Stage（上一阶段成绩）不参与报名分组
 
 ### 4.5.5 Split 信息展示
 
-- 报名页面实时显示："当前已报名 X / Y 人（Z 个服务器）"，其中 Y = max_splits × max_entries_per_split
+- 报名页面实时显示："当前已报名 X 人（N 个服务器，每组约 ⌊X/N⌋ 人）"
 - 分组公布后，车手在赛事详情页看到自己所在的 Split 编号
 - 每个 Split 独立展示：参赛名单、服务器信息、比赛时间、成绩
 
@@ -1035,16 +1087,15 @@ flowchart TD
 
 | 边缘情况 | 处理方案 |
 |---------|---------|
-| 报名人数刚超过总容量（如上限 60，报了 61 人） | 报名页分组面板**强提示**管理员重新设定组数或每组容量（超容量警告），再执行均分 |
+| 报名截止人数低于开赛下限（`min_entries`） | 报名页**强提示**人数不足，建议重开报名（回退报名开放）或下调下限 |
 | 按当前组数均分后每组人数过少 | 报名页**强提示**（低于 `min_entries` 下限），建议减少组数 |
 | 车手临时退赛导致某 Split 人数骤减 | 管理员可在报名页重新选组数并再次「均分分组」，重算各组 |
 | 按水平分组（尚未上线） | 排名（ranking）机制完成后再开放，按实力蛇形均分；当前仅支持按报名时间 / 随机 |
 | 锦标赛不同赛事分组可能变化 | 每场赛事独立重新分组 |
 | 并行 Split 成绩如何统一排名 | 由管理员在赛制规则中说明（各 Split 独立积分 / 按 Split 系数折算等），平台不做强制约束 |
-| 管理员在报名进行中修改 Split 配置 | 系统弹出确认提示"修改将影响已报名车手的分组，是否继续？"，修改后需要重新计算预计 Split 数。若缩小 max_splits 导致总容量低于当前已报名人数，不允许修改 |
-| 自选 Split 模式下某 Split 已满 | 该 Split 不再可选，车手只能选择未满的 Split |
-| 未设置 max_splits（为空） | 不限制报名人数，Split 数量无上限，随报名人数自动扩展 |
-| max_splits = 1 且报名已满 | 等同于未启用多 Split 的人数上限，报名按钮显示"名额已满" |
+| Stage 开赛后再调整分组 | 一旦 Stage 开赛，分组与名单应用即**硬锁定**（见 4.x 锁矩阵），不可再均分/应用 |
+| 未设置 `max_registrations`（为空） | 不限制报名总量；服务器数量仍由报名截止后人工决定 |
+| 报名达到 `max_registrations` | 新用户无法报名（报名按钮显示"名额已满"），可加入候补 |
 
 ## 4.6 赛事准入门槛
 
@@ -1455,11 +1506,13 @@ flowchart TD
 
     D --> G
     G --> H[管理员确认/编辑]
-    H --> I[保存为草稿]
-    I --> J{确认发布?}
-    J -->|是| K[发布成绩<br/>更新积分榜]
-    J -->|否| I
+    H --> I[成绩立即公示给用户<br/>进入复核/申诉窗口]
+    I --> J{锁定?}
+    J -->|窗口内需修正/判罚| H
+    J -->|窗口到期自动 或 管理员提前锁定| K[整 Stage 锁定<br/>冻结成绩 + 发放积分]
 ```
+
+> 服务器成绩一上报即对用户**公示**，无需"发布"动作；管理员的关键动作是**锁定**。详见 4.3.3。
 
 ### 6.1.3 成绩数据字段
 
@@ -1483,17 +1536,16 @@ flowchart TD
 
 - 按锦标赛维度展示积分排名，作为**独立积分榜页面**呈现（成绩列表页 / 单赛事成绩页均有入口）
 - 积分规则由管理员在锦标赛配置中以自定义文字和/或结构化积分表格描述
-- **计分范围**：仅计入 `awards_points = true` 的 Stage，且只取该 Stage 的 race session 成绩（多 Split 自动汇总）；非计分 Stage 的成绩照常展示但不进榜
+- **计分范围**：仅计入**已锁定**且 `awards_points = true` 的 Stage，且只取该 Stage 的 race session 成绩（多 Split 自动汇总）；公示中（未锁定）成绩照常展示但**不计积分**，非计分 Stage 同样不进榜
 - 积分榜含**车手榜 / 车队榜**两个 Tab
 - 车手榜每行可展开「积分构成」：逐场列出 **分站 / 阶段 · 名次 · 该场最快圈速 · 得分**（不再展示胜场、领奖台次数）
 - 管理员可手动输入每位车手在每场的成绩与积分（成绩录入页）
 
-### 6.2.2 人工管理晋级
+### 6.2.2 晋级与跨 Round 资格
 
-- 晋级/淘汰由运营团队完全人工管理
-- 管理员可手动标记哪些车手晋级到下一轮
-- 锦标赛中各赛事之间的参赛名单由管理员手动配置
-- 平台展示晋级结果，不做晋级逻辑的自动计算
+- **Round 内（Stage 之间）**：当 Stage 的参赛资格来源为"上一阶段成绩"时，系统**据已锁定成绩 + 资格规则（名次 / 积分 / 圈速倍率）计算晋级名单**写入下一 Stage（如预选→正赛）；管理员可在此基础上微调。
+- **跨 Round**：当前**不支持**按上一 Round 成绩决定下一 Round 资格——每个 Round 独立开放**自由报名**。
+- 晋级计算的前置条件是上一 Stage 成绩**已锁定**；未锁定不可晋级。
 
 ## 6.3 排行榜
 
@@ -1525,7 +1577,7 @@ flowchart TD
 |---------|---------|
 | 成绩导入文件格式错误 | 系统校验文件结构，返回具体的字段错误提示，管理员可修正后重新上传 |
 | 成绩中包含未报名车手 | 系统标记异常，管理员确认后可将其标记为"外卡选手"或移除 |
-| 成绩发布后需要修正 | 管理员可编辑已发布成绩，但所有修改记录变更日志（谁、何时、修改了什么） |
+| 成绩**锁定后**需要修正 | 须"撤销锁定 → 修正 → 重新锁定"，全程记录变更日志（谁、何时、改了什么）并通知受影响车手；公示中（未锁定）则可直接修正 |
 | 积分规则导致平分 | 由管理员在赛制规则中定义 Tie-breaker 规则，管理员手动调整排名 |
 | 车手对成绩有异议 | 通过抗议系统（第7章）提交，管理员审核后可修正成绩并重算积分 |
 
@@ -1574,28 +1626,28 @@ flowchart TD
 | created_at | DateTime | 提交时间 |
 | deadline | DateTime | 抗议截止时间（如赛后 48 小时内） |
 
-### 7.1.3 抗议时间窗口
+### 7.1.3 抗议/申诉时间窗口
 
-- 车手只能在赛后规定时间内（如 48 小时，管理员可配置）提交抗议
-- 超时后抗议入口关闭
+- 抗议与申诉只能在该 Stage 成绩的**公示窗口内（锁定前）**提交；窗口时长由赛事配置 `result_lock_window_hours` 决定（默认 24h，管理员可提前锁定）。
+- 该 Stage 成绩**锁定后**，抗议/申诉入口关闭，成绩与处罚不再变更（如需变更须先撤销锁定，见 4.3.3）。
 
 ## 7.2 处罚管理
 
 ### 7.2.1 处罚类型
 
+赛事内判罚仅针对**该场成绩**，简化为三类：
+
 | 处罚类型 | 说明 | 效果 |
 |---------|------|------|
-| **警告** | 轻微违规的书面警告 | 记录在案 |
-| **罚时** | 对该场比赛成绩加罚时间 | 成绩名次可能下调 |
-| **名次下调** | 在该场比赛中降低若干名次 | 成绩修改 |
-| **取消该场成绩** | 取消该场比赛的成绩 | 该场无积分 |
-| **取消锦标赛资格** | 取消整个锦标赛的参赛资格 | 所有赛事成绩作废 |
-| **禁赛（按场次）** | 禁止参加接下来 N 场赛事 | 无法报名指定数量的赛事 |
-| **禁赛（按时长）** | 禁止参赛一段时间 | 无法报名期间的赛事 |
+| **警告** | 轻微违规的书面警告 | 记录在案，不改成绩 |
+| **罚时** | 对该场比赛成绩加罚时间 | 按罚时重排名次、按积分表重算积分 |
+| **取消该场成绩（DSQ）** | 取消该车手该场比赛成绩 | 该场无积分 |
+
+> **用户封禁/禁赛**（警告、临时封禁、永久封禁、赛事禁赛）属于**用户管理**范畴，见 3.4「封禁与禁赛体系」，不在赛事判罚内。
 
 ### 7.2.2 管理员裁决流程
 
-判罚通过**独立判罚弹窗**完成：选择判罚类型（罚时 / 取消成绩 DSQ / 名次下调 / 扣分 / 警告）、填写罚时秒数或名次/扣分数、填写判罚原因。该弹窗在两处复用：
+判罚通过**独立判罚弹窗**完成：选择判罚类型（罚时 / 取消成绩 DSQ / 警告）、填写罚时秒数、填写判罚原因。该弹窗在两处复用：
 
 - **成绩录入页**：每条成绩行的「判罚」按钮 → 直接对该车手该 Session 成绩判罚
 - **抗议详情页**：裁决"确认违规"时打开同一弹窗，判罚结果回填到抗议裁决记录
@@ -1609,7 +1661,7 @@ flowchart TD
    - 确认违规 → 打开判罚弹窗，选择处罚类型与程度并填写原因
 4. 确认判罚
 5. 系统自动：
-   - 应用判罚并**重算名次与积分**（罚时/名次按积分表重算）
+   - 应用判罚并**重算名次与积分**（罚时按积分表重排重算）
    - **写入判罚留痕**（审计日志，记录字段变更、原因、操作人、时间，并关联抗议 ID），在成绩录入页底部「修订历史」展示
    - 更新抗议状态，回填判罚明细到裁决记录
    - 如有禁赛：更新用户状态
@@ -1617,7 +1669,7 @@ flowchart TD
 
 ### 7.2.3 申诉流程
 
-被处罚的车手可在裁决通知后规定时间内（如 24 小时）提出申诉：
+被处罚的车手可在该 Stage 成绩的**公示窗口内（锁定前）**提出申诉（窗口见 7.1.3）：
 
 1. 车手在通知详情中点击"提出申诉"
 2. 填写申诉理由和补充证据
@@ -2174,5 +2226,16 @@ Pit House 是 MOZA 设备调节软件，用户在赛车过程中通常保持开�
 > - **Split 是 Stage 的横向并行维度**：Split 数量在 Stage 层级设定（`max_splits`）；一份共享开赛参数（`game_config`）+ Session 时序模板（`Stage.sessions`）分发给该 Stage 下所有 Split，各 Split 仅在服务器参数与 Entry List 上独立。
 > - **成绩聚合链路**：Session → Split → Stage → Round → Competition。先按 Session 在 Split 间合并，再聚合到 Stage，由此可分别得到排位榜、正赛成绩、分站成绩与年度积分。
 > - **涉及调整**：4.1.3（分层模型重写）、4.1.6（Stage/splits 字段说明）、4.1.7（Session 重写为成绩颗粒度）、4.1.8（配置归属）、4.1.9（成绩归属表）。注：v3.3 中"Session 不再独立""成绩绑定 Stage.splits[].results"的结论被本版本修正。
+
+> **v3.5 变更摘要**（状态流转细化 + 判罚/分组/锁定模型修订）：
+> - **成绩生命周期 公示 → 锁定**：服务器上报后成绩即对用户可见（公示中，可改/可申诉）；管理员锁定或到计划锁定时间后冻结（锁定，停申诉、发积分）。命名落地为 `results_locked_at` / `lockStageResults` / Round 状态 `ResultsLocked`。锁定以整个 Stage 为单位。详见 4.3.3。
+> - **Stage 计划锁定时间**：新增 `Stage.results_lock_at`，默认 = `ends_at` + `result_lock_window_hours`（默认 24h，可配），到点自动锁定；管理员亦可手动提前锁定。
+> - **Round 状态跟随最新 Stage**：多 Stage 时 Round 状态取最新（已开赛）Stage 的状态（含派生锁定）；报名阶段按时间 + `registration_override`（forceOpen/forceClosed）推导。Competition 聚合 = 当前站。
+> - **判罚简化为三类**：警告 / 罚时 / 取消该场成绩（DSQ）。删除名次下调、扣分；用户封禁/禁赛归入用户管理（3.4），不在赛事判罚内。详见 7.2.1。
+> - **分组模型重构**：删除 `max_splits` / `max_entries_per_split` / `enable_multi_split` 与"总容量"概念。服务器（Split）数量在**报名截止后于报名页按实际人数确定并均分**；`max_registrations` 仅限制报名总量，不做 Stage 容量校验。Stage 仅保留 `min_entries` 与 `split_assignment_rule`。详见 4.5.4。
+> - **报名人数不足提示**：报名截止时若通过人数低于 `min_entries`，报名页强提示。
+> - **CompetitionRuleset 修订**：移除 `weather` / `has_pitstop` / `min_entries` / `result_lock_window_hours`（`result_lock_window_hours` 改为 Competition 级字段；`min_entries` 在 Stage 层；天气由 `game_config` 表达）。
+> - **Round 模型修订**：`stage_ids` → 内嵌 `stages`；移除未实现的 `rule_overrides`；新增 `registration_override`。
+> - **硬编辑锁矩阵**：身份/规则（报名开放即锁）、参赛资格来源（报名截止锁）、报名时间与人数上限（Stage 开赛锁）、服务器配置（已开服/Stage 结束锁）、参赛名单（Stage 开赛锁）、Stage 开始时间（开赛锁）、成绩（锁定后锁）、删除（仅 Draft）、取消（成绩公示/锁定后禁）。均为字段禁用 + 提交拒绝的硬拦截。详见《赛事状态流转设计》§4。
 
 > **文档结束**

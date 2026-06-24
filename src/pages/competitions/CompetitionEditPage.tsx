@@ -19,6 +19,7 @@ import { cn, getCompetitionStatus, getRoundStatus } from '@/lib/utils'
 import { ImageUpload } from '@/components/ui/ImageUpload'
 import { ServerConfigModal } from './ServerConfigModal'
 import { isoToLocalInput, localInputToIso, tzSelectOptions, tzShortLabel } from '@/lib/timezone'
+import { canEditIdentity, canEditEligibility, isStageStarted, canEditRegistrationWindow, isServerConfigLocked } from '@/lib/guards'
 
 type TabKey = 'info' | 'rounds'
 
@@ -41,6 +42,7 @@ export function CompetitionEditPage() {
 
   if (!foundComp) return <div className="text-center py-12 text-gray-500">Competition not found</div>
   const comp = localComp ?? foundComp
+  const identityLocked = !canEditIdentity(comp)
 
   const setLocal = (updater: (prev: Competition) => Competition) => {
     setLocalComp(prev => updater(prev ?? foundComp))
@@ -151,14 +153,20 @@ export function CompetitionEditPage() {
 
       {tab === 'info' && (
         <div className="max-w-5xl mx-auto p-6 space-y-6">
+          {identityLocked && (
+            <div className="rounded-md bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm text-amber-700">
+              {t('event.identityLockedHint')}
+            </div>
+          )}
           <Card>
             <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionBasicInfo')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input label={`${t('competition.competitionName')} (${editLang === 'en' ? 'EN' : '中文'})`} value={editLang === 'en' ? comp.name_en : comp.name_zh} onChange={(e) => setLocal(prev => ({ ...prev, ...(editLang === 'en' ? { name_en: e.target.value } : { name_zh: e.target.value }) }))} />
-              <Select label={t('event.game')} options={gameOptions} value={comp.game} onChange={(e) => setLocal(prev => ({ ...prev, game: e.target.value as GamePlatform }))} />
-              <Select label={t('event.carClass')} options={carClassOptions.length > 0 ? carClassOptions : [{ value: '', label: '' }]} value={comp.carClass} onChange={(e) => setLocal(prev => ({ ...prev, carClass: e.target.value }))} />
+              <Select label={t('event.game')} options={gameOptions} value={comp.game} disabled={identityLocked} onChange={(e) => setLocal(prev => ({ ...prev, game: e.target.value as GamePlatform }))} />
+              <Select label={t('event.carClass')} options={carClassOptions.length > 0 ? carClassOptions : [{ value: '', label: '' }]} value={comp.carClass} disabled={identityLocked} onChange={(e) => setLocal(prev => ({ ...prev, carClass: e.target.value }))} />
               <Select label={t('event.timezone')} options={tzSelectOptions(lang)} value={comp.timezone ?? 'UTC+8'} onChange={(e) => setLocal(prev => ({ ...prev, timezone: e.target.value }))} />
-              <Input label={t('event.carList')} placeholder={t('event.carListPlaceholder')} value={comp.carList?.join(', ') || ''} onChange={(e) => setLocal(prev => ({ ...prev, carList: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))} />
+              <Input label={t('event.resultLockWindow')} type="number" min={0} disabled={identityLocked} value={String(comp.resultLockWindowHours ?? 24)} onChange={(e) => setLocal(prev => ({ ...prev, resultLockWindowHours: e.target.value ? Number(e.target.value) : undefined }))} />
+              <Input label={t('event.carList')} placeholder={t('event.carListPlaceholder')} disabled={identityLocked} value={comp.carList?.join(', ') || ''} onChange={(e) => setLocal(prev => ({ ...prev, carList: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))} />
               <Input label={t('event.streamUrl')} value={comp.defaultRuleset.streamUrl || ''} onChange={(e) => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, streamUrl: e.target.value } }))} />
               <div className="md:col-span-2 max-w-sm">
                 <ImageUpload label={t('event.coverImage')} value={comp.coverImage || ''} onChange={(v) => setLocal(prev => ({ ...prev, coverImage: v }))} />
@@ -176,9 +184,10 @@ export function CompetitionEditPage() {
                 <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
+                    disabled={identityLocked}
                     checked={comp.regions.includes(opt.value as Region)}
                     onChange={() => setLocal(prev => ({ ...prev, regions: prev.regions.includes(opt.value as Region) ? prev.regions.filter(r => r !== opt.value) : [...prev.regions, opt.value as Region] }))}
-                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
                   />
                   <span className="text-sm text-gray-700">{opt.label}</span>
                 </label>
@@ -189,7 +198,7 @@ export function CompetitionEditPage() {
           <Card>
             <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionRules')}</h3>
             <div className="space-y-4">
-              <Textarea label={`${t('event.accessRequirements')} (${editLang === 'en' ? 'EN' : '中文'})`} value={editLang === 'en' ? comp.defaultRuleset.accessRequirements_en || '' : comp.defaultRuleset.accessRequirements_zh || ''} onChange={(e) => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, ...(editLang === 'en' ? { accessRequirements_en: e.target.value } : { accessRequirements_zh: e.target.value }) } }))} />
+              <Textarea label={`${t('event.accessRequirements')} (${editLang === 'en' ? 'EN' : '中文'})`} disabled={identityLocked} value={editLang === 'en' ? comp.defaultRuleset.accessRequirements_en || '' : comp.defaultRuleset.accessRequirements_zh || ''} onChange={(e) => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, ...(editLang === 'en' ? { accessRequirements_en: e.target.value } : { accessRequirements_zh: e.target.value }) } }))} />
             </div>
           </Card>
 
@@ -212,13 +221,13 @@ export function CompetitionEditPage() {
                         <input type="number" className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm" value={row.position} readOnly />
                       </td>
                       <td className="py-2 pr-3">
-                        <input type="number" className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm" value={row.points} onChange={(e) => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, scoringTable: (prev.defaultRuleset.scoringTable || []).map((r, i) => i === idx ? { ...r, points: Number(e.target.value) } : r) } }))} />
+                        <input type="number" disabled={identityLocked} className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm disabled:bg-gray-50" value={row.points} onChange={(e) => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, scoringTable: (prev.defaultRuleset.scoringTable || []).map((r, i) => i === idx ? { ...r, points: Number(e.target.value) } : r) } }))} />
                       </td>
                       <td className="py-2 pr-3">
-                        <input type="text" className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm" value={editLang === 'en' ? (row.note_en || '') : (row.note_zh || '')} onChange={(e) => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, scoringTable: (prev.defaultRuleset.scoringTable || []).map((r, i) => i === idx ? { ...r, ...(editLang === 'en' ? { note_en: e.target.value } : { note_zh: e.target.value }) } : r) } }))} />
+                        <input type="text" disabled={identityLocked} className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm disabled:bg-gray-50" value={editLang === 'en' ? (row.note_en || '') : (row.note_zh || '')} onChange={(e) => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, scoringTable: (prev.defaultRuleset.scoringTable || []).map((r, i) => i === idx ? { ...r, ...(editLang === 'en' ? { note_en: e.target.value } : { note_zh: e.target.value }) } : r) } }))} />
                       </td>
                       <td className="py-2">
-                        <button className="text-red-500 hover:text-red-700" onClick={() => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, scoringTable: (prev.defaultRuleset.scoringTable || []).filter((_, i) => i !== idx).map((r, i) => ({ ...r, position: i + 1 })) } }))}>
+                        <button disabled={identityLocked} className="text-red-500 hover:text-red-700 disabled:opacity-30" onClick={() => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, scoringTable: (prev.defaultRuleset.scoringTable || []).filter((_, i) => i !== idx).map((r, i) => ({ ...r, position: i + 1 })) } }))}>
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
@@ -233,12 +242,13 @@ export function CompetitionEditPage() {
             <div className="mt-3">
               <Textarea
                 label={`${t('event.scoringNote')} (${editLang === 'en' ? 'EN' : '中文'})`}
+                disabled={identityLocked}
                 value={editLang === 'en' ? comp.defaultRuleset.scoringNote_en || '' : comp.defaultRuleset.scoringNote_zh || ''}
                 onChange={(e) => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, ...(editLang === 'en' ? { scoringNote_en: e.target.value } : { scoringNote_zh: e.target.value }) } }))}
               />
             </div>
             <div className="mt-3">
-              <Button variant="secondary" size="sm" onClick={() => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, scoringTable: [...(prev.defaultRuleset.scoringTable || []), { position: (prev.defaultRuleset.scoringTable?.length || 0) + 1, points: 0, note_en: '', note_zh: '' }] } }))}>
+              <Button variant="secondary" size="sm" disabled={identityLocked} onClick={() => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, scoringTable: [...(prev.defaultRuleset.scoringTable || []), { position: (prev.defaultRuleset.scoringTable?.length || 0) + 1, points: 0, note_en: '', note_zh: '' }] } }))}>
                 <Plus className="w-4 h-4 mr-1" />
                 {t('event.addRow')}
               </Button>
@@ -270,6 +280,7 @@ export function CompetitionEditPage() {
             <RoundAccordion
               key={round.id}
               round={round}
+              comp={comp}
               roundIdx={roundIdx}
               isExpanded={expandedRoundId === round.id}
               expandedStageId={expandedStageId}
@@ -300,6 +311,7 @@ export function CompetitionEditPage() {
 
 function RoundAccordion({
   round,
+  comp,
   roundIdx,
   isExpanded,
   expandedStageId,
@@ -315,6 +327,7 @@ function RoundAccordion({
   onUpdateStage,
 }: {
   round: Round
+  comp: Competition
   roundIdx: number
   isExpanded: boolean
   expandedStageId: string | null
@@ -333,6 +346,7 @@ function RoundAccordion({
   const lang = useApp().state.language
   const getName = (e: { name_zh: string; name_en: string }) => lang === 'zh' ? e.name_zh : e.name_en
   const tzShort = tzShortLabel(timezone)
+  const regWindowLocked = !canEditRegistrationWindow(round)
 
   return (
     <Card padding={false}>
@@ -347,7 +361,7 @@ function RoundAccordion({
             <span className="text-sm font-medium text-gray-900 truncate">
               {getName(round)}
             </span>
-            <StatusBadge status={getRoundStatus(round)} label={t(`event.status.${getRoundStatus(round)}`)} />
+            <StatusBadge status={getRoundStatus(round, comp)} label={t(`event.status.${getRoundStatus(round, comp)}`)} />
           </div>
           <div className="text-xs text-gray-500 mt-0.5">
             {round.track || 'No track'}
@@ -367,11 +381,12 @@ function RoundAccordion({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4" key={editLang}>
             <Input label={`${t('competition.roundName')} (${editLang === 'en' ? 'EN' : '中文'})`} defaultValue={editLang === 'en' ? round.name_en : round.name_zh} onChange={(e) => onUpdate(editLang === 'en' ? { name_en: e.target.value } : { name_zh: e.target.value })} />
             <Input label={t('event.track')} defaultValue={round.track || ''} onChange={(e) => onUpdate({ track: e.target.value })} />
-            <Input label={`${t('event.registrationOpenAt')} (${tzShort})`} type="datetime-local" defaultValue={isoToLocalInput(round.registrationOpenAt, timezone)} onChange={(e) => onUpdate({ registrationOpenAt: e.target.value ? localInputToIso(e.target.value, timezone) : round.registrationOpenAt })} />
-            <Input label={`${t('event.registrationCloseAt')} (${tzShort})`} type="datetime-local" defaultValue={isoToLocalInput(round.registrationCloseAt, timezone)} onChange={(e) => onUpdate({ registrationCloseAt: e.target.value ? localInputToIso(e.target.value, timezone) : round.registrationCloseAt })} />
-            <Input label={`${t('event.cancelRegistrationDeadline')} (${tzShort})`} type="datetime-local" defaultValue={isoToLocalInput(round.cancelRegistrationDeadline, timezone)} onChange={(e) => onUpdate({ cancelRegistrationDeadline: e.target.value ? localInputToIso(e.target.value, timezone) : undefined })} />
-            <Input label={t('event.maxRegistrations')} type="number" min={0} defaultValue={round.maxRegistrations ?? ''} onChange={(e) => onUpdate({ maxRegistrations: e.target.value ? Number(e.target.value) : undefined })} />
+            <Input label={`${t('event.registrationOpenAt')} (${tzShort})`} type="datetime-local" disabled={regWindowLocked} defaultValue={isoToLocalInput(round.registrationOpenAt, timezone)} onChange={(e) => onUpdate({ registrationOpenAt: e.target.value ? localInputToIso(e.target.value, timezone) : round.registrationOpenAt })} />
+            <Input label={`${t('event.registrationCloseAt')} (${tzShort})`} type="datetime-local" disabled={regWindowLocked} defaultValue={isoToLocalInput(round.registrationCloseAt, timezone)} onChange={(e) => onUpdate({ registrationCloseAt: e.target.value ? localInputToIso(e.target.value, timezone) : round.registrationCloseAt })} />
+            <Input label={`${t('event.cancelRegistrationDeadline')} (${tzShort})`} type="datetime-local" disabled={regWindowLocked} defaultValue={isoToLocalInput(round.cancelRegistrationDeadline, timezone)} onChange={(e) => onUpdate({ cancelRegistrationDeadline: e.target.value ? localInputToIso(e.target.value, timezone) : undefined })} />
+            <Input label={t('event.maxRegistrations')} type="number" min={round.currentRegistrations || 0} disabled={regWindowLocked} defaultValue={round.maxRegistrations ?? ''} onChange={(e) => onUpdate({ maxRegistrations: e.target.value ? Math.max(round.currentRegistrations || 0, Number(e.target.value)) : undefined })} />
           </div>
+          {regWindowLocked && <p className="text-xs text-gray-400 -mt-1">{t('event.registrationWindowLockedHint')}</p>}
 
           <div className="max-w-sm">
             <ImageUpload label={t('event.coverImage')} defaultValue={round.coverImage || ''} aspectRatio="video" onChange={(v) => onUpdate({ coverImage: v })} />
@@ -410,6 +425,8 @@ function RoundAccordion({
                   registeredDriverIds={round.registeredDriverIds}
                   game={game}
                   timezone={timezone}
+                  lockWindowHours={comp.resultLockWindowHours ?? 24}
+                  eligibilityLocked={!canEditEligibility(round)}
                   onUpdate={(updated) => onUpdateStage(stage.id, updated)}
                   onDelete={() => onDeleteStage(stage.id)}
                 />
@@ -431,6 +448,8 @@ function StageAccordion({
   registeredDriverIds,
   game,
   timezone,
+  lockWindowHours,
+  eligibilityLocked,
   onUpdate,
   onDelete,
 }: {
@@ -442,28 +461,26 @@ function StageAccordion({
   registeredDriverIds: string[]
   game: GamePlatform
   timezone?: string
+  lockWindowHours: number
+  eligibilityLocked?: boolean
   onUpdate: (updated: Stage) => void
   onDelete: () => void
 }) {
   const { t } = useTranslation()
   const lang = useApp().state.language
   const tzShort = tzShortLabel(timezone)
+  const startLocked = isStageStarted(stage)
+  const serverConfigLocked = isServerConfigLocked(stage)
+  const lockAtIso = stage.resultsLockAt ?? new Date(new Date(stage.endsAt).getTime() + lockWindowHours * 3_600_000).toISOString()
   const splitRuleOptions = useManagedOptions('splitRule', lang)
   const eligibilityOptions = useManagedOptions('eligibilitySource', lang)
   const getName = (e: { name_zh: string; name_en: string }) => lang === 'zh' ? e.name_zh : e.name_en
   const [eligibility, setEligibility] = useState(stage.eligibilitySource || 'roundRegistration')
   const [advMetric, setAdvMetric] = useState(stage.advancementRule?.metric || 'lapTime')
   const [selectedDrivers, setSelectedDrivers] = useState<Set<string>>(new Set())
-  const [enableMultiSplit, setEnableMultiSplit] = useState(stage.enableMultiSplit || false)
-  const [maxSplits, setMaxSplits] = useState(stage.maxSplits || 2)
   const [showServerConfig, setShowServerConfig] = useState(false)
 
-  const splitCount = enableMultiSplit ? Math.max(1, maxSplits) : 1
-
-  const handleMultiSplitChange = (enabled: boolean) => {
-    setEnableMultiSplit(enabled)
-    onUpdate({ ...stage, enableMultiSplit: enabled })
-  }
+  const splitCount = Math.max(1, stage.splits.length)
 
   const handleSaveStage = (updated: Stage) => {
     onUpdate(updated)
@@ -510,8 +527,12 @@ function StageAccordion({
         <div className="px-4 pb-4 space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3">
             <Input label={`${t('competition.stageName')} (${editLang === 'en' ? 'EN' : '中文'})`} value={editLang === 'en' ? stage.name_en : stage.name_zh} onChange={(e) => onUpdate({ ...stage, ...(editLang === 'en' ? { name_en: e.target.value } : { name_zh: e.target.value }) })} />
-            <Input label={`${t('common.from')} (${tzShort})`} type="datetime-local" value={isoToLocalInput(stage.startsAt, timezone)} onChange={(e) => onUpdate({ ...stage, startsAt: e.target.value ? localInputToIso(e.target.value, timezone) : stage.startsAt })} />
+            <Input label={`${t('common.from')} (${tzShort})`} type="datetime-local" disabled={startLocked} value={isoToLocalInput(stage.startsAt, timezone)} onChange={(e) => onUpdate({ ...stage, startsAt: e.target.value ? localInputToIso(e.target.value, timezone) : stage.startsAt })} />
             <Input label={`${t('common.to')} (${tzShort})`} type="datetime-local" value={isoToLocalInput(stage.endsAt, timezone)} onChange={(e) => onUpdate({ ...stage, endsAt: e.target.value ? localInputToIso(e.target.value, timezone) : stage.endsAt })} />
+            <div>
+              <Input label={`${t('event.resultsLockAt')} (${tzShort})`} type="datetime-local" value={isoToLocalInput(lockAtIso, timezone)} onChange={(e) => onUpdate({ ...stage, resultsLockAt: e.target.value ? localInputToIso(e.target.value, timezone) : undefined })} />
+              <p className="text-xs text-gray-500 mt-1">{t('event.resultsLockAtHint', { hours: lockWindowHours })}</p>
+            </div>
           </div>
 
           <Textarea label={`${t('common.description')} (${editLang === 'en' ? 'EN' : '中文'})`} value={editLang === 'en' ? stage.description_en || '' : stage.description_zh || ''} onChange={(e) => onUpdate({ ...stage, ...(editLang === 'en' ? { description_en: e.target.value } : { description_zh: e.target.value }) })} />
@@ -521,6 +542,7 @@ function StageAccordion({
               label={t('competition.eligibilitySource')}
               options={eligibilityOptions}
               value={eligibility}
+              disabled={eligibilityLocked}
               onChange={(e) => { setEligibility(e.target.value as typeof eligibility); onUpdate({ ...stage, eligibilitySource: e.target.value as Stage['eligibilitySource'] }) }}
             />
 
@@ -599,37 +621,26 @@ function StageAccordion({
           </div>
 
           <div className="rounded-md bg-gray-50 border border-gray-200 p-3 space-y-3">
-            <div className="flex items-center justify-between">
-              <h5 className="text-xs font-medium text-gray-600">{t('event.sectionSplitConfig')}</h5>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={enableMultiSplit} onChange={(e) => handleMultiSplitChange(e.target.checked)} className="rounded border-gray-300" />
-                <span className="text-sm text-gray-700">{t('event.enableMultiSplit')}</span>
-              </label>
+            <h5 className="text-xs font-medium text-gray-600">{t('event.sectionSplitConfig')}</h5>
+            <p className="text-xs text-gray-500">{t('competition.splitDecidedAfterReg')}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Input label={t('event.minEntries')} type="number" value={String(stage.minEntries ?? '')} onChange={(e) => onUpdate({ ...stage, minEntries: Number(e.target.value) })} />
+              <Select label={t('event.splitAssignmentRule')} options={splitRuleOptions} value={stage.splitAssignmentRule || ''} onChange={(e) => onUpdate({ ...stage, splitAssignmentRule: e.target.value })} />
             </div>
-            {enableMultiSplit && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Input label={t('event.maxEntriesPerSplit')} type="number" value={String(stage.maxEntriesPerSplit ?? '')} onChange={(e) => onUpdate({ ...stage, maxEntriesPerSplit: Number(e.target.value) })} />
-                <Input label={t('event.maxSplits')} type="number" value={String(maxSplits)} onChange={(e) => { const v = Math.max(1, Number(e.target.value)); setMaxSplits(v); onUpdate({ ...stage, maxSplits: v }) }} />
-                <Input label={t('event.minEntries')} type="number" value={String(stage.minEntries ?? '')} onChange={(e) => onUpdate({ ...stage, minEntries: Number(e.target.value) })} />
-                <Select label={t('event.splitAssignmentRule')} options={splitRuleOptions} value={stage.splitAssignmentRule || ''} onChange={(e) => onUpdate({ ...stage, splitAssignmentRule: e.target.value })} />
-              </div>
-            )}
-            {!enableMultiSplit && (
-              <p className="text-xs text-gray-500">{t('competition.singleSplitHint')}</p>
-            )}
           </div>
 
           {/* Server Config button */}
-          <div className="rounded-md border border-gray-200 bg-white p-3 transition-colors hover:bg-gray-50 hover:border-gray-300">
+          <div className={cn('rounded-md border border-gray-200 bg-white p-3 transition-colors', serverConfigLocked ? 'opacity-70' : 'hover:bg-gray-50 hover:border-gray-300')}>
             <button
-              onClick={() => setShowServerConfig(true)}
-              className="flex items-center justify-between w-full cursor-pointer"
+              onClick={() => { if (!serverConfigLocked) setShowServerConfig(true) }}
+              disabled={serverConfigLocked}
+              className={cn('flex items-center justify-between w-full', serverConfigLocked ? 'cursor-not-allowed' : 'cursor-pointer')}
             >
               <div className="flex items-center gap-2">
                 <Settings className="w-4 h-4 text-gray-500" />
                 <span className="text-sm font-medium text-gray-700">{t('serverConfig.title')}</span>
               </div>
-              <span className="text-xs text-blue-600 hover:text-blue-700">{t('common.edit')}</span>
+              <span className="text-xs text-gray-400">{serverConfigLocked ? t('event.serverConfigLocked') : <span className="text-blue-600 hover:text-blue-700">{t('common.edit')}</span>}</span>
             </button>
           </div>
         </div>

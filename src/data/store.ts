@@ -8,7 +8,7 @@ interface Slice {
   replace: (rows: AnyRow[]) => void
 }
 
-const LS_KEY = 'racing-arcade-state-v2'
+const LS_KEY = 'racing-arcade-state-v3'
 const slices: Slice[] = []
 let version = 0
 const listeners = new Set<() => void>()

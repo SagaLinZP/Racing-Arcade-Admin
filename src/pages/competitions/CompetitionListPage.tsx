@@ -17,6 +17,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Modal } from '@/components/ui/Modal'
 import { Plus, Pencil, Ban, Trash2, Clock, ClipboardList, Activity } from 'lucide-react'
 import { getCompetitionStatus } from '@/lib/utils'
+import { canCancelCompetition, canDeleteCompetition } from '@/lib/guards'
 import { formatDateTz } from '@/lib/timezone'
 
 function coverStyle(c: Competition): React.CSSProperties {
@@ -29,8 +30,8 @@ function coverStyle(c: Competition): React.CSSProperties {
 
 function needsResults(c: Competition): boolean {
   return c.rounds.some(r => r.stages.some(s => {
-    const st = getStageResultStatus(s)
-    if (st === 'entered' || st === 'partial') return true
+    const st = getStageResultStatus(s, c)
+    if (st === 'showing') return true
     if (st === 'pending' && Date.now() >= new Date(s.endsAt).getTime()) return true
     return false
   }))
@@ -204,14 +205,16 @@ export function CompetitionListPage() {
                 <Button variant="ghost" size="sm" onClick={() => navigate(`/competitions/${c.id}/edit`)} title={t('common.edit')}>
                   <Pencil className="w-4 h-4" />
                 </Button>
-                {status !== 'Cancelled' && (
+                {canCancelCompetition(c) && (
                   <Button variant="ghost" size="sm" onClick={() => { setCancelTarget(c); setCancelReason('') }} title={t('competition.cancelCompetition')}>
                     <Ban className="w-4 h-4 text-orange-500" />
                   </Button>
                 )}
-                <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(c)} title={t('competition.deleteCompetition')}>
-                  <Trash2 className="w-4 h-4 text-red-500" />
-                </Button>
+                {canDeleteCompetition(c) && (
+                  <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(c)} title={t('competition.deleteCompetition')}>
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </Button>
+                )}
               </div>
             </div>
           )

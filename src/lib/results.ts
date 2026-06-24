@@ -30,42 +30,40 @@ export function getPointsForPosition(
   return entry?.points ?? 0
 }
 
-export type StageResultStatus = 'pending' | 'entered' | 'partial' | 'published'
+/** pending = 无成绩；showing = 公示中（可改/可申诉）；locked = 已锁定（冻结、计分） */
+export type StageResultStatus = 'pending' | 'showing' | 'locked'
 
-export function getStageResultStatus(stage: Stage): StageResultStatus {
-  const splits = stage.splits
-  if (splits.length === 0) return 'pending'
-  const hasAnyResults = splits.some(s => s.results && s.results.length > 0)
-  if (!hasAnyResults) return 'pending'
-  const allPublished = splits.every(s => !s.results || s.results.length === 0 || s.resultsPublishedAt)
-  const anyPublished = splits.some(s => s.resultsPublishedAt)
-  if (allPublished) return 'published'
-  if (anyPublished) return 'partial'
-  return 'entered'
+const LOCK_WINDOW_DEFAULT_HOURS = 24
+
+/** 计划锁定时间（毫秒）：Stage.resultsLockAt 优先，否则 = Stage 结束 + 锁定窗口。 */
+export function getStageLockAt(stage: Stage, comp?: Competition): number {
+  if (stage.resultsLockAt) return new Date(stage.resultsLockAt).getTime()
+  const windowH = comp?.resultLockWindowHours ?? LOCK_WINDOW_DEFAULT_HOURS
+  return new Date(stage.endsAt).getTime() + windowH * 3_600_000
+}
+
+/** 锁定 = 任一 Split 有 resultsLockedAt（手动/提前锁定），或已到计划锁定时间（自动锁定）。 */
+export function isStageLocked(stage: Stage, comp?: Competition): boolean {
+  const hasResults = stage.splits.some(s => s.results && s.results.length > 0)
+  if (!hasResults) return false
+  if (stage.splits.some(s => s.resultsLockedAt)) return true
+  return Date.now() >= getStageLockAt(stage, comp)
+}
+
+export function getStageResultStatus(stage: Stage, comp?: Competition): StageResultStatus {
+  const hasResults = stage.splits.some(s => s.results && s.results.length > 0)
+  if (!hasResults) return 'pending'
+  return isStageLocked(stage, comp) ? 'locked' : 'showing'
 }
 
 export function getRaceSessionId(stage: Stage): string | undefined {
   return stage.sessions.find(s => s.type === 'race')?.id
 }
 
-export function getSessionResultStatus(stage: Stage, sessionId: string): StageResultStatus {
-  const splits = stage.splits
-  if (splits.length === 0) return 'pending'
-  let hasAnyResults = false
-  let relevantSplits = 0
-  let publishedRelevant = 0
-  for (const sp of splits) {
-    const sessionResults = (sp.results ?? []).filter(r => r.sessionId === sessionId)
-    if (sessionResults.length > 0) {
-      hasAnyResults = true
-      relevantSplits++
-      if (sp.resultsPublishedAt) publishedRelevant++
-    }
-  }
-  if (!hasAnyResults) return 'pending'
-  if (relevantSplits > 0 && publishedRelevant === relevantSplits) return 'published'
-  if (publishedRelevant > 0) return 'partial'
-  return 'entered'
+export function getSessionResultStatus(stage: Stage, sessionId: string, comp?: Competition): StageResultStatus {
+  const has = stage.splits.some(sp => (sp.results ?? []).some(r => r.sessionId === sessionId))
+  if (!has) return 'pending'
+  return isStageLocked(stage, comp) ? 'locked' : 'showing'
 }
 
 export function getSessionResultCount(stage: Stage, sessionId: string): number {
@@ -95,10 +93,11 @@ export interface DriverStanding {
   results: StandingResultEntry[]
 }
 
-function collectResultsFromStages(stages: Stage[], sessionId?: string): DriverStanding[] {
+function collectResultsFromStages(stages: Stage[], comp: Competition | undefined, sessionId?: string): DriverStanding[] {
   const map = new Map<string, DriverStanding>()
   for (const stage of stages) {
     if (stage.awardsPoints === false) continue
+    if (!isStageLocked(stage, comp)) continue // 仅已锁定成绩计入积分
     const targetSessionId = sessionId ?? getRaceSessionId(stage)
     for (const split of stage.splits) {
       if (!split.results) continue
@@ -136,15 +135,15 @@ export function calculateCompetitionStandings(competition: Competition, sessionI
   for (const round of competition.rounds) {
     stages.push(...round.stages)
   }
-  return collectResultsFromStages(stages, sessionId)
+  return collectResultsFromStages(stages, competition, sessionId)
 }
 
-export function calculateRoundStandings(round: Round, sessionId?: string): DriverStanding[] {
-  return collectResultsFromStages(round.stages, sessionId)
+export function calculateRoundStandings(round: Round, comp?: Competition, sessionId?: string): DriverStanding[] {
+  return collectResultsFromStages(round.stages, comp, sessionId)
 }
 
-export function calculateStageStandings(stage: Stage, sessionId?: string): DriverStanding[] {
-  return collectResultsFromStages([stage], sessionId)
+export function calculateStageStandings(stage: Stage, comp?: Competition, sessionId?: string): DriverStanding[] {
+  return collectResultsFromStages([stage], comp, sessionId)
 }
 
 export function getStageTimeState(stage: Stage): { started: boolean; ended: boolean } {

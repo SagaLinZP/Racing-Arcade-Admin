@@ -4,13 +4,11 @@ import { addAuditLog } from '@/data/admin'
 import { getPointsForPosition } from './results'
 import type { ScoringTableEntry } from './utils'
 
-export type PenaltyKind = 'warning' | 'time' | 'position' | 'points' | 'dsq'
+export type PenaltyKind = 'warning' | 'time' | 'dsq'
 
 export type PenaltyAction =
   | { kind: 'warning' }
   | { kind: 'time'; seconds: number }
-  | { kind: 'position'; positions: number }
-  | { kind: 'points'; points: number }
   | { kind: 'dsq' }
 
 export interface PenaltyChange {
@@ -63,27 +61,6 @@ export function applyPenalty(
       changes.push({ driverId, field: 'points', oldValue: String(target.points ?? 0), newValue: '0' })
       target.status = 'DSQ'
       target.points = 0
-    } else if (action.kind === 'points') {
-      const old = target.points ?? 0
-      target.points = Math.max(0, old - action.points)
-      changes.push({ driverId, field: 'points', oldValue: String(old), newValue: String(target.points) })
-    } else if (action.kind === 'position') {
-      const oldPos = target.position
-      const newPos = oldPos + action.positions
-      sessionResults.forEach(r => {
-        if (r.driverId !== driverId && r.position > oldPos && r.position <= newPos) {
-          r.position -= 1
-        }
-      })
-      target.position = newPos
-      const oldPenalty = target.penalty ?? ''
-      target.penalty = oldPenalty ? `${oldPenalty}; +${action.positions} pos` : `+${action.positions} pos`
-      if (scoringTable) {
-        sessionResults.forEach(r => {
-          if (r.status !== 'DSQ') r.points = getPointsForPosition(scoringTable, r.position)
-        })
-      }
-      changes.push({ driverId, field: 'position', oldValue: String(oldPos), newValue: String(newPos) })
     } else if (action.kind === 'time') {
       const oldPos = target.position
       const adjusted = new Map<string, number>()

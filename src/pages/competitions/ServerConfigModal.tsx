@@ -192,7 +192,7 @@ export function ServerConfigModal({
       splitConfig: local.splits[0]
         ? Object.fromEntries(
             Object.entries(local.splits[0]).filter(([k]) =>
-              !['id', 'splitNumber', 'results', 'resultsPublishedAt'].includes(k),
+              !['id', 'splitNumber', 'results', 'resultsLockedAt'].includes(k),
             ),
           )
         : undefined,

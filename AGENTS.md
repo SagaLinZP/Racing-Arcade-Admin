@@ -41,7 +41,7 @@ src/
 ├── data/                      # Mock 数据 + 持久化（所有数据的唯一来源）
 │   ├── store.ts               # ★ useSyncExternalStore 外部 store + localStorage 持久化
 │   ├── competitions.ts        # ★ 主数据模型：Competition → Round → Stage → Session/Split（见下）
-│   ├── registrations.ts       # ★ 报名记录 Registration（driver↔round，status/payment/split/platformId）
+│   ├── registrations.ts       # ★ 报名记录 Registration（driver↔round，status/split/platformId）
 │   ├── servers.ts             # ★ 服务器实例 ServerInstance（开服状态/日志模拟）
 │   ├── demoScenario.ts        # ★ 演示赛事生成/重置（供 FlowAssistant 使用的端到端示例）
 │   ├── options.ts             # ManagedOption + OptionGroup，13 个下拉选项组（6 个分类）
@@ -61,11 +61,11 @@ src/
 │   ├── utils.ts               # cn(), formatDate(), formatDateTime(), statusColor(), ScoringTableEntry, getCompetitionStatus(), getRoundStatus()
 │   ├── results.ts             # 成绩计算：findStageById(), getPointsForPosition(), getStageResultStatus()/getSessionResultStatus(), getRaceSessionId(), calculate*Standings()（均支持 sessionId 过滤）
 │   ├── serverResults.ts       # 模拟服务器生成比赛成绩（种子化伪随机，从 entryList/报名车手生成 race 成绩）
-│   ├── stageOps.ts            # ★ 开服/发布：startStageServers(), isStageServerRunning(), publishStageResults()
+│   ├── stageOps.ts            # ★ 开服/锁定：startStageServers(), isStageServerRunning(), lockStageResults()/unlockStageResults()
 │   ├── advancement.ts         # ★ 晋级：computeAdvancers()/applyAdvancement()（position/points/lapTime 三种 metric）
 │   ├── registrationOps.ts     # ★ 报名运营：assignSplitsEvenly()(均分分组), getSplitPlan()/getSplitWarning()(容量校验), applyToEntryList()(写入 entryList)
 │   ├── resultParser.ts        # ★ 解析真实 ACC/AC 成绩 JSON → reconcile 匹配车手 → SessionResult
-│   ├── penalties.ts           # ★ 成绩处罚：applyPenalty()（warning/time/position/points/dsq，自动重算名次积分）
+│   ├── penalties.ts           # ★ 成绩处罚：applyPenalty()（warning/time/dsq，自动重算名次积分）
 │   ├── flowSteps.ts           # ★ FlowAssistant 的 8 步引导定义（每步 isDone/route/run）
 │   ├── timezone.ts            # ★ 赛事时区换算（UTC↔墙钟）+ 4 区时区选项 + 带后缀展示
 │   ├── lang.ts                # 语言偏好持久化（localStorage，默认 'zh'）
@@ -131,7 +131,7 @@ src/
 原型使用自建的轻量外部 store 实现跨刷新持久化：
 
 - **slice 注册**：可变数据数组（`registrations`、`serverInstances`）通过 `registerSlice({ key, get, replace })` 注册到 store
-- **写操作**：任何 mutate 后必须调用 `bump()` —— 它会 `persist()`（写入 localStorage key `racing-arcade-state-v1`）并通知所有订阅者
+- **写操作**：任何 mutate 后必须调用 `bump()` —— 它会 `persist()`（写入 localStorage key `racing-arcade-state-v3`）并通知所有订阅者
 - **订阅**：组件用 `useDataVersion()`（基于 `useSyncExternalStore`）订阅版本号变化以触发重渲染
 - **恢复**：`main.tsx` 启动时调用 `hydrate()` 从 localStorage 恢复各 slice
 - **重置**：`resetStore()` 清空 localStorage
@@ -156,7 +156,7 @@ Competition（赛事，如 MOZA GT3 Challenge）
 > **成绩归属**：`Session` 是成绩归属的最小颗粒度。成绩记录（`SessionResult`）存放在 `Split.results` 上，但**每条记录带 `sessionId` 字段**指明所属的 Session。聚合时沿 Session → Split → Stage → Round → Competition 逐级汇总。
 
 ### Competition
-- 状态 `CompetitionStatus`：`Draft | Upcoming | RegistrationOpen | RegistrationClosed | InProgress | Completed | ResultsPublished | Cancelled`（由 `getCompetitionStatus()` 从 rounds 聚合推导，除非设了 `statusOverride: 'Draft' | 'Cancelled'`）
+- 状态 `CompetitionStatus`：`Draft | Upcoming | RegistrationOpen | RegistrationClosed | InProgress | Completed | Cancelled`；`RoundStatus` 另含 `ResultsLocked`。`getCompetitionStatus()` 取**当前站**（第一个未进入终态的 Round）的状态，除非设了 `statusOverride: 'Draft' | 'Cancelled'`。`getRoundStatus(round, comp?)` **跟随最新（已开赛）Stage 的状态**（含派生锁定）。成绩走 **公示中 → 锁定**（`Split.resultsLockedAt`，整 Stage 一次锁定；仅已锁定成绩计入积分）。锁定时间 = `Stage.resultsLockAt`（可设，默认 = 结束 + `Competition.resultLockWindowHours`，默认 24h，到点派生自动锁定），亦可手动锁定；`getStageLockAt()` 取计划锁定时间
 - `isDemo?: boolean`（标记由 demoScenario 生成的示例赛事）
 - `timezone?: string`（**赛事级时区**，如 `'UTC+8'`；时间统一以 UTC 存储，输入/展示按此时区换算，见下「时区系统」）
 - 双语字段后缀：`_zh` / `_en`（`name`, `description` 等）
@@ -173,7 +173,7 @@ Competition（赛事，如 MOZA GT3 Challenge）
 - `Split` 服务器字段已覆盖 AC/ACC server guide 全部非报名字段（含 AC 高级：`numThreads`/`sleepTime`/`udpPlugin*`/`authPluginAddress`），由 `SplitServerFields` 统一编辑
 
 ### Registration（`data/registrations.ts`，新）
-- driver ↔ round 的报名记录：`status`(**approved**/rejected/waitlisted/withdrawn)、`paymentStatus`(none/unpaid/paid/refunded)、`splitNumber?`、`platformId`(Steam GUID)、`preferredNumber?`、`teamId?`
+- driver ↔ round 的报名记录：`status`(**approved**/rejected/waitlisted/withdrawn)、`splitNumber?`、`platformId`(Steam GUID)、`preferredNumber?`、`teamId?`
 - **报名全自动**：新报名默认 `approved`，**无「待审/pending」概念**；管理员可在报名页对个人「移除报名(rejected)」或「转候补(waitlisted)」/恢复
 - 助手：`getRoundRegistrations()`、`getApprovedDriverIds()`、`setRegistrationStatus()`、`assignSplit()`、`addRegistration()`
 - 已注册到 store slice（持久化）
@@ -196,8 +196,8 @@ Competition（赛事，如 MOZA GT3 Challenge）
 
 ### StageTemplate（导出为 `stageTemplates`）
 服务器配置模板，应用到 Stage 可一次性载入完整开服配方：
-- `gameConfig`（赛道/天气/规则/辅助/门槛）、`sessions`（P/Q/R 时序）、`splitConfig?`（**含 serverName/passwords/ports/capacity/flags**，排除 id/splitNumber/entryList/results/resultsPublishedAt）
-- **不含** `bopEntries`（BoP 报名后按车手水平动态配置）、不含 `maxSplits`/`maxEntriesPerSplit`
+- `gameConfig`（赛道/天气/规则/辅助/门槛）、`sessions`（P/Q/R 时序）、`splitConfig?`（**含 serverName/passwords/ports/capacity/flags**，排除 id/splitNumber/entryList/results/resultsLockedAt）
+- **不含** `bopEntries`（BoP 报名后按车手水平动态配置）
 - 应用模板载入 gameConfig + sessions + splitConfig；另存为模板捕获这三块
 - **模板编辑页（`TemplateEditPage`）已暴露全部三块**：服务器设置（`SplitServerFields` 编辑 `splitConfig`，除报名名单外的全部服务器字段）+ Session 时序（`SessionsEditor`）+ GameConfig（`GameConfigEditor`）。新模板用 `defaultSplitConfig()` 初始化
 - `SplitServerFields` / `SessionsEditor`（`pages/competitions/serverFields.tsx`）由 `ServerConfigModal` 与模板页**共用**——新增 Split/Session 字段只改这一处即可两边同步
@@ -212,11 +212,12 @@ Competition（赛事，如 MOZA GT3 Challenge）
 | 模块 | 关键函数 | 作用 |
 |------|---------|------|
 | `registrationOps.ts` | `assignSplitsEvenly`(报名后按组数**均分**，按报名时间/随机)、`getSplitPlan`/`getSplitWarning`(超容量/每组过少强提示)、`applyToEntryList`(approved → 各 Stage entryList) | 报名(自动通过)→分组→参赛名单 |
-| `stageOps.ts` | `startStageServers`(按 split 开服)、`isStageServerRunning`、`publishStageResults`(标记发布) | 开服/发布 |
+| `stageOps.ts` | `startStageServers`(按 split 开服)、`isStageServerRunning`、`lockStageResults`/`unlockStageResults`(整 Stage 锁定/撤销) | 开服/锁定 |
+| `guards.ts` | `canEditIdentity`(报名开放即锁身份/规则)、`canEditEligibility`(报名截止锁资格来源)、`isStageStarted`(开赛锁开始时间) | 硬编辑锁守卫 |
 | `serverResults.ts` | `syncStageResults`(从 entryList/报名车手种子化生成 race 成绩) | 模拟服务器上报成绩 |
 | `resultParser.ts` | `parseResultsJson`(真实 ACC/AC JSON)、`reconcileRows`(按 playerId/raceNumber/name 匹配)、`rowsToSessionResults` | 导入真实成绩文件 |
 | `advancement.ts` | `computeAdvancers`(position/points/lapTime)、`applyAdvancement`(写入目标 Stage entryList) | 阶段间晋级 |
-| `penalties.ts` | `applyPenalty`(warning/time/position/points/dsq，自动重算名次积分)、`applyPenaltyWithAudit`(判罚+写 `auditLogs` 留痕+持久化) | 成绩处罚 |
+| `penalties.ts` | `applyPenalty`(warning/time/dsq，自动重算名次积分)、`applyPenaltyWithAudit`(判罚+写 `auditLogs` 留痕+持久化) | 成绩处罚 |
 | `timezone.ts` | `isoToLocalInput`/`localInputToIso`(UTC↔墙钟)、`formatDateTimeTz`(带 `(UTC±X)` 后缀)、`tzSelectOptions` | 赛事时区换算 |
 
 ### FlowAssistant（`components/FlowAssistant.tsx` + `lib/flowSteps.ts`）
@@ -246,7 +247,7 @@ create → review → server(push) → results(pull) → protest(可选) → pub
 
 ## 判罚（`components/PenaltyModal.tsx` + `lib/penalties.ts`）
 
-- 通用大弹窗 `PenaltyModal`，5 种判罚（罚时/取消成绩 DSQ/降名次/扣分/警告）+ 原因，**成绩录入页**每行「判罚」按钮与**抗议详情页**裁决共用
+- 通用大弹窗 `PenaltyModal`，3 种判罚（罚时/取消成绩 DSQ/警告）+ 原因，**成绩录入页**每行「判罚」按钮与**抗议详情页**裁决共用。用户封禁/禁赛归用户管理，不在此
 - 应用走 `applyPenaltyWithAudit`：调 `applyPenalty` 重算名次积分 → 每条变更写 `auditLogs`（带 `protestId`）留痕 → `updateCompetition` 持久化
 - 弹窗 `onApplied(summary)` 回传判罚明细，抗议页据此回填 `ProtestResolution`
 - 成绩页打开弹窗前先 `commitLocal()`（本地编辑落到 live results），应用后 `resyncFromStage()` 回灌本地副本
@@ -254,9 +255,11 @@ create → review → server(push) → results(pull) → protest(可选) → pub
 ## 报名与分组（`lib/registrationOps.ts`）
 
 - **报名全自动**：车手报名即 `approved`，无审核/待审环节；管理员可在报名页对个人「移除报名」或「转候补」/恢复。无 `approveAllPending`（已删）
-- 分组在**报名管理下钻页**（`/registrations/competition/:id`）进行：管理员选组数 + 分配方式（按报名时间/随机；按水平即将推出）→ `assignSplitsEvenly` 把 approved 报名**均分**（组间人数差 ≤1，写 `splitNumber` 并回写 Stage 的 `maxSplits/enableMultiSplit`）
-- 未手动分组时沿用赛事编辑里的 split 配置；`getSplitWarning` 在超总容量或每组人数低于 `minEntries` 时强提示
+- 分组在**报名管理下钻页**（`/registrations/competition/:id`）进行：报名截止后管理员按实际人数选服务器数 N + 分配方式（按报名时间/随机；按水平即将推出）→ `assignSplitsEvenly` 把 approved 报名**均分**（组间人数差 ≤1，写 `splitNumber`，并把各分站 Stage 调成恰好 N 个 `Split`）。**无 `maxSplits/maxEntriesPerSplit/enableMultiSplit` 概念**（已删）
+- 服务器数量纯运行期决定；`getSplitWarning` 仅在每组人数低于 `minEntries` 时强提示；报名截止人数低于 `minEntries` 时报名页另有不足提示
+- `maxRegistrations`（Round 级）仅限制报名总量，不做 Stage 容量校验
 - 仅对 `eligibilitySource === 'roundRegistration'` 的 Stage 分组；晋级类 Stage 不参与
+- 编辑锁（`lib/guards.ts`）：`canEditRegistrationWindow`（Stage 开赛锁报名时间/上限）、`isServerConfigLocked`（已开服/Stage 结束锁服务器配置）、`isEntryListLocked`（Stage 开赛锁分组/名单）、`canDeleteCompetition`（仅 Draft 可删）、`canCancelCompetition`（成绩公示/锁定后禁）
 
 ## 侧边栏导航顺序（10 项）
 
@@ -357,7 +360,7 @@ npm run lint       # eslint
 |------|------|
 | 统一 Competition 模型（取代旧 Championship + Event） | 一套结构表达"锦标赛"和"独立赛"，Round 数量区分两者 |
 | 自建 store（useSyncExternalStore + localStorage） | 纯前端原型实现跨刷新持久化，无需后端 |
-| 报名 Registration 独立模型 + store slice | 审批/支付/分 split 是独立业务流，且需持久化 |
+| 报名 Registration 独立模型 + store slice | 报名（自动通过）/候补/分 split 是独立业务流，且需持久化 |
 | 服务器 ServerInstance 模拟层 | 演示开服生命周期（状态/日志），无真实开服工具 |
 | FlowAssistant 引导 + demoScenario | 把分散能力串成可演示的端到端闭环 |
 | Stage 用平级 `sessions` + `splits` | 多 Split 共享同一份游戏配置和 Session 时序 |

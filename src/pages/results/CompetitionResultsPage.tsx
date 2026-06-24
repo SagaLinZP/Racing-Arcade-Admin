@@ -3,12 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '@/hooks/useAppStore'
 import { competitions, updateCompetition } from '@/data/competitions'
-import type { Stage } from '@/data/competitions'
+import type { Stage, Competition } from '@/data/competitions'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import {
   getStageResultStatus,
+  getStageLockAt,
   getSessionResultCount,
   getRaceSessionId,
   calculateRoundStandings,
@@ -16,9 +17,10 @@ import {
   getStageTimeState,
   getName,
 } from '@/lib/results'
+import { formatDateTimeTz } from '@/lib/timezone'
 import { canSyncStage, syncStageResults } from '@/lib/serverResults'
 import { applyAdvancement, canAdvance } from '@/lib/advancement'
-import { startStageServers, isStageServerRunning, publishStageResults } from '@/lib/stageOps'
+import { startStageServers, isStageServerRunning, lockStageResults } from '@/lib/stageOps'
 import { applyToEntryList } from '@/lib/registrationOps'
 import { getApprovedDriverIds } from '@/data/registrations'
 import { addNotification } from '@/data/notifications'
@@ -75,16 +77,16 @@ export function CompetitionResultsPage() {
     startStageServers(stage)
   }
 
-  const handlePublish = (stage: Stage) => {
-    const ok = publishStageResults(stage, comp)
+  const handleLock = (stage: Stage) => {
+    const ok = lockStageResults(stage, comp)
     if (ok) {
       addNotification({
-        id: `ntf_pub_${stage.id}`,
+        id: `ntf_lock_${stage.id}`,
         type: 'results',
-        title_zh: '成绩已发布',
-        title_en: 'Results Published',
-        body_zh: `${getName(comp, 'zh')} - ${getName(stage, 'zh')} 成绩已发布。`,
-        body_en: `${getName(comp, 'en')} - ${getName(stage, 'en')} results published.`,
+        title_zh: '成绩已锁定',
+        title_en: 'Results Locked',
+        body_zh: `${getName(comp, 'zh')} - ${getName(stage, 'zh')} 成绩已锁定，积分已发放。`,
+        body_en: `${getName(comp, 'en')} - ${getName(stage, 'en')} results locked, points awarded.`,
         link: `/results/competition/${comp.id}`,
         isRead: false,
         createdAt: new Date().toISOString(),
@@ -170,7 +172,7 @@ export function CompetitionResultsPage() {
 
       <div className="space-y-6">
         {comp.rounds.map(round => {
-          const standings = calculateRoundStandings(round)
+          const standings = calculateRoundStandings(round, comp)
           return (
             <div key={round.id}>
               <div className="flex items-center gap-2 mb-2 px-1">
@@ -195,11 +197,11 @@ export function CompetitionResultsPage() {
                       count: getSessionResultCount(stage, s.id),
                     }))
                     const totalResults = sessionCounts.reduce((sum, sc) => sum + sc.count, 0)
-                    const st = getStageResultStatus(stage)
+                    const st = getStageResultStatus(stage, comp)
                     const ended = getStageTimeState(stage).ended
-                    const cta = st === 'published'
+                    const cta = st === 'locked'
                       ? { label: t('result.ctaView'), variant: 'secondary' as const }
-                      : (st === 'entered' || st === 'partial')
+                      : st === 'showing'
                         ? { label: t('result.ctaContinue'), variant: 'primary' as const }
                         : ended
                           ? { label: t('result.ctaEnter'), variant: 'primary' as const }
@@ -225,7 +227,7 @@ export function CompetitionResultsPage() {
                             {stage.splits.length > 1 && ` · ${stage.splits.length} ${t('result.serversLabel')}`}
                           </div>
                         </div>
-                        <StageStatus stage={stage} t={t} />
+                        <StageStatus stage={stage} comp={comp} t={t} />
                         <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                           {comp.isDemo && stage.type === 'race_day' && getApprovedDriverIds(round.id).length > 0 && !isStageServerRunning(stage) && (
                             <Button data-flow="server" variant="primary" size="sm" onClick={() => handleStartServer(stage)}>
@@ -237,12 +239,12 @@ export function CompetitionResultsPage() {
                               <RefreshCw className={cn('w-4 h-4', comp.isDemo && 'mr-1', syncing && 'animate-spin')} />{comp.isDemo && t('result.syncFromServer')}
                             </Button>
                           )}
-                          {comp.isDemo && (getStageResultStatus(stage) === 'entered' || getStageResultStatus(stage) === 'partial') && (
-                            <Button data-flow="publish" variant="primary" size="sm" onClick={() => handlePublish(stage)}>
-                              <Send className="w-3.5 h-3.5 mr-1" />{t('result.publishResults')}
+                          {getStageResultStatus(stage, comp) === 'showing' && (
+                            <Button data-flow={comp.isDemo ? 'publish' : undefined} variant="primary" size="sm" title={t('result.autoLockAt', { time: formatDateTimeTz(new Date(getStageLockAt(stage, comp)).toISOString(), comp.timezone) })} onClick={() => handleLock(stage)}>
+                              <Send className="w-3.5 h-3.5 mr-1" />{t('result.lockResults')}
                             </Button>
                           )}
-                          {canAdvance(round, stage) && (
+                          {canAdvance(round, stage, comp) && (
                             <Button data-flow={comp.isDemo ? 'advance' : undefined} variant={comp.isDemo ? 'primary' : 'ghost'} size="sm" onClick={() => { const n = applyAdvancement(comp, round, stage); setAdvanceFlash(t('result.advanceDone', { count: n })) }} title={t('result.generateAdvancers')}>
                               <ArrowUpRight className={cn('w-4 h-4', comp.isDemo && 'mr-1')} />{comp.isDemo && t('result.generateAdvancers')}
                             </Button>
@@ -267,14 +269,13 @@ export function CompetitionResultsPage() {
   )
 }
 
-function StageStatus({ stage, t }: { stage: Stage; t: (k: string) => string }) {
-  const st = getStageResultStatus(stage)
+function StageStatus({ stage, comp, t }: { stage: Stage; comp: Competition; t: (k: string) => string }) {
+  const st = getStageResultStatus(stage, comp)
   const { started, ended } = getStageTimeState(stage)
   let key: string
   let variant: 'default' | 'info' | 'warning' | 'success'
-  if (st === 'published') { key = 'published'; variant = 'success' }
-  else if (st === 'partial') { key = 'partial'; variant = 'info' }
-  else if (st === 'entered') { key = 'entered'; variant = 'info' }
+  if (st === 'locked') { key = 'locked'; variant = 'success' }
+  else if (st === 'showing') { key = 'showing'; variant = 'info' }
   else if (!started) { key = 'notStarted'; variant = 'default' }
   else if (!ended) { key = 'live'; variant = 'warning' }
   else { key = 'awaitingResults'; variant = 'warning' }

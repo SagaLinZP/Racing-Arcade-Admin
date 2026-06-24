@@ -1,7 +1,6 @@
 import type { Competition, Stage } from '@/data/competitions'
 import { updateCompetition } from '@/data/competitions'
 import { startServer, getServerInstance } from '@/data/servers'
-import { getRaceSessionId } from './results'
 
 export function startStageServers(stage: Stage): number {
   stage.splits.forEach(sp => startServer(stage.id, sp, stage.gameConfig))
@@ -16,16 +15,18 @@ export function stageHasEntryList(stage: Stage): boolean {
   return stage.splits.some(sp => (sp.entryList?.length ?? 0) > 0)
 }
 
-export function publishStageResults(stage: Stage, competition: Competition): boolean {
-  const raceId = getRaceSessionId(stage)
+/** 锁定整个 Stage：该 Stage 所有 Split 同时写入 resultsLockedAt。 */
+export function lockStageResults(stage: Stage, competition: Competition): boolean {
+  const hasResults = stage.splits.some(sp => sp.results && sp.results.length > 0)
+  if (!hasResults) return false
   const now = new Date().toISOString()
-  let published = false
-  for (const sp of stage.splits) {
-    if (sp.results?.some(r => r.sessionId === raceId)) {
-      sp.resultsPublishedAt = now
-      published = true
-    }
-  }
-  if (published) updateCompetition(competition)
-  return published
+  stage.splits.forEach(sp => { sp.resultsLockedAt = now })
+  updateCompetition(competition)
+  return true
+}
+
+/** 撤销锁定（高门槛例外，仅在派生自动锁定窗口前有效）。 */
+export function unlockStageResults(stage: Stage, competition: Competition): void {
+  stage.splits.forEach(sp => { sp.resultsLockedAt = undefined })
+  updateCompetition(competition)
 }

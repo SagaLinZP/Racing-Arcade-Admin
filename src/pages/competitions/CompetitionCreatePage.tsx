@@ -34,6 +34,7 @@ interface FormState {
   carClass: string
   carList: string
   timezone: string
+  resultLockWindowHours: number
   regions: string[]
   accessRequirements_en: string
   accessRequirements_zh: string
@@ -50,6 +51,7 @@ const emptyForm = (): FormState => ({
   description_en: '', description_zh: '',
   game: 'ACC', carClass: '', carList: '',
   timezone: 'UTC+8',
+  resultLockWindowHours: 24,
   regions: ['CN'],
   accessRequirements_en: '', accessRequirements_zh: '',
   resources_en: '', resources_zh: '',
@@ -177,6 +179,7 @@ export function CompetitionCreatePage() {
       carClass: form.carClass,
       carList: form.carList ? form.carList.split(',').map(s => s.trim()).filter(Boolean) : undefined,
       timezone: form.timezone,
+      resultLockWindowHours: form.resultLockWindowHours,
       defaultRuleset: {
         scoringTable: scoringRows,
         scoringNote_zh: form.scoringNote_zh || undefined,
@@ -362,6 +365,7 @@ export function CompetitionCreatePage() {
               <Select data-flow="create-game" label={t('event.game')} options={gameOptions} value={form.game} onChange={(e) => update('game', e.target.value)} />
               <Select data-flow="create-carClass" label={t('event.carClass')} options={carClassOptions.length > 0 ? carClassOptions : [{ value: '', label: '' }]} value={form.carClass} onChange={(e) => update('carClass', e.target.value)} />
               <Select label={t('event.timezone')} options={tzSelectOptions(lang)} value={form.timezone} onChange={(e) => update('timezone', e.target.value)} />
+              <Input label={t('event.resultLockWindow')} type="number" min={0} value={String(form.resultLockWindowHours)} onChange={(e) => update('resultLockWindowHours', Number(e.target.value))} />
               <Input label={t('event.carList')} placeholder={t('event.carListPlaceholder')} value={form.carList} onChange={(e) => update('carList', e.target.value)} />
               <Input label={t('event.streamUrl')} value={form.streamUrl} onChange={(e) => update('streamUrl', e.target.value)} />
               <div className="md:col-span-2 max-w-sm">
@@ -765,7 +769,7 @@ function CreateStagePanel({
           stage={stage}
           editLang={editLang}
           game={game}
-          splitCount={stage.enableMultiSplit ? Math.max(1, stage.maxSplits || 1) : 1}
+          splitCount={Math.max(1, stage.splits.length)}
           registeredDrivers={[]}
         />
       )}

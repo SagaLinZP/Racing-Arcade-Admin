@@ -3,7 +3,6 @@ import { competitions } from './competitions'
 import { drivers } from './drivers'
 
 export type RegistrationStatus = 'approved' | 'rejected' | 'waitlisted' | 'withdrawn'
-export type PaymentStatus = 'none' | 'unpaid' | 'paid' | 'refunded'
 
 export interface Registration {
   id: string
@@ -14,7 +13,6 @@ export interface Registration {
   preferredNumber?: number
   teamId?: string
   status: RegistrationStatus
-  paymentStatus: PaymentStatus
   splitNumber?: number
   submittedAt: string
   reviewedAt?: string
@@ -43,7 +41,6 @@ function seedRegistrations(): Registration[] {
           preferredNumber: 11 + i,
           teamId: d?.teamId,
           status: 'approved',
-          paymentStatus: 'paid',
           submittedAt: round.registrationOpenAt,
           reviewedAt: round.registrationOpenAt,
           reviewedBy: 'admin1',
@@ -62,7 +59,6 @@ function seedRegistrations(): Registration[] {
           preferredNumber: 51 + i,
           teamId: d.teamId,
           status,
-          paymentStatus: status === 'waitlisted' ? 'none' : 'unpaid',
           submittedAt: round.registrationOpenAt,
         })
         regSeq++
@@ -104,14 +100,6 @@ export function setRegistrationStatus(id: string, status: RegistrationStatus, re
   }
 }
 
-export function setPaymentStatus(id: string, paymentStatus: PaymentStatus) {
-  const r = registrations.find(x => x.id === id)
-  if (r) {
-    r.paymentStatus = paymentStatus
-    bump()
-  }
-}
-
 export function assignSplit(id: string, splitNumber: number | undefined) {
   const r = registrations.find(x => x.id === id)
   if (r) {
@@ -142,7 +130,6 @@ export function createDefaultRegistration(competitionId: string, roundId: string
     driverId,
     platformId: '',
     status: 'approved',
-    paymentStatus: 'unpaid',
     submittedAt: new Date().toISOString(),
   }
 }

@@ -1,6 +1,6 @@
 import type { Competition, Round, Stage, AdvancementRule, EntryListEntry } from '@/data/competitions'
 import { createDefaultSplit, updateCompetition } from '@/data/competitions'
-import { getRaceSessionId } from './results'
+import { getRaceSessionId, isStageLocked } from './results'
 import { drivers } from '@/data/drivers'
 
 interface StageStanding {
@@ -59,11 +59,11 @@ export function applyAdvancement(competition: Competition, round: Round, targetS
   const advancers = computeAdvancers(prevStage, rule)
   if (advancers.length === 0) return 0
 
-  const splitCount = targetStage.enableMultiSplit ? Math.max(1, targetStage.maxSplits ?? 1) : 1
-  while (targetStage.splits.length < splitCount) {
-    targetStage.splits.push(createDefaultSplit(targetStage.id, targetStage.splits.length + 1))
+  if (targetStage.splits.length === 0) {
+    targetStage.splits.push(createDefaultSplit(targetStage.id, 1))
   }
-  const cap = targetStage.maxEntriesPerSplit ?? (Math.ceil(advancers.length / splitCount) || 1)
+  const splitCount = Math.max(1, targetStage.splits.length)
+  const cap = Math.ceil(advancers.length / splitCount) || 1
   targetStage.splits.forEach((split, si) => {
     const chunk = advancers.slice(si * cap, (si + 1) * cap)
     const entries: EntryListEntry[] = chunk.map((driverId, i) => ({
@@ -80,9 +80,12 @@ export function applyAdvancement(competition: Competition, round: Round, targetS
   return advancers.length
 }
 
-export function canAdvance(round: Round, targetStage: Stage): boolean {
+export function canAdvance(round: Round, targetStage: Stage, comp?: Competition): boolean {
   if (targetStage.eligibilitySource !== 'previousStageResult') return false
   const idx = round.stages.findIndex(s => s.id === targetStage.id)
   if (idx <= 0) return false
-  return getStageStandings(round.stages[idx - 1]).length > 0
+  const prevStage = round.stages[idx - 1]
+  // 晋级以上一 Stage 的已锁定成绩为依据
+  if (!isStageLocked(prevStage, comp)) return false
+  return getStageStandings(prevStage).length > 0
 }
