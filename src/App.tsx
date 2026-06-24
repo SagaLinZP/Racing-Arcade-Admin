@@ -8,6 +8,7 @@ import { CompetitionCreatePage } from './pages/competitions/CompetitionCreatePag
 import { CompetitionEditPage } from './pages/competitions/CompetitionEditPage'
 import { RegistrationListPage } from './pages/registrations/RegistrationListPage'
 import { CompetitionRegistrationsPage } from './pages/registrations/CompetitionRegistrationsPage'
+import { RoundRegistrationsPage } from './pages/registrations/RoundRegistrationsPage'
 import { TemplateListPage } from './pages/templates/TemplateListPage'
 import { TemplateEditPage } from './pages/templates/TemplateEditPage'
 import { ResultListPage } from './pages/results/ResultListPage'
@@ -54,6 +55,7 @@ export default function App() {
               <Route path="/competitions/:id/edit" element={<CompetitionEditPage />} />
               <Route path="/registrations" element={<RegistrationListPage />} />
               <Route path="/registrations/competition/:competitionId" element={<CompetitionRegistrationsPage />} />
+              <Route path="/registrations/competition/:competitionId/round/:roundId" element={<RoundRegistrationsPage />} />
               <Route path="/templates" element={<TemplateListPage />} />
               <Route path="/templates/create" element={<TemplateEditPage />} />
               <Route path="/templates/:id/edit" element={<TemplateEditPage />} />

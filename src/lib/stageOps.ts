@@ -28,5 +28,7 @@ export function lockStageResults(stage: Stage, competition: Competition): boolea
 /** 撤销锁定（高门槛例外，仅在派生自动锁定窗口前有效）。 */
 export function unlockStageResults(stage: Stage, competition: Competition): void {
   stage.splits.forEach(sp => { sp.resultsLockedAt = undefined })
+  const windowH = competition.resultLockWindowHours ?? 24
+  stage.resultsLockAt = new Date(Date.now() + windowH * 3_600_000).toISOString()
   updateCompetition(competition)
 }

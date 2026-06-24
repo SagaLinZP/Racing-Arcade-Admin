@@ -75,15 +75,14 @@ export function CompetitionListPage() {
   interface PrimaryAction { label: string; to: string; variant: 'primary' | 'secondary'; badge?: number }
   const primaryAction = (c: Competition): PrimaryAction | null => {
     const status = getCompetitionStatus(c)
-    if (status === 'Cancelled') return null
+    if (status === 'Cancelled' || status === 'Draft') return null
     if (status === 'Archived') return { label: t('competition.ctaViewResults'), to: `/results/competition/${c.id}`, variant: 'secondary' }
-    if (status === 'Draft') return { label: t('competition.ctaContinueEdit'), to: `/competitions/${c.id}/edit`, variant: 'secondary' }
     if (status === 'RegistrationOpen') return { label: t('competition.ctaRegistrations'), to: `/registrations/competition/${c.id}`, variant: 'primary' }
     if (status === 'RegistrationClosed' || status === 'InProgress') return { label: t('competition.ctaManageEvent'), to: `/results/competition/${c.id}`, variant: 'primary' }
     if (status === 'Completed') return needsResults(c)
       ? { label: t('competition.ctaEnterResults'), to: `/results/competition/${c.id}`, variant: 'primary' }
       : { label: t('competition.ctaViewResults'), to: `/results/competition/${c.id}`, variant: 'secondary' }
-    return { label: t('common.edit'), to: `/competitions/${c.id}/edit`, variant: 'secondary' }
+    return null
   }
 
   const roundName = (r: Competition['rounds'][number]) => lang === 'zh' ? r.name_zh : r.name_en

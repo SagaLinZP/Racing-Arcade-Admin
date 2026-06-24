@@ -59,9 +59,14 @@ export function CompetitionResultsPage() {
     setSyncing(true)
     setTimeout(() => {
       for (const round of comp.rounds) {
-        const stage = round.stages.find(s => s.id === stageId)
-        if (stage) {
+        const stageIdx = round.stages.findIndex(s => s.id === stageId)
+        if (stageIdx >= 0) {
+          const stage = round.stages[stageIdx]
           syncStageResults(stage, round, comp)
+          const nextStage = round.stages[stageIdx + 1]
+          if (nextStage && canAdvance(round, nextStage)) {
+            applyAdvancement(comp, round, nextStage)
+          }
           break
         }
       }

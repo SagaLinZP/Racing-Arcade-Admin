@@ -35,20 +35,19 @@ function planningStage(round: Round): Stage | undefined {
   return roundRegistrationStages(round)[0] ?? round.stages[0]
 }
 
-export function getSplitPlan(round: Round): SplitPlan {
+export function getSplitPlan(round: Round, comp?: Competition): SplitPlan {
   const stage = planningStage(round)
   const splitCount = Math.max(1, stage?.splits.length ?? 1)
   const approvedCount = getRoundRegistrations(round.id).filter(r => r.status === 'approved').length
-  const minPerGroup = stage?.minEntries ?? 4
+  const minPerGroup = comp?.minSplitEntries ?? stage?.minEntries ?? 10
   const perGroup = Math.floor(approvedCount / splitCount)
   return { splitCount, approvedCount, minPerGroup, perGroup }
 }
 
 export type SplitWarning = 'tooFew' | null
 
-/** 多组均分后每组人数过少时提示（容量上限已不在 Stage 层校验）。 */
-export function getSplitWarning(round: Round, overrideSplitCount?: number): SplitWarning {
-  const plan = getSplitPlan(round)
+export function getSplitWarning(round: Round, comp?: Competition, overrideSplitCount?: number): SplitWarning {
+  const plan = getSplitPlan(round, comp)
   const splitCount = Math.max(1, overrideSplitCount ?? plan.splitCount)
   if (splitCount > 1 && Math.floor(plan.approvedCount / splitCount) < plan.minPerGroup) return 'tooFew'
   return null
@@ -62,6 +61,49 @@ function ensureSplitCount(stage: Stage, k: number): void {
   if (stage.splits.length > k) {
     stage.splits = stage.splits.slice(0, k).map((s, i) => ({ ...s, splitNumber: i + 1 }))
   }
+}
+
+/** 按 Stage 粒度分配分组：把已通过报名均分到该 Stage 的 k 个 Split，并直接写入各 Split 的 entryList。 */
+export function assignStageSplits(
+  competition: Competition,
+  round: Round,
+  stage: Stage,
+  splitCount: number,
+  order: 'time' | 'random',
+): number {
+  const approved = getRoundRegistrations(round.id).filter(r => r.status === 'approved')
+  if (approved.length === 0) return 0
+  const ordered = [...approved]
+  if (order === 'random') {
+    for (let i = ordered.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[ordered[i], ordered[j]] = [ordered[j], ordered[i]]
+    }
+  } else {
+    ordered.sort((a, b) => a.submittedAt.localeCompare(b.submittedAt))
+  }
+  const k = Math.max(1, splitCount)
+  ensureSplitCount(stage, k)
+  const n = ordered.length
+  const base = Math.floor(n / k)
+  const rem = n % k
+  let idx = 0
+  stage.splits.forEach((split, si) => {
+    const size = base + (si < rem ? 1 : 0)
+    const chunk = ordered.slice(idx, idx + size)
+    idx += size
+    split.entryList = chunk.map((r, i) => ({
+      id: `ele_${stage.id}_${split.splitNumber}_${r.driverId}`,
+      driverId: r.driverId,
+      driverName: driverName(r.driverId),
+      teamName: teamName(r.teamId),
+      raceNumber: r.preferredNumber ?? 100 + i,
+      ballastKg: 0,
+      restrictor: 0,
+    }))
+  })
+  updateCompetition(competition)
+  return approved.length
 }
 
 /** 报名截止后：把已通过报名均分到 k 个服务器（组间人数差 ≤1），并把各分站 Stage 调整为 k 个 Split。 */

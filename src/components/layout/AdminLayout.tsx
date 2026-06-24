@@ -25,7 +25,6 @@ import { FlowAssistant } from '@/components/FlowAssistant'
 
 const navItems = [
   { path: '/competitions', icon: Trophy, labelKey: 'admin.competitions' },
-  { path: '/templates', icon: FileText, labelKey: 'admin.templates' },
   { path: '/registrations', icon: UserCheck, labelKey: 'admin.registrations' },
   { path: '/results', icon: ClipboardList, labelKey: 'admin.results' },
   { path: '/protests', icon: AlertTriangle, labelKey: 'admin.protests' },
@@ -33,6 +32,7 @@ const navItems = [
   { path: '/news', icon: Newspaper, labelKey: 'admin.news' },
   { path: '/teams', icon: Shield, labelKey: 'admin.teams' },
   { path: '/notifications', icon: Bell, labelKey: 'admin.notifications' },
+  { path: '/templates', icon: FileText, labelKey: 'admin.templates' },
   { path: '/settings/options', icon: Settings, labelKey: 'admin.optionsManagement' },
 ]
 

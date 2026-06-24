@@ -37,8 +37,6 @@ export function computeAdvancers(prevStage: Stage, rule: AdvancementRule): strin
   switch (rule.metric) {
     case 'position':
       return standings.slice(0, rule.limit ?? standings.length).map(s => s.driverId)
-    case 'points':
-      return [...standings].sort((a, b) => b.points - a.points).slice(0, rule.limit ?? standings.length).map(s => s.driverId)
     case 'lapTime': {
       const withLap = standings.filter(s => s.bestLapMs != null).sort((a, b) => a.bestLapMs! - b.bestLapMs!)
       if (withLap.length === 0) return []

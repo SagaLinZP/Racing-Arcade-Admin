@@ -24,8 +24,6 @@ export function ResultListPage() {
       <Card padding={false}>
         <div className="divide-y divide-gray-200">
           {competitions.map(comp => {
-            const allStages = comp.rounds.flatMap(r => r.stages)
-            const withResults = allStages.filter(s => s.splits.some(sp => sp.results && sp.results.length > 0)).length
             const hasStandings = calculateCompetitionStandings(comp).length > 0
             return (
               <div
@@ -34,17 +32,8 @@ export function ResultListPage() {
                 className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 cursor-pointer transition-colors"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-gray-900 truncate">{getName(comp, lang)}</span>
-                    <Badge variant="default">{comp.game}</Badge>
-                  </div>
-                  <div className="text-xs text-gray-400 mt-0.5">
-                    {comp.rounds.length} {t('competition.rounds').toLowerCase()}
-                    {' · '}
-                    {allStages.length} {t('competition.stages').toLowerCase()}
-                    {' · '}
-                    {withResults}/{allStages.length} {t('result.synced').toLowerCase()}
-                  </div>
+                  <span className="text-sm font-semibold text-gray-900 truncate block">{getName(comp, lang)}</span>
+                  <div className="mt-0.5"><Badge variant="default">{comp.game}</Badge></div>
                 </div>
                 {hasStandings && (
                   <span

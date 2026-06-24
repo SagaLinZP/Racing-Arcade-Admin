@@ -11,6 +11,7 @@ import { applyToEntryList } from '@/lib/registrationOps'
 import { startStageServers, lockStageResults } from '@/lib/stageOps'
 import {
   DEMO_COMP_ID,
+  DEMO_ROUND_ID,
   DEMO_RACE_STAGE_ID,
   DEMO_FINAL_STAGE_ID,
   DEMO_RACE_SPLIT_ID,
@@ -50,7 +51,7 @@ export interface FlowStep {
   run?: () => void
 }
 
-const REG_ROUTE = `/registrations/competition/${DEMO_COMP_ID}`
+const REG_ROUTE = `/registrations/competition/${DEMO_COMP_ID}/round/${DEMO_ROUND_ID}`
 const RESULTS_ROUTE = `/results/competition/${DEMO_COMP_ID}`
 
 export const flowSteps: FlowStep[] = [

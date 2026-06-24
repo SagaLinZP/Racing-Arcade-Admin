@@ -14,12 +14,13 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { ArrowLeft, Save, Plus, ChevronDown, ChevronRight, Trash2, Settings } from 'lucide-react'
+import { ArrowLeft, Save, Plus, ChevronDown, ChevronRight, Trash2, Settings, AlertTriangle } from 'lucide-react'
 import { cn, getCompetitionStatus, getRoundStatus } from '@/lib/utils'
 import { ImageUpload } from '@/components/ui/ImageUpload'
 import { ServerConfigModal } from './ServerConfigModal'
 import { isoToLocalInput, localInputToIso, tzSelectOptions, tzShortLabel } from '@/lib/timezone'
 import { canEditIdentity, canEditEligibility, isStageStarted, canEditRegistrationWindow, isServerConfigLocked } from '@/lib/guards'
+import { getStageLockAt } from '@/lib/results'
 
 type TabKey = 'info' | 'rounds'
 
@@ -76,7 +77,17 @@ export function CompetitionEditPage() {
     setLocal(prev => ({ ...prev, rounds: prev.rounds.map(r => r.id === roundId ? { ...r, stages: r.stages.filter(s => s.id !== stageId) } : r) }))
   }
 
+  const LOCK_BUFFER_MS = 10 * 60 * 1000
+  const hasLockDeadlineError = (localComp ?? comp).rounds.some(round =>
+    round.stages.some((stage, i) => {
+      if (i === 0) return false
+      const prevLock = getStageLockAt(round.stages[i - 1], localComp ?? comp)
+      return prevLock > new Date(stage.startsAt).getTime() - LOCK_BUFFER_MS
+    })
+  )
+
   const handleSave = () => {
+    if (hasLockDeadlineError) return
     if (localComp) {
       updateCompetition({ ...localComp, updatedAt: new Date().toISOString() })
     }
@@ -121,7 +132,7 @@ export function CompetitionEditPage() {
                 >中文</button>
               </div>
               <div className="w-px h-6 bg-gray-200" />
-              <Button variant="secondary" onClick={handleSave}>
+              <Button variant="secondary" onClick={handleSave} disabled={hasLockDeadlineError}>
                 <Save className="w-4 h-4 mr-1" />{t('common.save')}
               </Button>
             </div>
@@ -162,10 +173,11 @@ export function CompetitionEditPage() {
             <h3 className="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">{t('event.sectionBasicInfo')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input label={`${t('competition.competitionName')} (${editLang === 'en' ? 'EN' : '中文'})`} value={editLang === 'en' ? comp.name_en : comp.name_zh} onChange={(e) => setLocal(prev => ({ ...prev, ...(editLang === 'en' ? { name_en: e.target.value } : { name_zh: e.target.value }) }))} />
-              <Select label={t('event.game')} options={gameOptions} value={comp.game} disabled={identityLocked} onChange={(e) => setLocal(prev => ({ ...prev, game: e.target.value as GamePlatform }))} />
-              <Select label={t('event.carClass')} options={carClassOptions.length > 0 ? carClassOptions : [{ value: '', label: '' }]} value={comp.carClass} disabled={identityLocked} onChange={(e) => setLocal(prev => ({ ...prev, carClass: e.target.value }))} />
+              <Select label={t('event.game')} options={gameOptions} value={comp.game} locked={identityLocked} onChange={(e) => setLocal(prev => ({ ...prev, game: e.target.value as GamePlatform }))} />
+              <Select label={t('event.carClass')} options={carClassOptions.length > 0 ? carClassOptions : [{ value: '', label: '' }]} value={comp.carClass} locked={identityLocked} onChange={(e) => setLocal(prev => ({ ...prev, carClass: e.target.value }))} />
               <Select label={t('event.timezone')} options={tzSelectOptions(lang)} value={comp.timezone ?? 'UTC+8'} onChange={(e) => setLocal(prev => ({ ...prev, timezone: e.target.value }))} />
               <Input label={t('event.resultLockWindow')} type="number" min={0} disabled={identityLocked} value={String(comp.resultLockWindowHours ?? 24)} onChange={(e) => setLocal(prev => ({ ...prev, resultLockWindowHours: e.target.value ? Number(e.target.value) : undefined }))} />
+              <Input label={t('event.minSplitEntries')} type="number" min={1} disabled={identityLocked} value={String(comp.minSplitEntries ?? 10)} onChange={(e) => setLocal(prev => ({ ...prev, minSplitEntries: e.target.value ? Number(e.target.value) : undefined }))} />
               <Input label={t('event.carList')} placeholder={t('event.carListPlaceholder')} disabled={identityLocked} value={comp.carList?.join(', ') || ''} onChange={(e) => setLocal(prev => ({ ...prev, carList: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))} />
               <Input label={t('event.streamUrl')} value={comp.defaultRuleset.streamUrl || ''} onChange={(e) => setLocal(prev => ({ ...prev, defaultRuleset: { ...prev.defaultRuleset, streamUrl: e.target.value } }))} />
               <div className="md:col-span-2 max-w-sm">
@@ -414,7 +426,9 @@ function RoundAccordion({
             )}
 
             <div className="space-y-2">
-              {round.stages.map((stage, stageIdx) => (
+              {round.stages.map((stage, stageIdx) => {
+                const prevLockMs = stageIdx > 0 ? getStageLockAt(round.stages[stageIdx - 1], comp) : undefined
+                return (
                 <StageAccordion
                   key={stage.id}
                   stage={stage}
@@ -427,10 +441,12 @@ function RoundAccordion({
                   timezone={timezone}
                   lockWindowHours={comp.resultLockWindowHours ?? 24}
                   eligibilityLocked={!canEditEligibility(round)}
+                  prevStageLockMs={prevLockMs}
                   onUpdate={(updated) => onUpdateStage(stage.id, updated)}
                   onDelete={() => onDeleteStage(stage.id)}
                 />
-              ))}
+                )
+              })}
             </div>
           </div>
         </div>
@@ -450,6 +466,7 @@ function StageAccordion({
   timezone,
   lockWindowHours,
   eligibilityLocked,
+  prevStageLockMs,
   onUpdate,
   onDelete,
 }: {
@@ -463,6 +480,7 @@ function StageAccordion({
   timezone?: string
   lockWindowHours: number
   eligibilityLocked?: boolean
+  prevStageLockMs?: number
   onUpdate: (updated: Stage) => void
   onDelete: () => void
 }) {
@@ -475,10 +493,17 @@ function StageAccordion({
   const splitRuleOptions = useManagedOptions('splitRule', lang)
   const eligibilityOptions = useManagedOptions('eligibilitySource', lang)
   const getName = (e: { name_zh: string; name_en: string }) => lang === 'zh' ? e.name_zh : e.name_en
-  const [eligibility, setEligibility] = useState(stage.eligibilitySource || 'roundRegistration')
+  const isFirstStage = stageIdx === 0
+  const effectiveEligibilityLocked = eligibilityLocked || isFirstStage
+  const [eligibility, setEligibility] = useState(isFirstStage ? 'roundRegistration' : (stage.eligibilitySource || 'roundRegistration'))
   const [advMetric, setAdvMetric] = useState(stage.advancementRule?.metric || 'lapTime')
   const [selectedDrivers, setSelectedDrivers] = useState<Set<string>>(new Set())
   const [showServerConfig, setShowServerConfig] = useState(false)
+
+  const STAGE_LOCK_BUFFER_MS = 10 * 60 * 1000
+  const lockDeadlineError = prevStageLockMs != null
+    ? prevStageLockMs > new Date(stage.startsAt).getTime() - STAGE_LOCK_BUFFER_MS
+    : false
 
   const splitCount = Math.max(1, stage.splits.length)
 
@@ -535,6 +560,13 @@ function StageAccordion({
             </div>
           </div>
 
+          {lockDeadlineError && (
+            <div className="flex items-start gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{t('competition.lockDeadlineError')}</span>
+            </div>
+          )}
+
           <Textarea label={`${t('common.description')} (${editLang === 'en' ? 'EN' : '中文'})`} value={editLang === 'en' ? stage.description_en || '' : stage.description_zh || ''} onChange={(e) => onUpdate({ ...stage, ...(editLang === 'en' ? { description_en: e.target.value } : { description_zh: e.target.value }) })} />
 
           <div className="space-y-3">
@@ -542,9 +574,15 @@ function StageAccordion({
               label={t('competition.eligibilitySource')}
               options={eligibilityOptions}
               value={eligibility}
-              disabled={eligibilityLocked}
+              locked={effectiveEligibilityLocked}
               onChange={(e) => { setEligibility(e.target.value as typeof eligibility); onUpdate({ ...stage, eligibilitySource: e.target.value as Stage['eligibilitySource'] }) }}
             />
+
+            {isFirstStage && (
+              <p className="text-xs text-gray-500 pl-3 border-l-2 border-gray-200 pl-3 py-1">
+                {t('competition.firstStageInheritHint')}
+              </p>
+            )}
 
             {eligibility === 'previousStageResult' && (
               <div className="space-y-3 pl-1 border-l-2 border-blue-200 pl-3">
@@ -553,11 +591,11 @@ function StageAccordion({
                     label={t('competition.advancementMetric')}
                     options={[
                       { value: 'lapTime', label: t('competition.advancementMetricLapTime') },
-                      { value: 'points', label: t('competition.advancementMetricPoints') },
                       { value: 'position', label: t('competition.advancementMetricPosition') },
                     ]}
                     value={advMetric}
-                    onChange={(e) => { const m = e.target.value as 'lapTime' | 'points' | 'position'; setAdvMetric(m); onUpdate({ ...stage, advancementRule: { ...(stage.advancementRule ?? { metric: m }), metric: m } }) }}
+                    locked={effectiveEligibilityLocked}
+                    onChange={(e) => { const m = e.target.value as 'lapTime' | 'position'; setAdvMetric(m); onUpdate({ ...stage, advancementRule: { ...(stage.advancementRule ?? { metric: m }), metric: m } }) }}
                   />
                   {advMetric === 'lapTime' ? (
                     <Input
@@ -565,11 +603,12 @@ function StageAccordion({
                       type="number"
                       step="0.01"
                       min="1"
+                      disabled={eligibilityLocked}
                       value={String(stage.advancementRule?.lapTimeMultiplier ?? 1.05)}
                       onChange={(e) => onUpdate({ ...stage, advancementRule: { ...(stage.advancementRule ?? { metric: 'lapTime' }), metric: 'lapTime', lapTimeMultiplier: Number(e.target.value) } })}
                     />
                   ) : (
-                    <Input label={t('competition.advancementLimit')} type="number" value={String(stage.advancementRule?.limit ?? '')} onChange={(e) => onUpdate({ ...stage, advancementRule: { ...(stage.advancementRule ?? { metric: advMetric }), metric: advMetric, limit: Number(e.target.value) } })} />
+                    <Input label={t('competition.advancementLimit')} type="number" disabled={eligibilityLocked} value={String(stage.advancementRule?.limit ?? '')} onChange={(e) => onUpdate({ ...stage, advancementRule: { ...(stage.advancementRule ?? { metric: advMetric }), metric: advMetric, limit: Number(e.target.value) } })} />
                   )}
                 </div>
                 {advMetric === 'lapTime' && (
@@ -624,7 +663,6 @@ function StageAccordion({
             <h5 className="text-xs font-medium text-gray-600">{t('event.sectionSplitConfig')}</h5>
             <p className="text-xs text-gray-500">{t('competition.splitDecidedAfterReg')}</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <Input label={t('event.minEntries')} type="number" value={String(stage.minEntries ?? '')} onChange={(e) => onUpdate({ ...stage, minEntries: Number(e.target.value) })} />
               <Select label={t('event.splitAssignmentRule')} options={splitRuleOptions} value={stage.splitAssignmentRule || ''} onChange={(e) => onUpdate({ ...stage, splitAssignmentRule: e.target.value })} />
             </div>
           </div>

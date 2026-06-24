@@ -207,7 +207,7 @@ export interface Session {
 
 export interface AdvancementRule {
   sourceSessionId?: string
-  metric: 'lapTime' | 'points' | 'position' | 'manual'
+  metric: 'lapTime' | 'position' | 'manual'
   lapTimeMultiplier?: number
   limit?: number
   targetStageId?: string
@@ -285,6 +285,7 @@ export interface Competition {
   carList?: string[]
   timezone?: string
   resultLockWindowHours?: number
+  minSplitEntries?: number
   defaultRuleset: CompetitionRuleset
   rounds: Round[]
   statusOverride?: 'Draft' | 'Cancelled' | 'Archived'
