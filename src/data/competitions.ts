@@ -17,7 +17,7 @@ export type RoundStatus = CompetitionStatus | 'ResultsLocked'
 
 export type StageType = 'qualifier' | 'race_day' | 'final' | 'consolation' | 'practice' | 'custom'
 export type SessionType = 'practice' | 'qualifying' | 'race' | 'timeTrial'
-export type ResultStatus = 'Finished' | 'DNF' | 'DNS' | 'DSQ' | 'Qualified' | 'Eliminated'
+export type ResultStatus = 'Finished' | 'DNF' | 'DNS' | 'DSQ'
 export type RestartPolicy = 'none' | 'fixedInterval' | 'manual'
 export type MergeRule = 'bestLapPerDriver' | 'bestResultPerDriver' | 'allClassifications'
 
@@ -605,8 +605,8 @@ const _rawCompetitions = [
                 id: 'c1r2s0se1',
                 stageId: 'c1r2s0',
                 type: 'practice',
-                name_zh: '热圈服务器',
-                name_en: 'Hotlap Server',
+                name_zh: '练习赛',
+                name_en: 'Practice',
                 startsAt: '2026-05-16T00:00:00Z',
                 endsAt: '2026-05-22T00:00:00Z',
                 gameSessionRestartPolicy: 'fixedInterval',
@@ -709,8 +709,8 @@ const _rawCompetitions = [
                 id: 'c1r3s0se1',
                 stageId: 'c1r3s0',
                 type: 'practice',
-                name_zh: '热圈服务器',
-                name_en: 'Hotlap Server',
+                name_zh: '练习赛',
+                name_en: 'Practice',
                 startsAt: '2026-06-20T00:00:00Z',
                 endsAt: '2026-06-26T00:00:00Z',
                 gameSessionRestartPolicy: 'fixedInterval',
@@ -852,8 +852,8 @@ const _rawCompetitions = [
                 id: 'c2r2s0se1',
                 stageId: 'c2r2s0',
                 type: 'practice',
-                name_zh: '热圈服务器',
-                name_en: 'Hotlap Server',
+                name_zh: '练习赛',
+                name_en: 'Practice',
                 startsAt: '2026-06-12T00:00:00Z',
                 endsAt: '2026-06-18T00:00:00Z',
                 gameSessionRestartPolicy: 'fixedInterval',
@@ -910,8 +910,8 @@ const _rawCompetitions = [
                 id: 'c2r3s0se1',
                 stageId: 'c2r3s0',
                 type: 'practice',
-                name_zh: '热圈服务器',
-                name_en: 'Hotlap Server',
+                name_zh: '练习赛',
+                name_en: 'Practice',
                 startsAt: '2026-07-15T00:00:00Z',
                 endsAt: '2026-07-22T00:00:00Z',
                 gameSessionRestartPolicy: 'fixedInterval',
@@ -1112,8 +1112,8 @@ const _rawCompetitions = [
                 id: 'c5r1s1se1',
                 stageId: 'c5r1s1',
                 type: 'practice',
-                name_zh: '热圈服务器',
-                name_en: 'Hotlap Server',
+                name_zh: '练习赛',
+                name_en: 'Practice',
                 startsAt: '2026-07-18T00:00:00Z',
                 endsAt: '2026-07-20T00:00:00Z',
                 gameSessionRestartPolicy: 'fixedInterval',

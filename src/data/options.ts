@@ -87,8 +87,6 @@ export const optionGroups: OptionGroup[] = [
       { value: 'DNF', label_en: 'DNF', label_zh: '未完赛' },
       { value: 'DNS', label_en: 'DNS', label_zh: '未发车' },
       { value: 'DSQ', label_en: 'DSQ', label_zh: '取消资格' },
-      { value: 'Qualified', label_en: 'Qualified', label_zh: '晋级' },
-      { value: 'Eliminated', label_en: 'Eliminated', label_zh: '淘汰' },
     ],
   },
   {
