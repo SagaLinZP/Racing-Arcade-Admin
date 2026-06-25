@@ -84,7 +84,6 @@ export const SESSION_TYPE_OPTIONS_T = (t: (k: string) => string) => [
   { value: 'practice', label: t('competition.sessionTypePractice') },
   { value: 'qualifying', label: t('competition.sessionTypeQualifying') },
   { value: 'race', label: t('competition.sessionTypeRace') },
-  { value: 'timeTrial', label: t('competition.sessionTypeTimeTrial') },
 ]
 
 export type GameConfigKey = keyof SessionGameConfig

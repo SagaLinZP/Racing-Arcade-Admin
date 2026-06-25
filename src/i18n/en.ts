@@ -261,7 +261,6 @@ export const en = {
     sessionTypePractice: 'Practice',
     sessionTypeQualifying: 'Qualifying',
     sessionTypeRace: 'Race',
-    sessionTypeTimeTrial: 'Time Trial',
     restartPolicy: 'Restart Policy',
     restartPolicyNone: 'None',
     restartPolicyFixedInterval: 'Fixed Interval',

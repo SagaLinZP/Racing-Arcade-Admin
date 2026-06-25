@@ -328,7 +328,6 @@ export function ServerConfigModal({
         <SessionsEditor
           sessions={local.sessions}
           game={game}
-          editLang={editLang}
           onChange={(sessions) => setLocal(prev => ({ ...prev, sessions }))}
         />
       )}
@@ -341,23 +340,18 @@ export function ServerConfigModal({
               {t('gameConfig.splitCountFixed', { count: local.splits.length })}
             </div>
           )}
-          {local.splits.map((split) => (
-            <div key={split.id} className="rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
-              <ServerStatusBar stageId={local.id} split={split} gameConfig={local.gameConfig} t={t} />
-              {splitCount > 1 && (
-                <div className="flex items-center gap-2">
-                  <Badge variant="info">{t('gameConfig.split')} {split.splitNumber}</Badge>
-                </div>
-              )}
-              <SplitServerFields split={split} game={game} onChange={(k, v) => setSplitField(split.id, k, v)} />
+          {local.splits[0] && (
+            <div className="rounded-md border border-gray-200 bg-gray-50 p-4 space-y-4">
+              <ServerStatusBar stageId={local.id} split={local.splits[0]} gameConfig={local.gameConfig} t={t} />
+              <SplitServerFields split={local.splits[0]} game={game} onChange={(k, v) => setSplitField(local.splits[0].id, k, v)} />
               <EntryListEditor
-                split={split}
+                split={local.splits[0]}
                 game={game}
                 editLang={editLang}
                 t={t}
               />
             </div>
-          ))}
+          )}
         </div>
       )}
 

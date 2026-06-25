@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
-import { ArrowLeft, Check, X, Clock, CheckCheck, Shuffle, Settings, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Check, X, Clock, Shuffle, Settings, AlertTriangle } from 'lucide-react'
 
 function statusVariant(s: RegistrationStatus): 'default' | 'info' | 'warning' | 'success' | 'danger' {
   switch (s) {
@@ -115,16 +115,17 @@ export function RoundRegistrationsPage() {
       <Card padding={false}>
         <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 border-b border-gray-200" data-flow={comp.isDemo ? 'review' : undefined}>
           <span className="text-sm font-semibold text-gray-700">{t('registration.roundRegistrationsTitle')}</span>
-          <span className="text-sm text-gray-600">{t('registration.summary', counts)}</span>
-          <span className="inline-flex items-center gap-1 text-xs text-green-600"><CheckCheck className="w-3.5 h-3.5" />{t('registration.autoApproved')}</span>
-          <div className="flex items-center gap-2">
-            {round.registrationOverride ? (
-              <Button variant="ghost" size="sm" onClick={() => setRegistrationOverride(comp, round, undefined)}>{t('registration.clearOverride')}</Button>
-            ) : roundStatus === 'RegistrationOpen' ? (
-              <Button variant="ghost" size="sm" onClick={() => setRegistrationOverride(comp, round, 'forceClosed')}><Clock className="w-3.5 h-3.5 mr-1" />{t('registration.closeEarly')}</Button>
-            ) : roundStatus === 'RegistrationClosed' ? (
-              <Button variant="ghost" size="sm" onClick={() => setRegistrationOverride(comp, round, 'forceOpen')}><Clock className="w-3.5 h-3.5 mr-1" />{t('registration.reopen')}</Button>
-            ) : null}
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-600">{t('registration.summary', counts)}</span>
+            <div className="flex items-center gap-2">
+              {round.registrationOverride ? (
+                <Button variant="ghost" size="sm" onClick={() => setRegistrationOverride(comp, round, undefined)}>{t('registration.clearOverride')}</Button>
+              ) : roundStatus === 'RegistrationOpen' ? (
+                <Button variant="ghost" size="sm" onClick={() => setRegistrationOverride(comp, round, 'forceClosed')}><Clock className="w-3.5 h-3.5 mr-1" />{t('registration.closeEarly')}</Button>
+              ) : roundStatus === 'RegistrationClosed' ? (
+                <Button variant="ghost" size="sm" onClick={() => setRegistrationOverride(comp, round, 'forceOpen')}><Clock className="w-3.5 h-3.5 mr-1" />{t('registration.reopen')}</Button>
+              ) : null}
+            </div>
           </div>
         </div>
         {all.length === 0 ? (
@@ -189,7 +190,6 @@ export function RoundRegistrationsPage() {
                 <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-200">
                   <Settings className="w-4 h-4 text-gray-400" />
                   <span className="text-sm font-medium text-gray-800">{getName(stage, lang)}</span>
-                  <Badge variant="default" className="text-xs">{stage.type}</Badge>
                   <span className="text-xs text-gray-400">
                     {stage.eligibilitySource === 'previousStageResult' ? t('registration.entryFromAdvancement') : t('registration.entryFromManualInvite')}
                   </span>

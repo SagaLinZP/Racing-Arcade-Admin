@@ -261,7 +261,6 @@ export const zh = {
     sessionTypePractice: '练习赛',
     sessionTypeQualifying: '排位赛',
     sessionTypeRace: '正赛',
-    sessionTypeTimeTrial: '计时赛',
     restartPolicy: '重启策略',
     restartPolicyNone: '不重启',
     restartPolicyFixedInterval: '固定间隔',

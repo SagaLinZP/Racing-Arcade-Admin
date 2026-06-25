@@ -621,7 +621,7 @@ Session 是四层结构的最底层，也是**成绩归属的最小颗粒度**�
 | 字段名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
 | id | UUID | 自动 | Session 唯一标识 |
-| type | Enum | 是 | `practice` / `qualifying` / `race` / `timeTrial` |
+| type | Enum | 是 | `practice` / `qualifying` / `race` |
 | name_zh / name_en | String | 是（至少一种） | Session 名称 |
 | duration_minutes | Integer | 否 | 固定时长（分钟） |
 | race_duration | Integer | 否 | 正赛时长或圈数 |

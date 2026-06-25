@@ -125,7 +125,7 @@ export function TemplateEditPage() {
 
         <Card>
           <h3 className="text-sm font-semibold text-gray-700 mb-4">{t('serverConfig.tabSessions')}</h3>
-          <SessionsEditor sessions={form.sessions} game={form.game} editLang={editLang} onChange={setSessions} />
+          <SessionsEditor sessions={form.sessions} game={form.game} onChange={setSessions} />
         </Card>
 
         <Card>

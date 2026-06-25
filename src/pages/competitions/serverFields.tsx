@@ -105,12 +105,10 @@ export function SplitServerFields({
 export function SessionsEditor({
   sessions,
   game,
-  editLang,
   onChange,
 }: {
   sessions: Session[]
   game: GamePlatform
-  editLang: 'en' | 'zh'
   onChange: (sessions: Session[]) => void
 }) {
   const { t } = useTranslation()
@@ -151,9 +149,8 @@ export function SessionsEditor({
               <span className="text-xs text-gray-400 py-0.5">{idx + 1}</span>
               <button onClick={() => moveSession(idx, 1)} disabled={idx === sessions.length - 1} className="text-gray-400 hover:text-gray-600 disabled:opacity-30"><ChevronDown className="w-3.5 h-3.5" /></button>
             </div>
-            <div className="flex-1 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2">
+            <div className="flex-1 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
               <Select label={t('competition.sessionType')} options={SESSION_TYPE_OPTIONS_T(t)} value={gs.type} onChange={(e) => handleTypeChange(gs.id, e.target.value as SessionType)} />
-              <Input label={`${t('common.name')} (${editLang === 'en' ? 'EN' : '中文'})`} value={editLang === 'en' ? gs.name_en : gs.name_zh} onChange={(e) => updateSession(gs.id, editLang === 'en' ? { name_en: e.target.value } : { name_zh: e.target.value })} />
               {gs.type !== 'race' ? (
                 <Input label={t('gameConfig.durationMinutes')} type="number" value={String(gs.durationMinutes ?? '')} onChange={(e) => updateSession(gs.id, { durationMinutes: Number(e.target.value) })} />
               ) : (

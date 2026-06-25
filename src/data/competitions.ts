@@ -16,7 +16,7 @@ export type CompetitionStatus =
 export type RoundStatus = CompetitionStatus | 'ResultsLocked'
 
 export type StageType = 'qualifier' | 'race_day' | 'final' | 'consolation' | 'practice' | 'custom'
-export type SessionType = 'practice' | 'qualifying' | 'race' | 'timeTrial'
+export type SessionType = 'practice' | 'qualifying' | 'race'
 export type ResultStatus = 'Finished' | 'DNF' | 'DNS' | 'DSQ'
 export type RestartPolicy = 'none' | 'fixedInterval' | 'manual'
 export type MergeRule = 'bestLapPerDriver' | 'bestResultPerDriver' | 'allClassifications'
@@ -440,7 +440,6 @@ export function createDefaultSession(type?: SessionType): Session {
     practice: { zh: '练习赛', en: 'Practice' },
     qualifying: { zh: '排位赛', en: 'Qualifying' },
     race: { zh: '正赛', en: 'Race' },
-    timeTrial: { zh: '计时赛', en: 'Time Trial' },
   }
   const base: Session = {
     id,
